@@ -1,8 +1,15 @@
-# Environment variables
+#######################################################################
+# Environment Variables
+#######################################################################
 .env
-app/server/.env
+.env.local
+.env.*.local
+app/**/.env
+**/. env
 
+#######################################################################
 # Python
+#######################################################################
 __pycache__/
 *.py[cod]
 *$py.class
@@ -11,41 +18,302 @@ __pycache__/
 env/
 venv/
 .venv
+ENV/
+env.bak/
+venv.bak/
 *.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+*.whl
 .pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+.pytype/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pyright/
 
-# Node
+#######################################################################
+# Node.js / JavaScript / TypeScript
+#######################################################################
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 dist/
+dist-ssr/
+*.local
 .npm
+.yarn
+.pnp.*
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.vuepress/dist
+.serverless/
+.fusebox/
+.dynamodb/
+.tern-port
+.vscode-test
+coverage/
+*.tsbuildinfo
 
-# Database
+#######################################################################
+# Go
+#######################################################################
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.dylib
+*.test
+*.out
+go.work
+
+# Build artifacts
+vendor/
+*.a
+*.so
+
+#######################################################################
+# Rust
+#######################################################################
+target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+#######################################################################
+# Java
+#######################################################################
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+.gradle/
+build/
+.mtj.tmp/
+*.log
+
+#######################################################################
+# C / C++
+#######################################################################
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+#######################################################################
+# Database Files
+#######################################################################
 *.db
 *.sqlite
 *.sqlite3
+*.db-shm
+*.db-wal
+*.db-journal
 
-# IDE
+#######################################################################
+# IDE / Editors
+#######################################################################
+# VSCode
 .vscode/
+*.code-workspace
+
+# IntelliJ IDEA
 .idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Vim
 *.swp
 *.swo
 *~
+*.un~
+.netrwhist
 
-# OS
+# Emacs
+*~
+\#*\#
+.\#*
+.projectile
+.dir-locals.el
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+#######################################################################
+# Operating System Files
+#######################################################################
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
 
-# Logs
+# Linux
+.directory
+.Trash-*
+.nfs*
+
+# Windows WSL
+*:Zone.Identifier
+
+#######################################################################
+# Logs and Temporary Files
+#######################################################################
 *.log
+logs/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
 
+#######################################################################
+# Claude Code / ADW Specific
+#######################################################################
+# Directory tree outputs (keep README)
 trees/
 !trees/README.md
 
-# Claude hooks logs
+# Claude Code hook logs
 logs/
+*.jsonl
 
-# Agent output directories
+# ADW agent output directories
 agents/
+!agents/README.md
+
+#######################################################################
+# Build Tools and Package Managers
+#######################################################################
+# uv (Python)
+.python-version
+uv.lock
+
+# npm / yarn / pnpm
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+
+# CMake
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+#######################################################################
+# Test Coverage and Reports
+#######################################################################
+coverage/
+.nyc_output/
+test-results/
+*.coveragerc
+
+#######################################################################
+# Cloud and Deployment
+#######################################################################
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# Docker
+.dockerignore
+
+# Kubernetes
+.kube/
+
+#######################################################################
+# Security and Secrets
+#######################################################################
+# Never commit these!
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+credentials.json
+secrets.yaml
+secrets.yml
+
+#######################################################################
+# Application-Specific
+# (Add your own patterns below)
+#######################################################################
+
+# Example: Uploaded files
+# uploads/
+# media/
+
+# Example: Generated documentation
+# docs/_build/
+# site/
+
+# Example: Cache directories
+# .cache/
+# tmp/

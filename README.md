@@ -1,211 +1,370 @@
-# Natural Language SQL Interface
+# Claude Code Project Template
 
-A web application that converts natural language queries to SQL using AI, built with FastAPI and Vite + TypeScript.
+A production-ready template for building AI-powered software projects with automated development workflow, GitHub integration, and intelligent slash commands.
 
-## Features
+## What Is This?
 
-- 🗣️ Natural language to SQL conversion using OpenAI or Anthropic
-- 📁 Drag-and-drop file upload (.csv and .json)
-- 📊 Interactive table results display
-- 🔒 SQL injection protection
-- ⚡ Fast development with Vite and uv
+This template provides everything you need to start a new software project with AI-first development capabilities:
 
-## Prerequisites
+- **AI Developer Workflow (ADW)**: Automatically process GitHub issues from classification to pull request
+- **Claude Code Integration**: Enhanced with custom slash commands and hooks for consistent development
+- **Production Infrastructure**: Logging, monitoring, scripts, and automation built-in
+- **Multi-Language Support**: Infrastructure works with Python, Node.js, Go, Rust, or any language
+- **Zero Application Code**: Clean slate for your project while preserving powerful automation
 
-- Python 3.10+
-- Node.js 18+
-- OpenAI API key and/or Anthropic API key
-- 'gh' github cli
-- astral uv
+## Key Features
 
-## Setup
+### 1. Automated Development Workflow
 
-### 1. Install Dependencies
-
-```bash
-# Backend
-cd app/server
-uv sync --all-extras
-
-# Frontend
-cd app/client
-npm install
-```
-
-### 2. Environment Configuration
-
-Set up your API keys in the server directory:
+Create a GitHub issue, and ADW automatically:
+- Classifies it (bug/feature/chore)
+- Generates an implementation plan
+- Implements the solution with Claude Code
+- Creates commits and a pull request
 
 ```bash
-cp .env.sample .env
+# Process any GitHub issue automatically
+cd adws
+uv run adw_plan_build.py 123
 ```
 
-and
+### 2. Intelligent Slash Commands
+
+Built-in commands for common development tasks:
 
 ```bash
-cd app/server
-cp .env.sample .env
-# Edit .env and add your API keys
+claude /bug          # Plan and fix bugs
+claude /feature      # Design and implement features
+claude /chore        # Handle maintenance tasks
+claude /implement    # Execute implementation plans
+claude /commit       # Create semantic commits
+claude /pull_request # Generate PRs with summaries
 ```
+
+### 3. Extensible Hooks System
+
+Customize Claude Code behavior with Python hooks:
+- Pre/post tool use logging
+- Custom notifications
+- LLM integrations (Anthropic, OpenAI)
+- Workflow lifecycle management
+
+### 4. Production-Ready Scripts
+
+Utilities for deployment and operations:
+- Application startup/shutdown
+- Webhook tunneling for local development
+- Environment setup helpers
+- GitHub utilities
 
 ## Quick Start
 
-Use the provided script to start both services:
+### Prerequisites
+
+Install required tools:
 
 ```bash
-./scripts/start.sh
+# GitHub CLI
+brew install gh  # macOS
+# or: sudo apt install gh  # Ubuntu/Debian
+# or: winget install --id GitHub.cli  # Windows
+
+gh auth login
+
+# Claude Code CLI
+# Follow: https://docs.anthropic.com/en/docs/claude-code
+
+# Python dependency manager (uv)
+curl -LsSf https://astral.sh/uv/install.sh | sh  # macOS/Linux
+# or: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
 ```
 
-Press `Ctrl+C` to stop both services.
+### Setup Your Project
 
-The script will:
-- Check that `.env` exists in `app/server/`
-- Start the backend on http://localhost:8000
-- Start the frontend on http://localhost:5173
-- Handle graceful shutdown when you exit
+1. **Clone this template**
+   ```bash
+   git clone <template-url> my-new-project
+   cd my-new-project
+   ```
 
-## Manual Start (Alternative)
+2. **Configure environment**
+   ```bash
+   cp .env.sample .env
+   # Edit .env with your values:
+   # - ANTHROPIC_API_KEY (from https://console.anthropic.com/)
+   # - GITHUB_REPO_URL (your repository URL)
+   ```
 
-### Backend
-```bash
-cd app/server
-# .env is loaded automatically by python-dotenv
-uv run python server.py
-```
+3. **Initialize your repository**
+   ```bash
+   git remote remove origin
+   git remote add origin https://github.com/your-username/your-new-repo.git
+   git push -u origin main
+   ```
 
-### Frontend
-```bash
-cd app/client
-npm run dev
-```
+4. **Build your application**
 
-## Usage
+   See [TEMPLATE_GUIDE.md](./TEMPLATE_GUIDE.md) for detailed examples of different project types:
+   - Python web apps (FastAPI/Flask)
+   - TypeScript/React apps
+   - CLI tools
+   - Node.js servers
+   - And more...
 
-1. **Upload Data**: Click "Upload Data" to open the modal
-   - Use sample data buttons for quick testing
-   - Or drag and drop your own .csv or .json files
-   - Uploading a file with the same name will overwrite the existing table
-2. **Query Your Data**: Type a natural language query like "Show me all users who signed up last week"
-   - Press `Cmd+Enter` (Mac) or `Ctrl+Enter` (Windows/Linux) to run the query
-3. **View Results**: See the generated SQL and results in a table format
-4. **Manage Tables**: Click the × button on any table to remove it
+### Your First ADW Workflow
 
-## Development
+1. **Create a GitHub issue**
+   ```bash
+   gh issue create --title "Add user authentication" \
+     --body "Implement JWT-based auth with login/logout endpoints"
+   ```
 
-### Backend Commands
-```bash
-cd app/server
-uv run python server.py      # Start server with hot reload
-uv run pytest               # Run tests
-uv add <package>            # Add package to project
-uv remove <package>         # Remove package from project
-uv sync --all-extras        # Sync all extras
-```
+2. **Let ADW handle it**
+   ```bash
+   # Option 1: Manual processing
+   cd adws
+   uv run adw_plan_build.py 1
 
-### Frontend Commands
-```bash
-cd app/client
-npm run dev                 # Start dev server
-npm run build              # Build for production
-npm run preview            # Preview production build
-```
+   # Option 2: Automatic monitoring
+   uv run trigger_cron.py  # Polls every 20 seconds
+
+   # Option 3: Webhook (instant)
+   uv run trigger_webhook.py
+   ```
+
+3. **Review the pull request**
+   ```bash
+   gh pr view
+   gh pr diff
+   gh pr merge
+   ```
 
 ## Project Structure
 
 ```
 .
-├── app/                    # Main application
-│   ├── client/             # Vite + TypeScript frontend
-│   └── server/             # FastAPI backend
-│
-├── adws/                   # AI Developer Workflows - Core agent system
-├── scripts/                # Utility scripts (start.sh, stop_apps.sh)
-├── specs/                  # Feature specifications
-├── ai_docs/                # AI/LLM documentation
-├── agents/                 # Agent execution logging
-└── logs/                   # Structured session logs
+├── .claude/
+│   ├── commands/           # Slash commands (/bug, /feature, /commit, etc.)
+│   ├── hooks/              # Pre/post tool use hooks
+│   └── settings.json       # Claude Code configuration
+├── adws/                   # AI Developer Workflow system
+│   ├── adw_plan_build.py   # Main workflow orchestrator
+│   ├── agent.py            # Claude Code CLI integration
+│   ├── github.py           # GitHub API operations
+│   ├── trigger_cron.py     # Polling-based monitoring
+│   └── trigger_webhook.py  # Webhook-based monitoring
+├── ai_docs/                # AI/LLM reference documentation
+├── app/                    # Your application code goes here
+│   └── README.md           # Application structure guidance
+├── scripts/                # Utility scripts
+│   ├── start.sh            # Application startup (customize this)
+│   ├── stop_apps.sh        # Application shutdown
+│   └── ...                 # GitHub and webhook utilities
+├── specs/                  # Implementation plans and specifications
+│   └── README.md           # Spec templates and examples
+├── .env.sample             # Environment variable template
+├── .gitignore              # Multi-language git ignore patterns
+├── README.md               # This file
+└── TEMPLATE_GUIDE.md       # Comprehensive usage guide
 ```
 
-## ADWs
+## Documentation
 
-- `uv run adws/health_check.py` - Basic health check ADW
-- `uv run adws/trigger_webhook.py` - React to incoming webhook trigger (be sure to setup a tunnel and your github webhook)
-- `uv run adws/trigger_cron.py` - Simple cron job trigger that checks github issues every N seconds
-- `uv run adws/adw_plan_build.py` - Plan -> Build AI Developer Workflow (ADW)
+- **[TEMPLATE_GUIDE.md](./TEMPLATE_GUIDE.md)** - Comprehensive guide with:
+  - Detailed infrastructure component documentation
+  - Step-by-step project setup tutorials
+  - Project type examples (web apps, APIs, CLI tools)
+  - Customization instructions
+  - ADW workflow tutorials
+  - Troubleshooting guide
 
-## API Endpoints
+- **[adws/README.md](./adws/README.md)** - ADW system documentation:
+  - Script usage guide
+  - Workflow examples
+  - Configuration options
+  - Debugging tips
 
-- `POST /api/upload` - Upload CSV/JSON file
-- `POST /api/query` - Process natural language query
-- `GET /api/schema` - Get database schema
-- `POST /api/insights` - Generate column insights
-- `GET /api/health` - Health check
+- **[app/README.md](./app/README.md)** - Application structure guidance
 
-## Security
+- **[specs/README.md](./specs/README.md)** - Specification templates
 
-### SQL Injection Protection
+## Environment Configuration
 
-The application implements comprehensive SQL injection protection through multiple layers:
+Required environment variables in `.env`:
 
-1. **Centralized Security Module** (`core/sql_security.py`):
-   - Identifier validation for table and column names
-   - Safe query execution with parameterized queries
-   - Proper escaping for identifiers using SQLite's square bracket notation
-   - Dangerous operation detection and blocking
-
-2. **Input Validation**:
-   - All table and column names are validated against a whitelist pattern
-   - SQL keywords cannot be used as identifiers
-   - File names are sanitized before creating tables
-   - User queries are validated for dangerous operations
-
-3. **Query Execution Safety**:
-   - Parameterized queries used wherever possible
-   - Identifiers (table/column names) are properly escaped
-   - Multiple statement execution is blocked
-   - SQL comments are not allowed in queries
-
-4. **Protected Operations**:
-   - File uploads with malicious names are sanitized
-   - Natural language queries cannot inject SQL
-   - Table deletion uses validated identifiers
-   - Data insights generation validates all inputs
-
-### Security Best Practices for Development
-
-When adding new SQL functionality:
-1. Always use the `sql_security` module functions
-2. Never concatenate user input directly into SQL strings
-3. Use `execute_query_safely()` for all database operations
-4. Validate all identifiers with `validate_identifier()`
-5. For DDL operations, use `allow_ddl=True` explicitly
-
-### Testing Security
-
-Run the comprehensive security tests:
 ```bash
-cd app/server
-uv run pytest tests/test_sql_injection.py -v
+# Required for Claude Code
+ANTHROPIC_API_KEY=sk-ant-xxxxx
+
+# Required for ADW
+GITHUB_REPO_URL=https://github.com/owner/repo
+
+# Optional (only if using different account than 'gh auth login')
+GITHUB_PAT=ghp_xxxxx
+
+# Optional features
+E2B_API_KEY=xxxxx                              # Cloud sandboxing
+CLOUDFLARED_TUNNEL_TOKEN=xxxxx                 # Webhook tunneling
+CLAUDE_CODE_PATH=claude                        # Custom Claude path
+CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR=true  # Directory management
 ```
 
+See [TEMPLATE_GUIDE.md - Environment Configuration](./TEMPLATE_GUIDE.md#environment-configuration) for details.
 
-### Additional Security Features
+## Common Tasks
 
-- CORS configured for local development only
-- File upload validation (CSV and JSON only)
-- Comprehensive error logging without exposing sensitive data
-- Database operations are isolated with proper connection handling
+### Run ADW on an Issue
+```bash
+cd adws
+uv run adw_plan_build.py <issue_number>
+```
+
+### Enable Automatic Processing
+```bash
+cd adws
+uv run trigger_cron.py  # Polls GitHub every 20 seconds
+```
+
+### Set Up Webhooks (Instant Processing)
+```bash
+cd adws
+uv run trigger_webhook.py  # Start server
+
+# In another terminal (for local development)
+../scripts/expose_webhook.sh  # Expose to internet
+```
+
+### Use Slash Commands
+```bash
+claude /feature         # Plan a new feature
+claude /bug             # Fix a bug
+claude /implement @specs/my-plan.md  # Execute a plan
+claude /commit          # Create semantic commit
+claude /pull_request    # Generate PR
+```
+
+### Start Your Application
+```bash
+./scripts/start.sh      # After customizing for your app
+```
+
+## Examples
+
+### Python FastAPI App
+
+```bash
+# Create structure
+mkdir -p app/src/api app/tests
+touch app/src/main.py app/pyproject.toml
+
+# Update scripts/start.sh
+echo "cd app && uv run uvicorn src.main:app --reload" > scripts/start.sh
+
+# Start development
+./scripts/start.sh
+```
+
+### TypeScript React App
+
+```bash
+# Create structure
+mkdir -p app/src/components app/public
+touch app/package.json app/tsconfig.json app/vite.config.ts
+
+# Update scripts/start.sh
+echo "cd app && npm install && npm run dev" > scripts/start.sh
+
+# Start development
+./scripts/start.sh
+```
+
+See [TEMPLATE_GUIDE.md - Project Type Examples](./TEMPLATE_GUIDE.md#project-type-examples) for more.
+
+## Customization
+
+### Add a Custom Slash Command
+
+Create `.claude/commands/my_command.md`:
+```markdown
+My custom command description and instructions for Claude Code.
+```
+
+Use it:
+```bash
+claude /my_command
+```
+
+### Customize ADW Behavior
+
+Edit files in `adws/`:
+- `agent.py` - Change model, timeout, or agent behavior
+- `trigger_cron.py` - Modify polling logic
+- `trigger_webhook.py` - Add custom webhook handlers
+
+### Add Custom Hooks
+
+Edit `.claude/hooks/*.py` to add:
+- Notifications (Slack, email, etc.)
+- Custom logging
+- External integrations
+- Validation rules
+
+See [TEMPLATE_GUIDE.md - Customization Guide](./TEMPLATE_GUIDE.md#customization-guide) for details.
 
 ## Troubleshooting
 
-**Backend won't start:**
-- Check Python version: `python --version` (requires 3.12+)
-- Verify API keys are set: `echo $OPENAI_API_KEY`
+### Claude Code not found
+```bash
+which claude  # Check if installed
+# Install from: https://docs.anthropic.com/en/docs/claude-code
 
-**Frontend errors:**
-- Clear node_modules: `rm -rf node_modules && npm install`
-- Check Node version: `node --version` (requires 18+)
+# Or specify path in .env
+echo "CLAUDE_CODE_PATH=/full/path/to/claude" >> .env
+```
 
-**CORS issues:**
-- Ensure backend is running on port 8000
-- Check vite.config.ts proxy settings
+### GitHub authentication failed
+```bash
+gh auth status  # Check status
+gh auth login   # Re-authenticate
+```
+
+### ADW not processing issues
+```bash
+# Check environment
+env | grep -E "(GITHUB|ANTHROPIC)"
+
+# Manually trigger
+cd adws
+uv run adw_plan_build.py <issue_number>
+```
+
+See [TEMPLATE_GUIDE.md - Troubleshooting](./TEMPLATE_GUIDE.md#troubleshooting) for complete guide.
+
+## Contributing
+
+This template is designed to evolve with your needs:
+
+1. **Customize for your project** - Modify infrastructure components
+2. **Improve and extend** - Add features that help your workflow
+3. **Share improvements** - Submit PRs to benefit other users
+
+## Resources
+
+- **Claude Code Docs**: https://docs.anthropic.com/en/docs/claude-code
+- **GitHub CLI Manual**: https://cli.github.com/manual/
+- **uv Documentation**: https://github.com/astral-sh/uv
+- **Anthropic API**: https://console.anthropic.com/
+
+## License
+
+This template is provided as-is for use in your projects. Customize freely.
+
+## Next Steps
+
+1. Read [TEMPLATE_GUIDE.md](./TEMPLATE_GUIDE.md) for comprehensive setup instructions
+2. Configure your `.env` file
+3. Create your application in `app/`
+4. Create your first GitHub issue
+5. Let ADW automate your development workflow
+
+**Happy building with AI-powered development!**
