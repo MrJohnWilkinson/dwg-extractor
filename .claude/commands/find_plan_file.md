@@ -11,7 +11,7 @@ Based on the `Previous Step Output` below, follow the `Instructions` to find the
   - Use `git diff --name-only origin/main...HEAD specs/` to list only the file names
   - Look for recently created .md files in the specs directory
   - Parse the previous output which should mention where the plan was saved
-- Return ONLY the file path (e.g., "specs/example-plan.md") or "0" if not found.
+- Return ONLY the file path (e.g., "specs/003-example-plan.md") or "0" if not found.
 - Do not include any explanation, just the path or "0" if not found.
 
 ## Previous Step Output

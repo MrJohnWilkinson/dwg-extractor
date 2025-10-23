@@ -7,7 +7,7 @@ Create a new plan in specs/*.md to resolve the `Bug` using the exact specified m
 - IMPORTANT: You're writing a plan to resolve a bug based on the `Bug` that will add value to the application.
 - IMPORTANT: The `Bug` describes the bug that will be resolved but remember we're not resolving the bug, we're creating the plan that will be used to resolve the bug based on the `Plan Format` below.
 - You're writing a plan to resolve a bug, it should be thorough and precise so we fix the root cause and prevent regressions.
-- Create the plan in the `specs/*.md` file. Name it appropriately based on the `Bug`.
+- Create the plan in `specs/NNN-*.md` where NNN is the next 3-digit number (e.g., if highest is specs/002-foo.md, use specs/003-new-name.md).
 - Use the plan format below to create the plan. 
 - Research the codebase to understand the bug, reproduce it, and put together a plan to fix it.
 - IMPORTANT: Replace every <placeholder> in the `Plan Format` with the requested value. Add as much detail as needed to fix the bug.
