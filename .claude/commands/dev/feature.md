@@ -77,6 +77,9 @@ IMPORTANT: Execute every step in order, top to bottom.
 ### Edge Cases
 <list edge cases that need to be tested>
 
+### Playwright MCP Tests
+<describe e2e tests needed for the feature>
+
 ## Acceptance Criteria
 <list specific, measurable criteria that must be met for the feature to be considered complete>
 

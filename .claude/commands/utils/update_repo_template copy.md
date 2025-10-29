@@ -69,27 +69,27 @@ files_to_sync: $ARGUMENTS (space-separated file paths relative to repo root)
 
 **Update single command file:**
 ```
-/update_repo_template .claude/commands/chore.md
+/utils:update_repo_template .claude/commands/dev/chore.md
 ```
 
 **Update multiple command files:**
 ```
-/update_repo_template .claude/commands/chore.md .claude/commands/bug.md
+/utils:update_repo_template .claude/commands/dev/chore.md .claude/commands/dev/bug.md
 ```
 
 **Update AI documentation:**
 ```
-/update_repo_template ai_docs/playwright_mcp_setup.md
+/utils:update_repo_template ai_docs/playwright_mcp_setup.md
 ```
 
 **Update command and related script:**
 ```
-/update_repo_template .claude/commands/install.md scripts/copy_dot_env.sh
+/utils:update_repo_template .claude/commands/dev/install.md scripts/copy_dot_env.sh
 ```
 
 **Update configuration file:**
 ```
-/update_repo_template .mcp.json
+/utils:update_repo_template .mcp.json
 ```
 
 ## Report

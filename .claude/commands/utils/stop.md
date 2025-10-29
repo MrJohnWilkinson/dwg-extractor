@@ -1,0 +1,1 @@
+`bash ./scripts/stop_apps.sh`
