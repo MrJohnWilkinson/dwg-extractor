@@ -11,9 +11,9 @@ Based on the `Github Issue` below, follow the `Instructions` to select the appro
 
 ## Command Mapping
 
-- Respond with `/chore` if the issue is a chore.
-- Respond with `/bug` if the issue is a bug.
-- Respond with `/feature` if the issue is a feature.
+- Respond with `/dev:chore` if the issue is a chore.
+- Respond with `/dev:bug` if the issue is a bug.
+- Respond with `/dev:feature` if the issue is a feature.
 - Respond with `0` if the issue isn't any of the above.
 
 ## Github Issue
