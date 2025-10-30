@@ -11,3 +11,4 @@ $ARGUMENTS
 ## Report
 - Summarize the work you've just done in a concise bullet point list.
 - Report the files and total lines changed with `git diff --stat`
+- Run `/dev:commit`

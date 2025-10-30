@@ -27,7 +27,6 @@ For each spec in the sequence, follow this process:
 - Instruct the sub-agent to:
   1. Run `/utils:prime` to understand the codebase
   2. Run `/dev:implement [spec-path]` to implement the specification (this produces a git diff report)
-  3. Commit and push all changes AFTER the `/dev:implement` command completes
 
 **2. Review Sub-agent Report**
 - The sub-agent's `/dev:implement` command produces a report including `git diff --stat`
