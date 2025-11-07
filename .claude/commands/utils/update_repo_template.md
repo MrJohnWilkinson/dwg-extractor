@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(cp:*), Bash(rm:*), Read, AskUserQuestion
+allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(cp:*), Bash(rm:*), Bash(gh:*), Read, AskUserQuestion
 argument-hint: [file1] [file2] ...
 description: Sync improved files back to template repository
 ---
@@ -69,17 +69,22 @@ paths_to_sync: $ARGUMENTS (space-separated file and directory paths relative to 
    - Display staged changes: `git diff --staged`
    - Output summary: "X files will be updated"
 
-7. **Commit and Push**
+7. **Commit, Push, and Create PR**
    - Create descriptive commit message explaining what was updated
    - Commit changes: `git commit -m "{message}"`
    - Push branch: `git push -u origin {branch_name}`
-   - Output the branch URL for creating a PR
+   - Automatically create PR in template repo using gh CLI:
+     - Generate title from paths synced: `chore: update template with {short_path_description}`
+     - Generate body summarizing what was synced from current project
+     - Create PR: `gh pr create --base main --title "{title}" --body "{body}"`
+     - Note: Base branch is always `main` since we're pushing to the template repo
+   - Output the created PR URL
 
 8. **Cleanup**
    - Return to original project directory
    - Remove temp directory: `rm -rf {temp_dir}`
-   - Report success with branch URL
-   - Remind user to create PR in template repo
+   - Report success with PR URL
+   - Remind user to review and merge PR in template repo when ready
 
 ## Examples
 
@@ -122,6 +127,6 @@ paths_to_sync: $ARGUMENTS (space-separated file and directory paths relative to 
 
 - Display summary: "X files updated" (or "No changes detected" if no changes)
 - List all files that were synced
-- Provide the template repo branch URL
-- Instruct user to create a PR at: `https://github.com/MrJohnWilkinson/claude-code-project-template/pulls`
+- Display the created PR URL in template repo (from gh pr create output)
+- Remind user to review and merge PR in template repo when ready
 - Confirm temp directory was cleaned up
