@@ -24,21 +24,11 @@ Archive all numbered analysis files from ai_output/ and specs/ directories to re
 
 1. **Navigate to target directory**
 
-2. **Identify all numbered files** - Find all files matching `NNN-*.md` pattern (3-digit prefix)
+2. **Append numbered files to archive** - Use `find . -maxdepth 1 -name '[0-9][0-9][0-9]-*.md' -print0 | tar -rzf archived_[dirname].tar.gz --null -T -` to batch append all matching files directly to the archive
 
-3. **Extract existing archive (if present)** - If `archived_[dirname].tar.gz` exists, extract it to temporary location to append new files
+3. **Delete archived files** - Use `find . -maxdepth 1 -name '[0-9][0-9][0-9]-*.md' -delete` to remove all numbered files
 
-4. **Create/update compressed archive** - Add all numbered files to `archived_[dirname].tar.gz` (appending to existing content if archive was present)
-
-5. **Verify archive contents** - List archive contents and confirm expected file count
-
-6. **Delete archived original files** - Remove all NNN-*.md files that were added to the archive
-
-7. **Confirm cleanup** - List directory to verify:
-   - All NNN-*.md files archived and removed
-   - Non-numbered files remain (e.g., SUPABASE_SETUP.md)
-   - Folders remain untouched
-   - Archive file is present
+4. **Verify and report** - Run `echo "Archive contains $(tar -tzf archived_[dirname].tar.gz | wc -l) files" && ls -1` to confirm cleanup
 
 **Repeat for second directory**
 
@@ -65,9 +55,7 @@ specs/
 
 **Processing:**
 - **All NNN files:** 015, 023, 028, 031, 035, 037, 040, 042, 043, 044, 045 (11 files)
-- **To archive:** All 11 numbered files
-- **Extract existing archive:** 001-014 files extracted to temp
-- **Add to archive:** All 11 files added, archive now contains 001-045 (26 files total)
+- **Append to archive:** All 11 files appended directly (no extraction needed), archive now contains 001-045 (26 files total)
 - **Delete:** All 11 numbered files removed
 
 **Directory after cleanup:**
