@@ -12,6 +12,13 @@ Update template repository files with improvements made in this project. This co
 
 paths_to_sync: $ARGUMENTS (space-separated file and directory paths relative to repo root)
 
+## Performance Optimizations
+
+- Pre-compute all dynamic values (timestamps, branch names, messages) at workflow start
+- Chain sequential bash operations with `&&` to reduce tool calls
+- Use parallel tool calls where operations are independent
+- Minimize intermediate status outputs during execution
+
 ## Instructions
 
 - IMPORTANT: This command ONLY updates specific template files, never the entire project.  
@@ -32,55 +39,63 @@ paths_to_sync: $ARGUMENTS (space-separated file and directory paths relative to 
 ## Workflow
 
 1. **Validate Input and Preview**
-   - Check that all `paths_to_sync` exist in current project
-   - Separate arguments into directories vs files
-   - Verify paths are template-appropriate (not project-specific code)
-   - Warn if any paths look project-specific
-   - Show preview of files that will be synced
-   - Ask user to confirm: "Proceed with syncing these files to template repo?"
+   - Pre-compute workflow variables: `timestamp=$(date +%s)`, `temp_dir=/tmp/template-sync-{timestamp}`, `branch_name=update-{descriptive}-{timestamp}`
+   - In parallel: validate all paths exist + check template-appropriateness
+   - Pre-compute commit message, PR title, and PR body based on paths
+   - Show preview with pre-computed values
+   - Ask user: "Proceed with syncing these files to template repo?"
    - If user rejects, abort immediately (no cleanup needed)
 
-2. **Fast Clone Template Repo**
-   - Create temp directory: `/tmp/template-sync-{timestamp}/`
-   - Shallow clone: `git clone --depth 1 https://github.com/MrJohnWilkinson/claude-code-project-template.git {temp_dir}`
-   - Change to temp directory
+2. **Clone and Setup Branch (Chained)**
+   - Single chained operation:
+     ```bash
+     mkdir -p {temp_dir} && \
+     git clone --depth 1 https://github.com/MrJohnWilkinson/claude-code-project-template.git {temp_dir} && \
+     cd {temp_dir} && \
+     git checkout -b {branch_name}
+     ```
+   - This eliminates 3 separate tool calls into one
+   - Uses pre-computed `temp_dir` and `branch_name` from Step 1
 
-3. **Create Sync Branch**
-   - Generate branch name from files being updated (e.g., `update-chore-command`)
-   - Create and checkout branch: `git checkout -b {branch_name}`
+3. **Batch Sync and Stage (Chained)**
+   - Chain all copy + stage operations:
+     ```bash
+     cd {original_dir} && \
+     for path in {paths_to_sync}; do
+       mkdir -p {temp_dir}/$(dirname $path) && \
+       cp -r $path {temp_dir}/$path
+     done && \
+     cd {temp_dir} && \
+     git add -A
+     ```
+   - Single bash execution instead of N+1 tool calls
+   - Preserves source path structure directly in template
 
-4. **Batch Sync Files**
-   - Build file lookup once: `find . -type f > /tmp/template-files.txt`
-   - For each file in `paths_to_sync`:
-     - Find target in template: `grep "$(basename $file)" /tmp/template-files.txt | head -1`
-     - Create parent directory if needed: `mkdir -p $(dirname $target)`
-     - Copy file: `cp $file $target`
-   - For each directory in `paths_to_sync`:
-     - Copy entire directory: `cp -r $dir $target_dir`
-   - Stage all changes: `git add -A`
-
-5. **Check for Actual Changes**
+4. **Check for Actual Changes**
    - Check if anything was actually modified: `git diff --staged --quiet`
    - If no changes detected:
      - Output: "No changes detected, skipping commit"
-     - Jump to Step 8 (Cleanup)
+     - Jump to Step 6 (Cleanup)
 
-6. **Show Diff**
+5. **Show Diff**
    - Display staged changes: `git diff --staged`
    - Output summary: "X files will be updated"
 
-7. **Commit, Push, and Create PR**
-   - Create descriptive commit message explaining what was updated
-   - Commit changes: `git commit -m "{message}"`
-   - Push branch: `git push -u origin {branch_name}`
-   - Automatically create PR in template repo using gh CLI:
-     - Generate title from paths synced: `chore: update template with {short_path_description}`
-     - Generate body summarizing what was synced from current project
-     - Create PR: `gh pr create --base main --title "{title}" --body "{body}"`
-     - Note: Base branch is always `main` since we're pushing to the template repo
-   - Output the created PR URL
+6. **Commit, Push, and Create PR (Chained)**
+   - Chain all three operations using pre-computed values from Step 1:
+     ```bash
+     git commit -m "{pre_computed_message}" && \
+     git push -u origin {branch_name} && \
+     gh pr create --repo MrJohnWilkinson/claude-code-project-template \
+       --head {branch_name} --base main \
+       --title "{pre_computed_title}" \
+       --body "{pre_computed_body}"
+     ```
+   - Single tool call with all network operations
+   - Uses commit message, PR title, and PR body computed in Step 1
+   - Output the created PR URL from gh command output
 
-8. **Cleanup**
+7. **Cleanup**
    - Return to original project directory
    - Remove temp directory: `rm -rf {temp_dir}`
    - Report success with PR URL
