@@ -8,7 +8,7 @@ Archive all numbered analysis files from ai_output/ and specs/ directories to re
 
 - **Target directories:** `ai_output/` and `specs/`
 - **File pattern:** `NNN-*.md` (where NNN = 3-digit number)
-- **Archive names:** `archived_ai_output.tar.gz` and `archived_specs.tar.gz`
+- **Archive names:** `archived_ai_output.tar` and `archived_specs.tar`
 
 ## Instructions
 
@@ -24,11 +24,11 @@ Archive all numbered analysis files from ai_output/ and specs/ directories to re
 
 1. **Navigate to target directory**
 
-2. **Append numbered files to archive** - Use `find . -maxdepth 1 -name '[0-9][0-9][0-9]-*.md' -print0 | tar -rzf archived_[dirname].tar.gz --null -T -` to batch append all matching files directly to the archive
+2. **Append numbered files to archive** - Use `find . -maxdepth 1 -name '[0-9][0-9][0-9]-*.md' -print0 | tar -rf archived_[dirname].tar --null -T -` to batch append all matching files directly to the archive
 
 3. **Delete archived files** - Use `find . -maxdepth 1 -name '[0-9][0-9][0-9]-*.md' -delete` to remove all numbered files
 
-4. **Verify and report** - Run `echo "Archive contains $(tar -tzf archived_[dirname].tar.gz | wc -l) files" && ls -1` to confirm cleanup
+4. **Verify and report** - Run `echo "Archive contains $(tar -tf archived_[dirname].tar | wc -l) files" && ls -1` to confirm cleanup
 
 **Repeat for second directory**
 
@@ -49,7 +49,7 @@ specs/
 ├── 044-editable-fields.md
 ├── 045-remove-legacy.md
 ├── README.md
-├── archived_specs.tar.gz (contains 001-014)
+├── archived_specs.tar (contains 001-014)
 └── templates/
 ```
 
@@ -62,7 +62,7 @@ specs/
 ```
 specs/
 ├── README.md
-├── archived_specs.tar.gz (contains 001-045)
+├── archived_specs.tar (contains 001-045)
 └── templates/
 ```
 
