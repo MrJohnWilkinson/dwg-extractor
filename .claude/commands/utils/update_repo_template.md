@@ -46,18 +46,16 @@ paths_to_sync: $ARGUMENTS (space-separated file and directory paths relative to 
    - Change to temp directory
 
 3. **Create Sync Branch**
-   - Generate branch name from files being updated (e.g., `update-chore-command`)
+   - Generate branch name with timestamp: `{descriptive_name}-$(date +%s)` (e.g., `update-chore-command-1762722792`)
+   - This prevents branch name collisions on repeated syncs
    - Create and checkout branch: `git checkout -b {branch_name}`
 
 4. **Batch Sync Files**
-   - Build file lookup once: `find . -type f > /tmp/template-files.txt`
-   - For each file in `paths_to_sync`:
-     - Find target in template: `grep "$(basename $file)" /tmp/template-files.txt | head -1`
-     - Create parent directory if needed: `mkdir -p $(dirname $target)`
-     - Copy file: `cp $file $target`
-   - For each directory in `paths_to_sync`:
-     - Copy entire directory: `cp -r $dir $target_dir`
+   - For each path in `paths_to_sync`:
+     - If directory: `mkdir -p $(dirname $TEMP_DIR/$path) && cp -r $path $TEMP_DIR/$path`
+     - If file: `mkdir -p $(dirname $TEMP_DIR/$path) && cp $path $TEMP_DIR/$path`
    - Stage all changes: `git add -A`
+   - NOTE: Preserve source path structure directly in template (no find/grep needed)
 
 5. **Check for Actual Changes**
    - Check if anything was actually modified: `git diff --staged --quiet`
@@ -76,8 +74,8 @@ paths_to_sync: $ARGUMENTS (space-separated file and directory paths relative to 
    - Automatically create PR in template repo using gh CLI:
      - Generate title from paths synced: `chore: update template with {short_path_description}`
      - Generate body summarizing what was synced from current project
-     - Create PR: `gh pr create --base main --title "{title}" --body "{body}"`
-     - Note: Base branch is always `main` since we're pushing to the template repo
+     - Create PR: `gh pr create --repo MrJohnWilkinson/claude-code-project-template --head {branch_name} --base main --title "{title}" --body "{body}"`
+     - Note: Use explicit --repo and --head flags to avoid ambiguity in temp directory context
    - Output the created PR URL
 
 8. **Cleanup**
