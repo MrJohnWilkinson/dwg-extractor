@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(date:*), Bash(find:*), Bash(jq:*), Read, SlashCommand, AskUserQuestion
+allowed-tools: Bash(echo:*), Bash(date:*), Bash(find:*), Bash(jq:*), Glob, Read, SlashCommand, AskUserQuestion
 argument-hint: <path-to-command.md>
 description: Analyze command execution timing using automatic hook-captured timestamps
 ---
