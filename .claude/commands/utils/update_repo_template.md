@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(cp:*), Bash(rm:*), Bash(timestamp=*), Bash(TEMP_DIR=*), Bash(ORIG_DIR=*), Bash(cd /tmp/template-sync-*), Bash(for path in*), Bash(done), Bash(if*), Bash(then*), Bash(else*), Bash(fi), Bash(timestamp=$(date +%s) && echo "TIMESTAMP=$timestamp" && echo "TEMP_DIR=/tmp/template-sync-$timestamp" && ls -la*), Bash(timestamp=$(date +%s) && echo "TIMESTAMP=$timestamp" && echo "TEMP_DIR=/tmp/template-sync-$timestamp" && ls -laR*), Bash(ls:*), Read, Edit(/.claude/commands/*), AskUserQuestion
+allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(cp:*), Bash(rm:*), Bash(timestamp=*), Bash(TEMP_DIR=*), Bash(ORIG_DIR=*), Bash(cd /tmp/template-sync-*), Bash(for path in*), Bash(done), Bash(if*), Bash(then*), Bash(else*), Bash(fi), Bash(timestamp=$(date +%s) && echo "TIMESTAMP=$timestamp" && echo "TEMP_DIR=/tmp/template-sync-$timestamp" && ls -la* && echo*), Bash(timestamp=$(date +%s) && echo "TIMESTAMP=$timestamp" && echo "TEMP_DIR=/tmp/template-sync-$timestamp" && ls -laR*), Bash(ls:*), Read, Edit(/.claude/commands/*), AskUserQuestion
 argument-hint: [file1] [file2] ...
 description: Sync improved files back to template repository
 ---
