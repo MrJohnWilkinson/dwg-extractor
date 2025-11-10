@@ -56,56 +56,81 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## Run
 
-### Step 1: Analyze Changes
+### Step 1: Batch Analysis & Metadata Extraction
 
-1. Run `git status` to see what files are staged/unstaged
+Run all analysis commands in parallel and extract metadata flags:
+
+1. Run `git status` to see staged/unstaged files
 2. Run `git diff --stat` to see file change summary
 3. Run `git diff HEAD` to see actual code changes
-4. Look for spec files in the changes (specs/*.md)
 
-### Step 2: Determine Commit Components
+**Immediately extract metadata:**
+- File count: How many files changed?
+- Line changes: Total insertions + deletions
+- File types: Are they all .md? Mix of code/docs? Test files?
+- Spec references: Any files in `specs/` directory?
+- Commit type pattern match:
+  * `.md` files only → `docs`
+  * `tests/`, `*.test.*` files → `test`
+  * `.github/workflows/` → `ci`
+  * New `app/` files → `feat`
+  * Bug fix patterns → `fix`
+  * Otherwise → `chore` or `refactor`
 
-**Determine type** based on file patterns:
-- `feat`: New files in `app/`, new features, new functionality
-- `fix`: Bug fixes, error handling changes, fixing broken functionality
-- `test`: Changes primarily in `tests/`, `*.test.*`, `*.spec.*` files
-- `docs`: Changes in `*.md` files, documentation directories
-- `chore`: Config changes, dependency updates, cleanup, refactoring
-- `ci`: Changes in `.github/workflows/`
-- `refactor`: Code restructuring without functionality changes
+**Set format flag:**
+- If 1 file changed AND < 50 lines changed → CONCISE format
+- Otherwise → BALANCED format
 
-**Generate context paragraph**: Explain WHY the change was made:
-- What problem does this solve?
-- What was the motivation?
-- What was broken or missing?
+### Step 2: Draft Complete Commit Message (Single Decision Block)
 
-**Organize changes into bullets**:
-- Group related changes together
-- Be specific about what changed (mention file names, functions, features)
-- Use action verbs (added, updated, removed, fixed, implemented)
-- Keep bullets concise but informative
+**IMPORTANT:** Draft the COMPLETE commit message during this step. Do not defer any content decisions to Step 3. Step 3 should be pure execution with no analysis.
 
-**Identify benefits/results** (if applicable):
-- Performance improvements
-- Better user experience
-- Resolved issues
-- Enabled new capabilities
-- Test results ("162 tests now passing")
+**Based on Step 1 metadata, draft the complete commit message in ONE analysis:**
 
-**Check for spec references**:
-- If changes include files in `specs/` directory
-- If implementing a specific spec, use: "Implements: specs/NNN-*.md"
-- If related to a spec, use: "Related to: specs/NNN-*.md"
-- If resolving a bug spec, use: "Resolves: specs/NNN-*.md"
+**If CONCISE format** (1 file, < 50 lines):
+1. Generate: `<type>: <brief description>`
+2. Add: 1-sentence explanation (optional)
+3. Add: Spec reference if applicable (from Step 1 metadata)
+4. Done → Jump to Step 3
 
-### Step 3: Create Commit
+**If BALANCED format** (multiple files or > 50 lines):
 
-1. Stage all changes: `git add -A`
+Pre-compute ALL components at once:
 
-2. Create commit using heredoc format for multi-line message:
+1. **Type**: Already determined in Step 1 metadata
+2. **Description**: Concise summary of what changed (50 chars or less)
+3. **Context paragraph**: WHY the change was made (1-2 sentences):
+   - What problem does this solve?
+   - What was the motivation?
+   - What was broken or missing?
+4. **Changes bullets**: Organize by file/area, use action verbs:
+   - Group related changes together
+   - Be specific (mention file names, functions, features)
+   - Use action verbs (added, updated, removed, fixed, implemented)
+   - Keep bullets concise but informative
+5. **Benefits section** (if applicable):
+   - Performance improvements
+   - Better user experience
+   - Resolved issues
+   - Enabled new capabilities
+   - Test results ("162 tests now passing")
+6. **Spec reference** (if specs/ files detected in Step 1):
+   - Implementing: "Implements: specs/NNN-*.md"
+   - Related: "Related to: specs/NNN-*.md"
+   - Resolving: "Resolves: specs/NNN-*.md"
+
+Assemble complete message in memory → Ready for Step 3
+
+### Step 3: Execute Git Operations (Chained)
+
+Execute all git operations in a single chained command using the commit message drafted in Step 2:
+
+**Branch safety check:**
+- If on `main` or `master` branch → **WARN** user before pushing, ask to confirm
+- If on any other branch → proceed with push automatically
 
 ```bash
-git commit -m "$(cat <<'EOF'
+git add -A && git commit -m "$(cat <<'EOF'
 <type>: <description>
 
 <context paragraph>
@@ -123,16 +148,17 @@ Changes:
 
 Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
-)"
+)" && git push
 ```
 
-3. Verify commit was created successfully
+**If on main/master:**
+1. Create commit (without push)
+2. Show warning: "⚠️ You are on branch 'main'. Push to main?"
+3. Wait for user confirmation
+4. If yes: `git push`
+5. If no: Stop (commit created but not pushed)
 
-### Step 4: Push Changes
-
-- Push commits if on `ai-assist-stage` branch
-- DO NOT push if on `main` branch
-- Use: `git push` (or `git push -u origin <branch>` if needed)
+**Result:** Commit created and pushed to current branch (with main/master confirmation)
 
 ## Edge Cases
 
@@ -233,10 +259,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ## Report
 
-After successful commit:
+After successful execution of Step 3:
+
 1. Display the commit message that was created
-2. Confirm whether push was executed (based on branch)
-3. Show commit hash if available
+2. Show commit hash from git output
+3. Confirm whether push was executed (based on branch check)
 
 Format:
 ```
@@ -249,4 +276,4 @@ Format:
 ✅ Pushed to origin/<branch>
 ```
 
-If commit failed, report the error clearly.
+If any step in the chained operation failed, report the error clearly and indicate which step failed (add, commit, or push).
