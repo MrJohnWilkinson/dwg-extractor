@@ -1,5 +1,5 @@
 ---
-model: haiku
+model: sonnet
 hints: Simple bash alias creation - $1=alias_name $2=command_path
 ---
 
