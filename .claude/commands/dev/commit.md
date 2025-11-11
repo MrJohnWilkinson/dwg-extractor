@@ -2,10 +2,10 @@
 
 Create a detailed conventional commit message with context, changes, and benefits.
 
-## Variables (Optional)
+## Variables
 
-type: $1  # Optional: feat, fix, chore, test, docs, refactor, perf
-description: $2  # Optional: brief description of changes
+TYPE: $1 (optional)
+DESCRIPTION: $2 (optional)
 
 **Note**: All variables are optional. If not provided, the command will analyze `git diff` to determine an appropriate commit message.
 

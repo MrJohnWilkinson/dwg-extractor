@@ -5,7 +5,13 @@ argument-hint: <report topic/details>
 
 # Report Generation
 
+## Purpose
+
 Generate a concise analysis report in the `ai_output/` directory based on the provided topic. Follow the `Instructions` to create the report using the exact specified markdown `Report Format`.
+
+## Variables
+
+REPORT_TOPIC: $ARGUMENTS (required)
 
 ## Instructions
 
@@ -46,9 +52,6 @@ Generate a concise analysis report in the `ai_output/` directory based on the pr
 ## Next Steps
 <optional: suggested next steps or action items>
 ```
-
-## Report Topic
-$ARGUMENTS
 
 ## Report
 - Summarize the work you've just done in a concise bullet point list.

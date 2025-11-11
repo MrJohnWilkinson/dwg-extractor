@@ -1,11 +1,15 @@
 # Chore Planning
 
-Create a new plan in specs/*.md to resolve the `Chore` using the exact specified markdown `Plan Format`. Follow the `Instructions` to create the plan use the `Relevant Files` to focus on the right files. Follow the `Report` section to properly report the results of your work.
+Create a new plan in specs/*.md to resolve the chore using the exact specified markdown `Plan Format`. Follow the `Instructions` to create the plan use the `Relevant Files` to focus on the right files. Follow the `Report` section to properly report the results of your work.
+
+## Variables
+
+CHORE_DESCRIPTION: $ARGUMENTS (required)
 
 ## Instructions
 
-- IMPORTANT: You're writing a plan to resolve a chore based on the `Chore` that will add value to the application.
-- IMPORTANT: The `Chore` describes the chore that will be resolved but remember we're not resolving the chore, we're creating the plan that will be used to resolve the chore based on the `Plan Format` below.
+- IMPORTANT: You're writing a plan to resolve a chore based on the chore description provided in the Variables section.
+- IMPORTANT: The chore description explains the chore that will be resolved but remember we're not resolving the chore, we're creating the plan that will be used to resolve the chore based on the `Plan Format` below.
 - You're writing a plan to resolve a chore, it should be simple but we need to be thorough and precise so we don't miss anything or waste time with any second round of changes.
 - Create the plan in `specs/NNN-*.md` where NNN is the next 3-digit number (e.g., if highest is specs/002-foo.md, use specs/003-new-name.md).
 - Use the plan format below to create the plan. 
@@ -54,9 +58,6 @@ Execute every command to validate the chore is complete with zero regressions.
 ## Notes
 <optionally list any additional notes or context that are relevant to the chore that will be helpful to the developer>
 ```
-
-## Chore
-$ARGUMENTS
 
 ## Report
 - Summarize the work you've just done in a concise bullet point list.

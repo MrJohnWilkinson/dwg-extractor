@@ -1,11 +1,15 @@
 # Feature Planning
 
-Create a new plan in specs/*.md to implement the `Feature` using the exact specified markdown `Plan Format`. Follow the `Instructions` to create the plan use the `Relevant Files` to focus on the right files.
+Create a new plan in specs/*.md to implement the feature using the exact specified markdown `Plan Format`. Follow the `Instructions` to create the plan use the `Relevant Files` to focus on the right files.
+
+## Variables
+
+FEATURE_DESCRIPTION: $ARGUMENTS (required)
 
 ## Instructions
 
-- IMPORTANT: You're writing a plan to implement a net new feature based on the `Feature` that will add value to the application.
-- IMPORTANT: The `Feature` describes the feature that will be implemented but remember we're not implementing a new feature, we're creating the plan that will be used to implement the feature based on the `Plan Format` below.
+- IMPORTANT: You're writing a plan to implement a net new feature based on the feature description provided in the Variables section.
+- IMPORTANT: The feature description explains the feature that will be implemented but remember we're not implementing a new feature, we're creating the plan that will be used to implement the feature based on the `Plan Format` below.
 - Create the plan in `specs/NNN-*.md` where NNN is the next 3-digit number (e.g., if highest is specs/002-foo.md, use specs/003-new-name.md).
 - Use the `Plan Format` below to create the plan. 
 - Research the codebase to understand existing patterns, architecture, and conventions before planning the feature.
@@ -92,9 +96,6 @@ Execute every command to validate the feature works correctly with zero regressi
 ## Notes
 <optionally list any additional notes, future considerations, or context that are relevant to the feature that will be helpful to the developer>
 ```
-
-## Feature
-$ARGUMENTS
 
 ## Report
 - Summarize the work you've just done in a concise bullet point list.

@@ -8,8 +8,7 @@ This command manages the sequential execution of multiple specification files by
 
 ## Variables
 
-**Spec Sequence** (Process in order):
-$ARGUMENTS
+SPEC_PATHS: $ARGUMENTS (required, space-separated spec file paths)
 
 ## Instructions
 

@@ -8,8 +8,7 @@ This command reads a breakdown document (created via `/breakdown`) and automatic
 
 ## Variables
 
-**Breakdown File Path**:
-$ARGUMENTS
+BREAKDOWN_PATH: $ARGUMENTS (required)
 
 ## Instructions
 

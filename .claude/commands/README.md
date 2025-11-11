@@ -2,6 +2,7 @@
 
 - All commands must use ONLY the headings options listed under `Headings`.
 - `Claude Code Commands` DON'T REQUIRE that ALL headings are used.  eg.  `.claude/commands/dev/bug.md` and `.claude/commands/dev/chore.md` only use SOME of the headings.
+- Headings should always follow the same order as they are listed below.
 
 # Headings
 
@@ -19,6 +20,21 @@ Metadata
 ## Examples
 ## Report
 ```
+
+# Using Variables and Arguments in Claude Code Commands
+
+- **Argument-Hint Requires Variables Section** - If `argument-hint` exists in YAML metadata, you MUST include a matching `## Variables` section that documents those arguments.
+- **Use ALL_CAPS for Variable Names** - Declared variable names in the Variables section must use ALL_CAPS (e.g., `DOCUMENT_PATH`, `REPORT_TOPIC`, `BRANCH_NAME`).
+- **Use Positional Arguments for Fixed Parameters** - Use `$1, $2, $3, ...` when you have specific, fixed-position parameters (e.g., branch name, port number, file type).
+- **Use `$ARGUMENTS` for Variable-Length Inputs** - Use `$ARGUMENTS` for inputs that vary in length (e.g., file lists, text blocks, multi-word descriptions).
+- **Map Arguments to Named Variables** - In `## Variables`, assign meaningful names to positional arguments (e.g., `BRANCH_NAME: $1`, `PORT_OFFSET: $2`).
+- **Document Required vs Optional** - Always indicate if arguments are required or optional with defaults (e.g., `BRANCH_NAME: $1 (required)`, `PORT_OFFSET: $2 (optional, defaults to auto-calculated)`).
+- **Use Named Variables in Instructions** - Reference the named variable (e.g., `<BRANCH_NAME>`) throughout instructions, NOT the positional `$1, $2`.
+- **Keep Hints Clear with Examples** - Use descriptive hints with examples when helpful (e.g., `argument-hint: [branch-name] [port-offset]`). Avoid vague hints like `<file path>`.
+- **Document All Variables** - Include both argument-based AND hardcoded variables in the Variables section (arguments, derived values, and constants).
+- **Variables Section for Multiple References** - Use Variables section especially when arguments appear 3+ times in instructions - improves readability.
+- **Keep Variable Descriptions Concise** - Variables should be brief declarations, not instructional content. Good: `REPORT_TOPIC: $ARGUMENTS (required)`. Bad: `DOCUMENT_PATH: $ARGUMENTS (required) - File path to the document to break down. This should be a spec, report, or plan file. The breakdown will decompose tasks into work units that can each be completed in a single session.`.
+- **Follow Standard Heading Order** - Metadata (YAML frontmatter), # Title, ## Purpose, ## Variables, ## Instructions, ## Relevant Files, (other sections as needed).
 
 ## Directory Organization
 

@@ -2,6 +2,10 @@
 
 Based on the `Github Issue` below, follow the `Instructions` to select the appropriate command to execute based on the `Command Mapping`.
 
+## Variables
+
+GITHUB_ISSUE: $ARGUMENTS (required)
+
 ## Instructions
 
 - Based on the details in the `Github Issue`, select the appropriate command to execute.
@@ -15,7 +19,3 @@ Based on the `Github Issue` below, follow the `Instructions` to select the appro
 - Respond with `/dev:bug` if the issue is a bug.
 - Respond with `/dev:feature` if the issue is a feature.
 - Respond with `0` if the issue isn't any of the above.
-
-## Github Issue
-
-$ARGUMENTS

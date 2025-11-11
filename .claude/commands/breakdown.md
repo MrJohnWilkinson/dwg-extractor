@@ -9,7 +9,13 @@ Break down a large document (spec, report, or plan) into high-level tasks that c
 
 ## Purpose
 
-Decompose or group tasks in plans, analysis reports, or feature specs into simple work units.  The work units should be described simply and should NOT be prescriptive.  The total work units in any breakdown must NOT be more than 5.  
+Decompose or group tasks in plans, analysis reports, or feature specs into simple work units.  The work units should be described simply and should NOT be prescriptive.  The total work units in any breakdown must NOT be more than 5.
+
+## Variables
+
+DOCUMENT_PATH: $ARGUMENTS (required)
+
+## Instructions
 
 **Each work unit must be:**
 - Approximately a single day of work
@@ -17,9 +23,6 @@ Decompose or group tasks in plans, analysis reports, or feature specs into simpl
 - Have clear dependencies and ordering
 - Assigned the appropriate command type (/dev:feature, /dev:bug, /dev:chore)
 - Maximum 5 bullet points
-
-
-## Instructions
 1. **Use your thinking model**  Think hard.
 
 1. **Read and Analyze** the input document thoroughly

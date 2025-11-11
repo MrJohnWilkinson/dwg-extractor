@@ -1,11 +1,15 @@
 # Bug Planning
 
-Create a new plan in specs/*.md to resolve the `Bug` using the exact specified markdown `Plan Format`. Follow the `Instructions` to create the plan use the `Relevant Files` to focus on the right files.
+Create a new plan in specs/*.md to resolve the bug using the exact specified markdown `Plan Format`. Follow the `Instructions` to create the plan use the `Relevant Files` to focus on the right files.
+
+## Variables
+
+BUG_DESCRIPTION: $ARGUMENTS (required)
 
 ## Instructions
 
-- IMPORTANT: You're writing a plan to resolve a bug based on the `Bug` that will add value to the application.
-- IMPORTANT: The `Bug` describes the bug that will be resolved but remember we're not resolving the bug, we're creating the plan that will be used to resolve the bug based on the `Plan Format` below.
+- IMPORTANT: You're writing a plan to resolve a bug based on the bug description provided in the Variables section.
+- IMPORTANT: The bug description explains the bug that will be resolved but remember we're not resolving the bug, we're creating the plan that will be used to resolve the bug based on the `Plan Format` below.
 - You're writing a plan to resolve a bug, it should be thorough and precise so we fix the root cause and prevent regressions.
 - Create the plan in `specs/NNN-*.md` where NNN is the next 3-digit number (e.g., if highest is specs/002-foo.md, use specs/003-new-name.md).
 - Use the plan format below to create the plan. 
@@ -68,9 +72,6 @@ Execute every command to validate the bug is fixed with zero regressions.
 ## Notes
 <optionally list any additional notes or context that are relevant to the bug that will be helpful to the developer>
 ```
-
-## Bug
-$ARGUMENTS
 
 ## Report
 - Summarize the work you've just done in a concise bullet point list.

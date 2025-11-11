@@ -10,7 +10,7 @@ Executes a command and analyzes its timing using automatic hook-captured timesta
 
 ## Variables
 
-command_path: $ARGUMENTS (relative path to command file, e.g., `.claude/commands/utils/start.md`)
+COMMAND_PATH: $ARGUMENTS (required)
 
 ## Instructions
 
