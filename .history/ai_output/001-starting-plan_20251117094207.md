@@ -1,0 +1,160 @@
+# Ultra-Simple ezdxf Block Extractor
+
+## Executive Summary
+
+A minimal single-screen desktop application that extracts block insertion counts from DWG/DXF files and exports to Excel. No layer filtering, no configuration, no complexity.
+
+## Table Summary
+
+| Component | Implementation |
+|-----------|---------------|
+| **Tech Stack** | Python 3.8+, ezdxf, pandas, openpyxl, customtkinter |
+| **GUI** | Single window with file picker and extract button |
+| **Input** | DWG or DXF file |
+| **Processing** | Count INSERT entities in modelspace |
+| **Output** | Excel file with block names and counts |
+
+## Technical Stack
+
+**Required Libraries:**
+- `ezdxf` - Parse DWG/DXF files
+- `pandas` - Data manipulation
+- `openpyxl` - Excel file writing
+- `customtkinter` - GUI framework
+
+**Python Version:** 3.8 or higher
+
+## GUI Design
+
+**Single Window Layout:**
+
+```
+┌─────────────────────────────────────────┐
+│   DWG Block Extractor                   │
+├─────────────────────────────────────────┤
+│                                         │
+│  Selected File:                         │
+│  ┌───────────────────────────────────┐  │
+│  │ C:\path\to\drawing.dwg            │  │
+│  └───────────────────────────────────┘  │
+│                                         │
+│  [Browse...]  [Extract Blocks]          │
+│                                         │
+│  ┌───────────────────────────────────┐  │
+│  │ ████████████░░░░░░░░░  60%        │  │
+│  │ Status: Scanning blocks...        │  │
+│  └───────────────────────────────────┘  │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+**Controls:**
+- File path text field (read-only)
+- Browse button (opens file picker)
+- Extract button (starts extraction)
+- Progress bar (shows during extraction)
+- Status label (shows current operation)
+
+## Input
+
+**File Selection:**
+- File picker dialog for DWG/DXF files
+- Accepted extensions: `.dwg`, `.dxf`
+- No batch processing (one file at a time)
+
+**Validation:**
+- File exists
+- Valid DWG/DXF format
+- File is readable by ezdxf
+
+## Processing
+
+**Extraction Logic:**
+1. Load DWG/DXF file with ezdxf
+2. Iterate through modelspace entities
+3. Count INSERT entities by block name
+4. Aggregate counts into dictionary
+
+**Scope:**
+- Modelspace only (no paperspace)
+- All layers (no filtering)
+- No nested block analysis
+- No attributes or XData
+
+## Output
+
+**Excel File Format:**
+
+| Block Name | Insertion Count |
+|------------|----------------|
+| VALVE_GATE | 142 |
+| PIPE_SUPPORT | 89 |
+| EQUIPMENT_TAG | 67 |
+
+**File Details:**
+- Single worksheet named "Block Summary"
+- Two columns: Block Name, Insertion Count
+- Sorted by count (descending)
+- Auto-filter enabled on headers
+- Saved to same directory as input file
+- Filename pattern: `{input_name}_blocks_{timestamp}.xlsx`
+
+## User Flow
+
+1. Launch application
+2. Click "Browse" to select DWG/DXF file
+3. Click "Extract Blocks"
+4. Wait for progress bar to complete
+5. Excel file opens automatically
+
+**Total clicks: 2** (Browse, Extract)
+
+## Success Criteria
+
+- [ ] Application launches without errors
+- [ ] File picker accepts DWG/DXF files
+- [ ] Extraction counts all block insertions correctly
+- [ ] Excel file is generated with correct format
+- [ ] Progress bar updates during extraction
+- [ ] Works with files containing 0-10,000 blocks
+
+## Project Structure
+
+Follows the standardized application structure (see `ai_docs/002-standardized-app-structure.md`):
+
+```
+dwg-extractor/
+├── app/                         # Main application directory
+│   ├── core/                    # Core business logic modules
+│   │   ├── __init__.py
+│   │   ├── extractor.py         # DWG/DXF extraction logic
+│   │   ├── excel_writer.py      # Excel generation
+│   │   └── constants.py         # Application constants
+│   ├── tests/                   # Test suite
+│   │   ├── __init__.py
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── test_extractor.py
+│   │   │   └── test_excel_writer.py
+│   │   └── assets/              # Test fixtures
+│   │       ├── sample_drawing.dxf
+│   │       └── test_blocks.dwg
+│   ├── .env.sample              # Environment template
+│   ├── main.py                  # Application entry point (GUI)
+│   ├── pyproject.toml           # Python dependencies (uv)
+│   └── .python-version          # Python version specification
+│
+├── scripts/                     # Utility scripts
+│   ├── start.sh                 # Start application
+│   └── build_executable.sh      # Build standalone executable (optional)
+```
+
+**Total lines of code: ~300**
+
+## Recommendations
+
+1. **Keep It Simple**: No settings, no profiles, no configuration files
+2. **Fail Fast**: Show error dialogs for invalid files, then exit
+3. **Auto-Open Output**: Launch Excel file automatically after extraction
+4. **Single Threaded First**: Don't worry about threading in v1.0
+5. **Windows Only**: Target Windows only
