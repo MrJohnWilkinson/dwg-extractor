@@ -55,6 +55,7 @@ dwg-extractor/
 ## Reference Files
 - ai_docs/001-naming-convention-guide.md
 - ai_docs/002-standardized-app-structure.md
+- IMPORTANT: app_docs/005-field-naming-convention.md (Use this guide whenever adding fields to the excel sheet)
 
 ## Working Directory Convention
 - **Always execute commands from project root** (`/home/john/github-projects-linux/dwg-extractor`) - never use `cd` commands
@@ -71,3 +72,4 @@ dwg-extractor/
 ## Dev Environment
 - Running on WSL2 (Ubuntu on Windows 11)
 - Project dir `/home/john/github-projects-linux/dwg-extractor`
+
