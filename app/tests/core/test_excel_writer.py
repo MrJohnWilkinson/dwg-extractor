@@ -27,6 +27,7 @@ from core.constants import (
     EXCEL_SHEET_BLOCK_COUNTS,
     EXCEL_SHEET_LAYER_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
+    EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS,
     EXCEL_COLUMN_BLOCK_NAME,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
@@ -36,6 +37,10 @@ from core.constants import (
     EXCEL_COLUMN_BLOCK_ROTATION_180,
     EXCEL_COLUMN_BLOCK_ROTATION_270,
     EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
+    EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+    EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
+    EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+    EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_LAYER_NAME,
     EXCEL_COLUMN_LAYER_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
@@ -75,11 +80,31 @@ class TestExcelWriter:
             },
             'layer_insertion_counts': {'Layer1': 15, 'Layer2': 3},
             'layer_entity_counts': {'Layer1': 25, 'Layer2': 10},
-            'entity_type_counts': {'INSERT': 18, 'LINE': 15, 'CIRCLE': 8}
+            'entity_type_counts': {'INSERT': 18, 'LINE': 15, 'CIRCLE': 8},
+            'block_trimming_data': {
+                'VALVE': {
+                    'native_width': 100.0,
+                    'native_height': 50.0,
+                    'vertical_segments': [10.0, 80.0, 10.0],
+                    'horizontal_segments': [5.0, 40.0, 5.0]
+                },
+                'PIPE': {
+                    'native_width': 200.0,
+                    'native_height': 100.0,
+                    'vertical_segments': [20.0, 160.0, 20.0],
+                    'horizontal_segments': [10.0, 80.0, 10.0]
+                },
+                'TAG': {
+                    'native_width': 50.0,
+                    'native_height': 25.0,
+                    'vertical_segments': [50.0],
+                    'horizontal_segments': [25.0]
+                }
+            }
         }
 
-    def test_write_excel_three_sheets(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
-        """Test that three sheets are created with correct names."""
+    def test_write_excel_four_sheets(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that four sheets are created with correct names."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -91,7 +116,8 @@ class TestExcelWriter:
         assert EXCEL_SHEET_BLOCK_COUNTS in wb.sheetnames
         assert EXCEL_SHEET_LAYER_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_ENTITY_SUMMARY in wb.sheetnames
-        assert len(wb.sheetnames) == 3
+        assert EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS in wb.sheetnames
+        assert len(wb.sheetnames) == 4
 
     def test_block_counts_sheet_structure(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test Block Counts sheet has correct columns and data with block-layer pairs."""
@@ -243,7 +269,8 @@ class TestExcelWriter:
             'block_rotation_counts': {},
             'layer_insertion_counts': {},
             'layer_entity_counts': {},
-            'entity_type_counts': {}
+            'entity_type_counts': {},
+            'block_trimming_data': {}
         }
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(empty_data, output_path)
@@ -327,3 +354,122 @@ class TestExcelWriter:
 
         with pytest.raises(ValueError, match="extraction_data cannot be None"):
             write_excel(None, output_path)  # type: ignore[arg-type]
+
+    def test_block_trimming_analysis_sheet_exists(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that Block Trimming Analysis sheet exists."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        assert EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS in wb.sheetnames
+
+    def test_block_trimming_analysis_sheet_headers(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test Block Trimming Analysis sheet has correct column headers."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+
+        # Verify all expected columns are present
+        expected_columns = [
+            EXCEL_COLUMN_BLOCK_NAME,
+            EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+            EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
+            EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+            EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS
+        ]
+
+        for col in expected_columns:
+            assert col in df.columns
+
+        # Verify exactly 5 columns
+        assert len(df.columns) == 5
+
+    def test_block_trimming_analysis_data_types(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test Block Trimming Analysis sheet has correct data types."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+
+        # Width and height should be numeric
+        for value in df[EXCEL_COLUMN_BLOCK_NATIVE_WIDTH]:
+            assert isinstance(value, (int, float))
+            assert value >= 0
+
+        for value in df[EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT]:
+            assert isinstance(value, (int, float))
+            assert value >= 0
+
+        # Segments should be strings (comma-separated values)
+        for value in df[EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS]:
+            assert isinstance(value, str) or pd.isna(value)
+
+        for value in df[EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS]:
+            assert isinstance(value, str) or pd.isna(value)
+
+    def test_block_trimming_analysis_segment_formatting(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that segments are formatted as comma-separated strings."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+
+        # Find VALVE row (has multi-segment data)
+        valve_row = df[df[EXCEL_COLUMN_BLOCK_NAME] == 'VALVE'].iloc[0]
+
+        # Verify segments are comma-separated strings
+        vertical_segments = valve_row[EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS]
+        assert isinstance(vertical_segments, str)
+        assert ',' in vertical_segments
+        assert '10.0, 80.0, 10.0' == vertical_segments
+
+        horizontal_segments = valve_row[EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS]
+        assert isinstance(horizontal_segments, str)
+        assert ',' in horizontal_segments
+        assert '5.0, 40.0, 5.0' == horizontal_segments
+
+    def test_block_trimming_analysis_sorting(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that Block Trimming Analysis sheet is sorted alphabetically by block name."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+
+        # Verify blocks are sorted alphabetically
+        block_names = df[EXCEL_COLUMN_BLOCK_NAME].tolist()
+        assert block_names == sorted(block_names)
+
+    def test_block_trimming_analysis_empty_data(self, temp_dir: str) -> None:
+        """Test that empty block_trimming_data creates sheet with headers only."""
+        empty_data: ExtractionResult = {
+            'block_counts': {},
+            'block_entities': {},
+            'block_layer_pairs': {},
+            'block_rotation_counts': {},
+            'layer_insertion_counts': {},
+            'layer_entity_counts': {},
+            'entity_type_counts': {},
+            'block_trimming_data': {}
+        }
+
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(empty_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+
+        # Should have headers but no data rows
+        assert len(df) == 0
+        assert len(df.columns) == 5
+
+    def test_block_trimming_analysis_auto_filter(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that Block Trimming Analysis sheet has auto-filter applied."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS]
+
+        # Verify auto-filter is applied
+        assert ws.auto_filter.ref is not None
+        assert ws.auto_filter.ref != ''

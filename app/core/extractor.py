@@ -12,14 +12,221 @@ Usage:
 """
 
 from pathlib import Path
-from typing import TypedDict
+from typing import TypedDict, Any
 import ezdxf
 from ezdxf import DXFError
+from ezdxf.layouts import BlockLayout
 
 from .logger import setup_logger
 from .constants import SUPPORTED_EXTENSIONS
 
 logger = setup_logger(__name__)
+
+
+def _get_block_bounding_box(block_def: BlockLayout) -> tuple[float, float, float, float]:
+    """
+    Extract the bounding box (extents) of a block definition at 0° rotation.
+
+    This function iterates through all entities in the block definition and calculates
+    the minimum and maximum X and Y coordinates to determine the block's bounding box.
+
+    Args:
+        block_def: ezdxf block definition object
+
+    Returns:
+        Tuple of (min_x, min_y, max_x, max_y) representing the bounding box extents.
+        Returns (0, 0, 0, 0) for empty blocks or blocks with no geometric entities.
+
+    Examples:
+        >>> block_def = doc.blocks.get('SHELF_4FT')
+        >>> _get_block_bounding_box(block_def)
+        (0.0, 0.0, 1200.0, 600.0)
+    """
+    min_x = float('inf')
+    min_y = float('inf')
+    max_x = float('-inf')
+    max_y = float('-inf')
+
+    has_geometry = False
+
+    for entity in block_def:
+        entity_type = entity.dxftype()
+
+        # Extract coordinates based on entity type
+        if entity_type == 'LINE':
+            start = entity.dxf.start
+            end = entity.dxf.end
+            min_x = min(min_x, start.x, end.x)
+            max_x = max(max_x, start.x, end.x)
+            min_y = min(min_y, start.y, end.y)
+            max_y = max(max_y, start.y, end.y)
+            has_geometry = True
+
+        elif entity_type in ('LWPOLYLINE', 'POLYLINE'):
+            try:
+                for point in entity.get_points():  # type: ignore[attr-defined]
+                    x, y = point[0], point[1]
+                    min_x = min(min_x, x)
+                    max_x = max(max_x, x)
+                    min_y = min(min_y, y)
+                    max_y = max(max_y, y)
+                    has_geometry = True
+            except (AttributeError, IndexError):
+                continue
+
+        elif entity_type == 'CIRCLE':
+            center = entity.dxf.center
+            radius = entity.dxf.radius
+            min_x = min(min_x, center.x - radius)
+            max_x = max(max_x, center.x + radius)
+            min_y = min(min_y, center.y - radius)
+            max_y = max(max_y, center.y + radius)
+            has_geometry = True
+
+        elif entity_type == 'ARC':
+            center = entity.dxf.center
+            radius = entity.dxf.radius
+            # Simplified bounding box for arcs (use full circle extents)
+            min_x = min(min_x, center.x - radius)
+            max_x = max(max_x, center.x + radius)
+            min_y = min(min_y, center.y - radius)
+            max_y = max(max_y, center.y + radius)
+            has_geometry = True
+
+        elif entity_type == 'POINT':
+            location = entity.dxf.location
+            min_x = min(min_x, location.x)
+            max_x = max(max_x, location.x)
+            min_y = min(min_y, location.y)
+            max_y = max(max_y, location.y)
+            has_geometry = True
+
+    # Return zeros if no geometry found
+    if not has_geometry:
+        return (0.0, 0.0, 0.0, 0.0)
+
+    return (min_x, min_y, max_x, max_y)
+
+
+def _get_intersection_points(block_def: BlockLayout) -> tuple[list[float], list[float]]:
+    """
+    Identify unique vertical and horizontal intersection points in a block definition.
+
+    This function extracts all vertex coordinates from geometric entities in the block
+    and identifies unique X-coordinates (vertical intersections) and Y-coordinates
+    (horizontal intersections). Duplicate points are filtered using a floating-point
+    tolerance (epsilon = 0.01) to handle precision issues.
+
+    Args:
+        block_def: ezdxf block definition object
+
+    Returns:
+        Tuple of (sorted_vertical_points, sorted_horizontal_points) where:
+        - sorted_vertical_points: List of unique X-coordinates sorted ascending (left-to-right)
+        - sorted_horizontal_points: List of unique Y-coordinates sorted ascending (bottom-to-top)
+
+    Examples:
+        >>> block_def = doc.blocks.get('SHELF_4FT')
+        >>> _get_intersection_points(block_def)
+        ([0.0, 50.0, 1150.0, 1200.0], [0.0, 25.0, 575.0, 600.0])
+    """
+    epsilon = 0.01  # Tolerance for floating-point comparison
+    x_coords: set[float] = set()
+    y_coords: set[float] = set()
+
+    for entity in block_def:
+        entity_type = entity.dxftype()
+
+        # Extract coordinates based on entity type
+        if entity_type == 'LINE':
+            start = entity.dxf.start
+            end = entity.dxf.end
+            x_coords.add(start.x)
+            x_coords.add(end.x)
+            y_coords.add(start.y)
+            y_coords.add(end.y)
+
+        elif entity_type in ('LWPOLYLINE', 'POLYLINE'):
+            try:
+                for point in entity.get_points():  # type: ignore[attr-defined]
+                    x_coords.add(point[0])
+                    y_coords.add(point[1])
+            except (AttributeError, IndexError):
+                continue
+
+        elif entity_type == 'CIRCLE':
+            center = entity.dxf.center
+            radius = entity.dxf.radius
+            # Add circle bounding box corners
+            x_coords.add(center.x - radius)
+            x_coords.add(center.x + radius)
+            y_coords.add(center.y - radius)
+            y_coords.add(center.y + radius)
+
+        elif entity_type == 'ARC':
+            center = entity.dxf.center
+            radius = entity.dxf.radius
+            # Add arc bounding box corners (simplified)
+            x_coords.add(center.x - radius)
+            x_coords.add(center.x + radius)
+            y_coords.add(center.y - radius)
+            y_coords.add(center.y + radius)
+
+        elif entity_type == 'POINT':
+            location = entity.dxf.location
+            x_coords.add(location.x)
+            y_coords.add(location.y)
+
+    # Sort and deduplicate with epsilon tolerance
+    def deduplicate_with_tolerance(coords: set[float], tol: float) -> list[float]:
+        sorted_coords = sorted(coords)
+        if not sorted_coords:
+            return []
+
+        result = [sorted_coords[0]]
+        for coord in sorted_coords[1:]:
+            if abs(coord - result[-1]) > tol:
+                result.append(coord)
+        return result
+
+    vertical_points = deduplicate_with_tolerance(x_coords, epsilon)
+    horizontal_points = deduplicate_with_tolerance(y_coords, epsilon)
+
+    return (vertical_points, horizontal_points)
+
+
+def _calculate_segments(intersection_points: list[float]) -> list[float]:
+    """
+    Calculate distances between consecutive intersection points.
+
+    This function takes a sorted list of intersection points and calculates
+    the segment sizes (distances) between each consecutive pair of points.
+
+    Args:
+        intersection_points: Sorted list of coordinate values (X or Y)
+
+    Returns:
+        List of segment sizes (distances between consecutive points).
+        Returns empty list if fewer than 2 points provided.
+        Segments are rounded to 2 decimal places for readability.
+
+    Examples:
+        >>> _calculate_segments([0, 50, 1150, 1200])
+        [50.0, 1100.0, 50.0]
+        >>> _calculate_segments([0])
+        []
+        >>> _calculate_segments([])
+        []
+    """
+    if len(intersection_points) < 2:
+        return []
+
+    segments = []
+    for i in range(len(intersection_points) - 1):
+        segment_size = intersection_points[i + 1] - intersection_points[i]
+        segments.append(round(segment_size, 2))
+
+    return segments
 
 
 def _categorize_rotation(angle: float) -> str:
@@ -78,10 +285,16 @@ class ExtractionResult(TypedDict):
         layer_insertion_counts: Dictionary mapping layer names to block insertion counts on that layer
         layer_entity_counts: Dictionary mapping layer names to total entity counts on that layer
         entity_type_counts: Dictionary mapping entity type names to their total count in the drawing
+        block_trimming_data: Dictionary mapping block names to their geometry analysis data.
+                             Each block entry contains: native_width (float), native_height (float),
+                             vertical_segments (list[float] - left-to-right), horizontal_segments (list[float] - bottom-to-top)
 
     Examples:
         block_layer_pairs: {('DOOR', 'WALLS'): 5, ('DOOR', 'OPENINGS'): 3, ('WINDOW', 'WALLS'): 8}
         block_rotation_counts: {('DOOR', 'WALLS', '0'): 12, ('DOOR', 'WALLS', '90'): 18, ('DOOR', 'WALLS', '180'): 10}
+        block_trimming_data: {'SHELF_4FT': {'native_width': 1200.0, 'native_height': 600.0,
+                                             'vertical_segments': [50.0, 1100.0, 50.0],
+                                             'horizontal_segments': [25.0, 550.0, 25.0]}}
     """
     block_counts: dict[str, int]
     block_entities: dict[str, int]
@@ -90,6 +303,7 @@ class ExtractionResult(TypedDict):
     layer_insertion_counts: dict[str, int]
     layer_entity_counts: dict[str, int]
     entity_type_counts: dict[str, int]
+    block_trimming_data: dict[str, dict[str, Any]]
 
 
 def extract_blocks(file_path: str) -> ExtractionResult:
@@ -100,9 +314,11 @@ def extract_blocks(file_path: str) -> ExtractionResult:
     - Block insertion counts
     - Entity counts within each block definition
     - Block-layer pairs (unique combinations of block name and layer)
+    - Block rotation counts for each block-layer pair
     - Layer-based insertion counts
     - Layer-based total entity counts
     - Global entity type counts
+    - Block trimming analysis (native dimensions and geometric segments)
 
     Args:
         file_path: Path to the DWG or DXF file to process
@@ -125,6 +341,8 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         {('VALVE_GATE', 'Piping'): 100, ('VALVE_GATE', 'Equipment'): 42, ('PIPE_SUPPORT', 'Piping'): 89}
         >>> result['layer_insertion_counts']
         {'Piping': 200, 'Equipment': 31}
+        >>> result['block_trimming_data']
+        {'SHELF_4FT': {'native_width': 1200.0, 'native_height': 600.0, 'vertical_segments': [50.0, 1100.0, 50.0], 'horizontal_segments': [25.0, 550.0, 25.0]}}
     """
     logger.info(f"Starting block extraction from {file_path}")
 
@@ -152,8 +370,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         layer_insertion_counts: dict[str, int] = {}
         layer_entity_counts: dict[str, int] = {}
         entity_type_counts: dict[str, int] = {}
+        block_trimming_data: dict[str, dict[str, Any]] = {}
 
-        # Extract block definition entity counts
+        # Extract block definition entity counts and geometry analysis
         logger.info("Analyzing block definitions...")
         for block_def in doc.blocks:
             block_name = block_def.name
@@ -164,7 +383,24 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             entity_count = sum(1 for _ in block_def)
             block_entities[block_name] = entity_count
 
+            # Analyze block geometry for trimming assistance
+            bbox = _get_block_bounding_box(block_def)
+            native_width = round(bbox[2] - bbox[0], 2)
+            native_height = round(bbox[3] - bbox[1], 2)
+
+            vertical_points, horizontal_points = _get_intersection_points(block_def)
+            vertical_segments = _calculate_segments(vertical_points)
+            horizontal_segments = _calculate_segments(horizontal_points)
+
+            block_trimming_data[block_name] = {
+                'native_width': native_width,
+                'native_height': native_height,
+                'vertical_segments': vertical_segments,
+                'horizontal_segments': horizontal_segments
+            }
+
         logger.info(f"Analyzed {len(block_entities)} block definitions")
+        logger.info(f"Analyzed geometry for {len(block_trimming_data)} block definitions")
 
         # Iterate through modelspace entities
         logger.info("Analyzing modelspace entities...")
@@ -215,7 +451,8 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             'block_rotation_counts': block_rotation_counts,
             'layer_insertion_counts': layer_insertion_counts,
             'layer_entity_counts': layer_entity_counts,
-            'entity_type_counts': entity_type_counts
+            'entity_type_counts': entity_type_counts,
+            'block_trimming_data': block_trimming_data
         }
 
         return result

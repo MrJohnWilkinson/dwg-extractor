@@ -26,6 +26,7 @@ from .constants import (
     EXCEL_SHEET_BLOCK_COUNTS,
     EXCEL_SHEET_LAYER_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
+    EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS,
     EXCEL_COLUMN_BLOCK_NAME,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
@@ -35,6 +36,10 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_ROTATION_180,
     EXCEL_COLUMN_BLOCK_ROTATION_270,
     EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
+    EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+    EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
+    EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+    EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_LAYER_NAME,
     EXCEL_COLUMN_LAYER_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
@@ -49,10 +54,11 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
     """
     Generate a multi-sheet Excel file from comprehensive CAD extraction data.
 
-    This function creates an Excel workbook with three sheets:
+    This function creates an Excel workbook with four sheets:
     - Block Counts: Block-layer pairs with insertion counts and entity counts in definitions
     - Layer Analysis: Layers with insertion counts and entity counts
     - Entity Summary: Entity types with total counts
+    - Block Trimming Analysis: Block geometry analysis with native dimensions and segments
 
     All sheets include headers, descending sort, auto-filters, and proper column widths.
     The output filename is timestamped to prevent overwrites.
@@ -98,6 +104,9 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
             # Sheet 3: Entity Summary
             _create_entity_summary_sheet(extraction_data, writer)
 
+            # Sheet 4: Block Trimming Analysis
+            _create_block_trimming_analysis_sheet(extraction_data, writer)
+
         # Load workbook for post-processing (formatting)
         wb = load_workbook(full_path)
 
@@ -105,6 +114,7 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         _format_block_counts_sheet(wb)
         _format_layer_analysis_sheet(wb)
         _format_entity_summary_sheet(wb)
+        _format_block_trimming_analysis_sheet(wb)
 
         # Save workbook with formatting
         wb.save(full_path)
@@ -275,3 +285,65 @@ def _format_entity_summary_sheet(wb: Workbook) -> None:
     ws.column_dimensions['B'].width = 25  # entity_type_count
 
     logger.info("Entity Summary sheet formatted")
+
+
+def _create_block_trimming_analysis_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
+    """Create the Block Trimming Analysis sheet with block geometry analysis data."""
+    logger.info("Creating Block Trimming Analysis sheet...")
+
+    block_trimming_data = data['block_trimming_data']
+
+    if block_trimming_data:
+        # Build DataFrame rows from block trimming data
+        rows = []
+        for block_name, geometry_data in block_trimming_data.items():
+            native_width = geometry_data['native_width']
+            native_height = geometry_data['native_height']
+            vertical_segments = geometry_data['vertical_segments']
+            horizontal_segments = geometry_data['horizontal_segments']
+
+            # Convert segment lists to comma-separated strings
+            vertical_segments_str = ", ".join(map(str, vertical_segments)) if vertical_segments else ""
+            horizontal_segments_str = ", ".join(map(str, horizontal_segments)) if horizontal_segments else ""
+
+            rows.append({
+                EXCEL_COLUMN_BLOCK_NAME: block_name,
+                EXCEL_COLUMN_BLOCK_NATIVE_WIDTH: native_width,
+                EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: native_height,
+                EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS: vertical_segments_str,
+                EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS: horizontal_segments_str
+            })
+
+        df = pd.DataFrame(rows)
+        # Sort by block_name alphabetically
+        df.sort_values(by=EXCEL_COLUMN_BLOCK_NAME, ascending=True, inplace=True)
+    else:
+        # Create empty DataFrame with headers only
+        df = pd.DataFrame(columns=[
+            EXCEL_COLUMN_BLOCK_NAME,
+            EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+            EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
+            EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+            EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS
+        ])
+
+    df.to_excel(writer, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS, index=False)
+    logger.info(f"Block Trimming Analysis sheet created with {len(df)} rows")
+
+
+def _format_block_trimming_analysis_sheet(wb: Workbook) -> None:
+    """Apply formatting to the Block Trimming Analysis sheet."""
+    ws = wb[EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS]
+
+    # Apply auto-filter
+    if ws.dimensions:
+        ws.auto_filter.ref = ws.dimensions
+
+    # Set column widths
+    ws.column_dimensions['A'].width = 30  # block_name
+    ws.column_dimensions['B'].width = 20  # block_native_width
+    ws.column_dimensions['C'].width = 20  # block_native_height
+    ws.column_dimensions['D'].width = 40  # block_vertical_segments
+    ws.column_dimensions['E'].width = 40  # block_horizontal_segments
+
+    logger.info("Block Trimming Analysis sheet formatted")

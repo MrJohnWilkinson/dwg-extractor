@@ -17,6 +17,7 @@ SUPPORTED_EXTENSIONS: tuple[str, str] = ('.dwg', '.dxf')
 EXCEL_SHEET_BLOCK_COUNTS: str = 'Block Counts'
 EXCEL_SHEET_LAYER_ANALYSIS: str = 'Layer Analysis'
 EXCEL_SHEET_ENTITY_SUMMARY: str = 'Entity Summary'
+EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS: str = 'Block Trimming Analysis'
 
 # Excel configuration - Block Counts sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
@@ -43,6 +44,15 @@ EXCEL_COLUMN_LAYER_ENTITY_COUNT: str = 'layer_entity_count'
 # See app_docs/005-field-naming-convention.md for naming conventions
 EXCEL_COLUMN_ENTITY_TYPE_NAME: str = 'entity_type_name'
 EXCEL_COLUMN_ENTITY_TYPE_COUNT: str = 'entity_type_count'
+
+# Excel configuration - Block Trimming Analysis sheet columns
+# See app_docs/005-field-naming-convention.md for naming conventions
+# Domain: block, Qualifier: native (at 0° rotation), Attribute: width/height
+EXCEL_COLUMN_BLOCK_NATIVE_WIDTH: str = 'block_native_width'
+EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: str = 'block_native_height'
+# Domain: block, Attribute: vertical/horizontal, Qualifier: segments (collection)
+EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS: str = 'block_vertical_segments'
+EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS: str = 'block_horizontal_segments'
 
 # UI messages
 MSG_SELECT_FILE: str = 'Please select a DWG or DXF file'

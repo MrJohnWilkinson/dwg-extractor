@@ -12,7 +12,14 @@ This test suite validates the DWG/DXF extraction functionality including:
 
 import pytest
 from pathlib import Path
-from core.extractor import extract_blocks, ExtractionResult, _categorize_rotation
+from core.extractor import (
+    extract_blocks,
+    ExtractionResult,
+    _categorize_rotation,
+    _get_block_bounding_box,
+    _get_intersection_points,
+    _calculate_segments
+)
 import ezdxf
 
 
@@ -343,3 +350,158 @@ class TestExtractor:
         # Verify total count
         total = sum(result['block_rotation_counts'].values())
         assert total == 13  # 5 + 3 + 2 + 1 + 2
+
+    def test_calculate_segments_normal(self) -> None:
+        """Test segment calculation with typical intersection point list."""
+        points = [0.0, 50.0, 1150.0, 1200.0]
+        segments = _calculate_segments(points)
+
+        assert len(segments) == 3
+        assert segments == [50.0, 1100.0, 50.0]
+
+    def test_calculate_segments_edge_cases(self) -> None:
+        """Test segment calculation with edge cases."""
+        # Empty list
+        assert _calculate_segments([]) == []
+
+        # Single point
+        assert _calculate_segments([0.0]) == []
+
+        # Two points
+        segments = _calculate_segments([0.0, 100.0])
+        assert len(segments) == 1
+        assert segments == [100.0]
+
+    def test_calculate_segments_precision(self) -> None:
+        """Test that segments are rounded to 2 decimal places."""
+        points = [0.0, 33.33333, 66.66666, 100.0]
+        segments = _calculate_segments(points)
+
+        # All segments should be rounded to 2 decimal places
+        for segment in segments:
+            # Check that segment has at most 2 decimal places
+            assert round(segment, 2) == segment
+
+    def test_get_block_bounding_box_simple(self) -> None:
+        """Test bounding box extraction for simple rectangular block."""
+        # Create a simple test drawing with a block
+        doc = ezdxf.new()
+        msp = doc.modelspace()
+
+        # Create a block with known extents
+        block = doc.blocks.new(name='TEST_BLOCK')
+        block.add_line((0, 0), (100, 0))
+        block.add_line((100, 0), (100, 50))
+        block.add_line((100, 50), (0, 50))
+        block.add_line((0, 50), (0, 0))
+
+        bbox = _get_block_bounding_box(block)
+
+        # Should be (min_x, min_y, max_x, max_y) = (0, 0, 100, 50)
+        assert bbox == (0.0, 0.0, 100.0, 50.0)
+
+    def test_get_block_bounding_box_empty(self) -> None:
+        """Test that empty block returns (0, 0, 0, 0)."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name='EMPTY_BLOCK')
+
+        bbox = _get_block_bounding_box(block)
+
+        assert bbox == (0.0, 0.0, 0.0, 0.0)
+
+    def test_get_intersection_points_simple(self) -> None:
+        """Test intersection point identification for simple block."""
+        # Create a simple test block with known vertices
+        doc = ezdxf.new()
+        block = doc.blocks.new(name='TEST_BLOCK')
+
+        # Rectangle with borders: outer 0-100, inner 10-90
+        block.add_line((0, 0), (100, 0))
+        block.add_line((100, 0), (100, 50))
+        block.add_line((100, 50), (0, 50))
+        block.add_line((0, 50), (0, 0))
+        block.add_line((10, 10), (90, 10))
+        block.add_line((90, 10), (90, 40))
+        block.add_line((90, 40), (10, 40))
+        block.add_line((10, 40), (10, 10))
+
+        vertical_points, horizontal_points = _get_intersection_points(block)
+
+        # Should have X coordinates: 0, 10, 90, 100
+        assert len(vertical_points) == 4
+        assert 0.0 in vertical_points
+        assert 10.0 in vertical_points
+        assert 90.0 in vertical_points
+        assert 100.0 in vertical_points
+
+        # Should have Y coordinates: 0, 10, 40, 50
+        assert len(horizontal_points) == 4
+        assert 0.0 in horizontal_points
+        assert 10.0 in horizontal_points
+        assert 40.0 in horizontal_points
+        assert 50.0 in horizontal_points
+
+    def test_get_intersection_points_sorting(self) -> None:
+        """Test that intersection points are sorted in ascending order."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name='TEST_BLOCK')
+
+        # Add lines in random order
+        block.add_line((100, 50), (0, 50))
+        block.add_line((50, 0), (50, 100))
+        block.add_line((0, 0), (100, 0))
+
+        vertical_points, horizontal_points = _get_intersection_points(block)
+
+        # Points should be sorted
+        assert vertical_points == sorted(vertical_points)
+        assert horizontal_points == sorted(horizontal_points)
+
+    def test_extract_block_trimming_data(self) -> None:
+        """Test that block_trimming_data field exists and has correct structure."""
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
+
+        # Verify block_trimming_data is present
+        assert 'block_trimming_data' in result
+        assert isinstance(result['block_trimming_data'], dict)
+
+        # Should have data for each block
+        assert len(result['block_trimming_data']) > 0
+
+        # Verify structure for each block
+        for block_name, geometry_data in result['block_trimming_data'].items():
+            assert isinstance(block_name, str)
+            assert isinstance(geometry_data, dict)
+
+            # Verify required fields
+            assert 'native_width' in geometry_data
+            assert 'native_height' in geometry_data
+            assert 'vertical_segments' in geometry_data
+            assert 'horizontal_segments' in geometry_data
+
+            # Verify types
+            assert isinstance(geometry_data['native_width'], (int, float))
+            assert isinstance(geometry_data['native_height'], (int, float))
+            assert isinstance(geometry_data['vertical_segments'], list)
+            assert isinstance(geometry_data['horizontal_segments'], list)
+
+            # All segments should be floats
+            for segment in geometry_data['vertical_segments']:
+                assert isinstance(segment, (int, float))
+            for segment in geometry_data['horizontal_segments']:
+                assert isinstance(segment, (int, float))
+
+    def test_block_trimming_data_types(self) -> None:
+        """Test that all block trimming data values are correct types."""
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
+
+        for geometry_data in result['block_trimming_data'].values():
+            # Width and height should be numeric
+            assert isinstance(geometry_data['native_width'], (int, float))
+            assert isinstance(geometry_data['native_height'], (int, float))
+            assert geometry_data['native_width'] >= 0
+            assert geometry_data['native_height'] >= 0
+
+            # Segments should be lists of floats
+            assert isinstance(geometry_data['vertical_segments'], list)
+            assert isinstance(geometry_data['horizontal_segments'], list)
