@@ -27,9 +27,9 @@ class TestExtractor:
         assert isinstance(result, dict)
         assert 'block_counts' in result
         assert 'block_entities' in result
-        assert 'layer_insertions' in result
-        assert 'layer_entities' in result
-        assert 'entity_types' in result
+        assert 'layer_insertion_counts' in result
+        assert 'layer_entity_counts' in result
+        assert 'entity_type_counts' in result
 
         # Verify we have exactly 3 block types
         assert len(result['block_counts']) == 3
@@ -47,9 +47,9 @@ class TestExtractor:
         assert isinstance(result, dict)
         assert result['block_counts'] == {}
         assert isinstance(result['block_entities'], dict)
-        assert isinstance(result['layer_insertions'], dict)
-        assert isinstance(result['layer_entities'], dict)
-        assert isinstance(result['entity_types'], dict)
+        assert isinstance(result['layer_insertion_counts'], dict)
+        assert isinstance(result['layer_entity_counts'], dict)
+        assert isinstance(result['entity_type_counts'], dict)
 
     def test_extract_invalid_file(self) -> None:
         """Test that invalid/corrupted files raise ValueError."""
@@ -82,9 +82,9 @@ class TestExtractor:
         assert isinstance(result, dict)
         assert 'block_counts' in result
         assert 'block_entities' in result
-        assert 'layer_insertions' in result
-        assert 'layer_entities' in result
-        assert 'entity_types' in result
+        assert 'layer_insertion_counts' in result
+        assert 'layer_entity_counts' in result
+        assert 'entity_type_counts' in result
 
         # Verify all block count keys are strings and values are integers
         for key, value in result['block_counts'].items():
@@ -122,14 +122,14 @@ class TestExtractor:
         result = extract_blocks('app/tests/assets/sample_drawing.dxf')
 
         # Verify layer data is present
-        assert isinstance(result['layer_insertions'], dict)
-        assert isinstance(result['layer_entities'], dict)
+        assert isinstance(result['layer_insertion_counts'], dict)
+        assert isinstance(result['layer_entity_counts'], dict)
 
         # Should have at least one layer (layer "0" is default)
-        assert len(result['layer_entities']) > 0
+        assert len(result['layer_entity_counts']) > 0
 
         # All layer entity counts should be positive
-        for count in result['layer_entities'].values():
+        for count in result['layer_entity_counts'].values():
             assert isinstance(count, int)
             assert count > 0
 
@@ -137,15 +137,15 @@ class TestExtractor:
         """Test that global entity type counts are extracted."""
         result = extract_blocks('app/tests/assets/sample_drawing.dxf')
 
-        # Verify entity_types contains data
-        assert len(result['entity_types']) > 0
+        # Verify entity_type_counts contains data
+        assert len(result['entity_type_counts']) > 0
 
         # Should at least have INSERT entities (since we have blocks)
-        assert 'INSERT' in result['entity_types']
-        assert result['entity_types']['INSERT'] == 18  # 10 + 5 + 3
+        assert 'INSERT' in result['entity_type_counts']
+        assert result['entity_type_counts']['INSERT'] == 18  # 10 + 5 + 3
 
         # All values should be positive integers
-        for count in result['entity_types'].values():
+        for count in result['entity_type_counts'].values():
             assert isinstance(count, int)
             assert count > 0
 

@@ -28,13 +28,13 @@ from core.constants import (
     EXCEL_SHEET_LAYER_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
     EXCEL_COLUMN_BLOCK_NAME,
-    EXCEL_COLUMN_COUNT,
-    EXCEL_COLUMN_ENTITIES_IN_DEFINITION,
+    EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
+    EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
     EXCEL_COLUMN_LAYER_NAME,
-    EXCEL_COLUMN_INSERTIONS_ON_LAYER,
-    EXCEL_COLUMN_ENTITIES_ON_LAYER,
-    EXCEL_COLUMN_ENTITY_TYPE,
-    EXCEL_COLUMN_TOTAL_COUNT
+    EXCEL_COLUMN_LAYER_INSERTION_COUNT,
+    EXCEL_COLUMN_LAYER_ENTITY_COUNT,
+    EXCEL_COLUMN_ENTITY_TYPE_NAME,
+    EXCEL_COLUMN_ENTITY_TYPE_COUNT
 )
 
 
@@ -53,9 +53,9 @@ class TestExcelWriter:
         return {
             'block_counts': {'VALVE': 10, 'PIPE': 5, 'TAG': 3},
             'block_entities': {'VALVE': 8, 'PIPE': 12, 'TAG': 4},
-            'layer_insertions': {'Layer1': 15, 'Layer2': 3},
-            'layer_entities': {'Layer1': 25, 'Layer2': 10},
-            'entity_types': {'INSERT': 18, 'LINE': 15, 'CIRCLE': 8}
+            'layer_insertion_counts': {'Layer1': 15, 'Layer2': 3},
+            'layer_entity_counts': {'Layer1': 25, 'Layer2': 10},
+            'entity_type_counts': {'INSERT': 18, 'LINE': 15, 'CIRCLE': 8}
         }
 
     def test_write_excel_three_sheets(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
@@ -84,15 +84,15 @@ class TestExcelWriter:
         # Verify headers
         assert list(df.columns) == [
             EXCEL_COLUMN_BLOCK_NAME,
-            EXCEL_COLUMN_COUNT,
-            EXCEL_COLUMN_ENTITIES_IN_DEFINITION
+            EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
+            EXCEL_COLUMN_BLOCK_ENTITY_COUNT
         ]
 
         # Verify data rows
         assert len(df) == 3
         assert df.iloc[0][EXCEL_COLUMN_BLOCK_NAME] == 'VALVE'
-        assert df.iloc[0][EXCEL_COLUMN_COUNT] == 10
-        assert df.iloc[0][EXCEL_COLUMN_ENTITIES_IN_DEFINITION] == 8
+        assert df.iloc[0][EXCEL_COLUMN_BLOCK_INSERTION_COUNT] == 10
+        assert df.iloc[0][EXCEL_COLUMN_BLOCK_ENTITY_COUNT] == 8
 
     def test_layer_analysis_sheet_structure(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test Layer Analysis sheet has correct columns and data."""
@@ -105,15 +105,15 @@ class TestExcelWriter:
         # Verify headers
         assert list(df.columns) == [
             EXCEL_COLUMN_LAYER_NAME,
-            EXCEL_COLUMN_INSERTIONS_ON_LAYER,
-            EXCEL_COLUMN_ENTITIES_ON_LAYER
+            EXCEL_COLUMN_LAYER_INSERTION_COUNT,
+            EXCEL_COLUMN_LAYER_ENTITY_COUNT
         ]
 
         # Verify data rows
         assert len(df) == 2
-        # Sorted by entities_on_layer descending
+        # Sorted by layer_entity_count descending
         assert df.iloc[0][EXCEL_COLUMN_LAYER_NAME] == 'Layer1'
-        assert df.iloc[0][EXCEL_COLUMN_ENTITIES_ON_LAYER] == 25
+        assert df.iloc[0][EXCEL_COLUMN_LAYER_ENTITY_COUNT] == 25
 
     def test_entity_summary_sheet_structure(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test Entity Summary sheet has correct columns and data."""
@@ -125,8 +125,8 @@ class TestExcelWriter:
 
         # Verify headers
         assert list(df.columns) == [
-            EXCEL_COLUMN_ENTITY_TYPE,
-            EXCEL_COLUMN_TOTAL_COUNT
+            EXCEL_COLUMN_ENTITY_TYPE_NAME,
+            EXCEL_COLUMN_ENTITY_TYPE_COUNT
         ]
 
         # Verify data rows
@@ -137,22 +137,22 @@ class TestExcelWriter:
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
-        # Block Counts: sorted by insertion_count descending
+        # Block Counts: sorted by block_insertion_count descending
         df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
-        assert df_blocks.iloc[0][EXCEL_COLUMN_COUNT] == 10  # VALVE
-        assert df_blocks.iloc[1][EXCEL_COLUMN_COUNT] == 5   # PIPE
-        assert df_blocks.iloc[2][EXCEL_COLUMN_COUNT] == 3   # TAG
+        assert df_blocks.iloc[0][EXCEL_COLUMN_BLOCK_INSERTION_COUNT] == 10  # VALVE
+        assert df_blocks.iloc[1][EXCEL_COLUMN_BLOCK_INSERTION_COUNT] == 5   # PIPE
+        assert df_blocks.iloc[2][EXCEL_COLUMN_BLOCK_INSERTION_COUNT] == 3   # TAG
 
-        # Layer Analysis: sorted by entities_on_layer descending
+        # Layer Analysis: sorted by layer_entity_count descending
         df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
-        assert df_layers.iloc[0][EXCEL_COLUMN_ENTITIES_ON_LAYER] == 25  # Layer1
-        assert df_layers.iloc[1][EXCEL_COLUMN_ENTITIES_ON_LAYER] == 10  # Layer2
+        assert df_layers.iloc[0][EXCEL_COLUMN_LAYER_ENTITY_COUNT] == 25  # Layer1
+        assert df_layers.iloc[1][EXCEL_COLUMN_LAYER_ENTITY_COUNT] == 10  # Layer2
 
-        # Entity Summary: sorted by total_count descending
+        # Entity Summary: sorted by entity_type_count descending
         df_entities = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
-        assert df_entities.iloc[0][EXCEL_COLUMN_TOTAL_COUNT] == 18  # INSERT
-        assert df_entities.iloc[1][EXCEL_COLUMN_TOTAL_COUNT] == 15  # LINE
-        assert df_entities.iloc[2][EXCEL_COLUMN_TOTAL_COUNT] == 8   # CIRCLE
+        assert df_entities.iloc[0][EXCEL_COLUMN_ENTITY_TYPE_COUNT] == 18  # INSERT
+        assert df_entities.iloc[1][EXCEL_COLUMN_ENTITY_TYPE_COUNT] == 15  # LINE
+        assert df_entities.iloc[2][EXCEL_COLUMN_ENTITY_TYPE_COUNT] == 8   # CIRCLE
 
     def test_all_sheets_autofilter(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test that auto-filters are applied to all sheets."""
@@ -182,29 +182,29 @@ class TestExcelWriter:
 
         # Block Counts sheet
         ws_blocks = wb[EXCEL_SHEET_BLOCK_COUNTS]
-        assert ws_blocks.column_dimensions['A'].width == 30  # Block Name
-        assert ws_blocks.column_dimensions['B'].width == 20  # Insertion Count
-        assert ws_blocks.column_dimensions['C'].width == 25  # Entities in Definition
+        assert ws_blocks.column_dimensions['A'].width == 30  # block_name
+        assert ws_blocks.column_dimensions['B'].width == 25  # block_insertion_count
+        assert ws_blocks.column_dimensions['C'].width == 25  # block_entity_count
 
         # Layer Analysis sheet
         ws_layers = wb[EXCEL_SHEET_LAYER_ANALYSIS]
-        assert ws_layers.column_dimensions['A'].width == 30  # Layer Name
-        assert ws_layers.column_dimensions['B'].width == 20  # Insertions on Layer
-        assert ws_layers.column_dimensions['C'].width == 20  # Entities on Layer
+        assert ws_layers.column_dimensions['A'].width == 30  # layer_name
+        assert ws_layers.column_dimensions['B'].width == 25  # layer_insertion_count
+        assert ws_layers.column_dimensions['C'].width == 25  # layer_entity_count
 
         # Entity Summary sheet
         ws_entities = wb[EXCEL_SHEET_ENTITY_SUMMARY]
-        assert ws_entities.column_dimensions['A'].width == 25  # Entity Type
-        assert ws_entities.column_dimensions['B'].width == 20  # Total Count
+        assert ws_entities.column_dimensions['A'].width == 25  # entity_type_name
+        assert ws_entities.column_dimensions['B'].width == 25  # entity_type_count
 
     def test_empty_data_all_sheets(self, temp_dir: str) -> None:
         """Test that empty data creates headers-only sheets."""
         empty_data: ExtractionResult = {
             'block_counts': {},
             'block_entities': {},
-            'layer_insertions': {},
-            'layer_entities': {},
-            'entity_types': {}
+            'layer_insertion_counts': {},
+            'layer_entity_counts': {},
+            'entity_type_counts': {}
         }
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(empty_data, output_path)
@@ -217,8 +217,8 @@ class TestExcelWriter:
         assert len(df_blocks) == 0
         assert list(df_blocks.columns) == [
             EXCEL_COLUMN_BLOCK_NAME,
-            EXCEL_COLUMN_COUNT,
-            EXCEL_COLUMN_ENTITIES_IN_DEFINITION
+            EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
+            EXCEL_COLUMN_BLOCK_ENTITY_COUNT
         ]
 
         df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)

@@ -19,18 +19,21 @@ EXCEL_SHEET_LAYER_ANALYSIS: str = 'Layer Analysis'
 EXCEL_SHEET_ENTITY_SUMMARY: str = 'Entity Summary'
 
 # Excel configuration - Block Counts sheet columns
-EXCEL_COLUMN_BLOCK_NAME: str = 'Block Name'
-EXCEL_COLUMN_COUNT: str = 'Insertion Count'
-EXCEL_COLUMN_ENTITIES_IN_DEFINITION: str = 'Entities in Definition'
+# See app_docs/005-field-naming-convention.md for naming conventions
+EXCEL_COLUMN_BLOCK_NAME: str = 'block_name'
+EXCEL_COLUMN_BLOCK_INSERTION_COUNT: str = 'block_insertion_count'
+EXCEL_COLUMN_BLOCK_ENTITY_COUNT: str = 'block_entity_count'
 
 # Excel configuration - Layer Analysis sheet columns
-EXCEL_COLUMN_LAYER_NAME: str = 'Layer Name'
-EXCEL_COLUMN_INSERTIONS_ON_LAYER: str = 'Insertions on Layer'
-EXCEL_COLUMN_ENTITIES_ON_LAYER: str = 'Entities on Layer'
+# See app_docs/005-field-naming-convention.md for naming conventions
+EXCEL_COLUMN_LAYER_NAME: str = 'layer_name'
+EXCEL_COLUMN_LAYER_INSERTION_COUNT: str = 'layer_insertion_count'
+EXCEL_COLUMN_LAYER_ENTITY_COUNT: str = 'layer_entity_count'
 
 # Excel configuration - Entity Summary sheet columns
-EXCEL_COLUMN_ENTITY_TYPE: str = 'Entity Type'
-EXCEL_COLUMN_TOTAL_COUNT: str = 'Total Count'
+# See app_docs/005-field-naming-convention.md for naming conventions
+EXCEL_COLUMN_ENTITY_TYPE_NAME: str = 'entity_type_name'
+EXCEL_COLUMN_ENTITY_TYPE_COUNT: str = 'entity_type_count'
 
 # UI messages
 MSG_SELECT_FILE: str = 'Please select a DWG or DXF file'

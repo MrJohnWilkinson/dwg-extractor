@@ -29,15 +29,15 @@ class ExtractionResult(TypedDict):
     Attributes:
         block_counts: Dictionary mapping block names to insertion counts
         block_entities: Dictionary mapping block names to entity count within their definition
-        layer_insertions: Dictionary mapping layer names to block insertion counts on that layer
-        layer_entities: Dictionary mapping layer names to total entity counts on that layer
-        entity_types: Dictionary mapping entity type names to their total count in the drawing
+        layer_insertion_counts: Dictionary mapping layer names to block insertion counts on that layer
+        layer_entity_counts: Dictionary mapping layer names to total entity counts on that layer
+        entity_type_counts: Dictionary mapping entity type names to their total count in the drawing
     """
     block_counts: dict[str, int]
     block_entities: dict[str, int]
-    layer_insertions: dict[str, int]
-    layer_entities: dict[str, int]
-    entity_types: dict[str, int]
+    layer_insertion_counts: dict[str, int]
+    layer_entity_counts: dict[str, int]
+    entity_type_counts: dict[str, int]
 
 
 def extract_blocks(file_path: str) -> ExtractionResult:
@@ -68,7 +68,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         {'VALVE_GATE': 142, 'PIPE_SUPPORT': 89}
         >>> result['block_entities']
         {'VALVE_GATE': 8, 'PIPE_SUPPORT': 12}
-        >>> result['layer_insertions']
+        >>> result['layer_insertion_counts']
         {'Piping': 200, 'Equipment': 31}
     """
     logger.info(f"Starting block extraction from {file_path}")
@@ -92,9 +92,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         # Initialize result dictionaries
         block_counts: dict[str, int] = {}
         block_entities: dict[str, int] = {}
-        layer_insertions: dict[str, int] = {}
-        layer_entities: dict[str, int] = {}
-        entity_types: dict[str, int] = {}
+        layer_insertion_counts: dict[str, int] = {}
+        layer_entity_counts: dict[str, int] = {}
+        entity_type_counts: dict[str, int] = {}
 
         # Extract block definition entity counts
         logger.info("Analyzing block definitions...")
@@ -116,23 +116,23 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             layer_name = entity.dxf.layer
 
             # Count entity types
-            entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
+            entity_type_counts[entity_type] = entity_type_counts.get(entity_type, 0) + 1
 
             # Count entities per layer
-            layer_entities[layer_name] = layer_entities.get(layer_name, 0) + 1
+            layer_entity_counts[layer_name] = layer_entity_counts.get(layer_name, 0) + 1
 
             # Count INSERT entities (block insertions)
             if entity_type == 'INSERT':
                 block_name = entity.dxf.name
                 block_counts[block_name] = block_counts.get(block_name, 0) + 1
-                layer_insertions[layer_name] = layer_insertions.get(layer_name, 0) + 1
+                layer_insertion_counts[layer_name] = layer_insertion_counts.get(layer_name, 0) + 1
 
         # Log summary
         total_insertions = sum(block_counts.values())
         unique_blocks = len(block_counts)
-        total_entities = sum(entity_types.values())
-        unique_entity_types = len(entity_types)
-        total_layers = len(layer_entities)
+        total_entities = sum(entity_type_counts.values())
+        unique_entity_types = len(entity_type_counts)
+        total_layers = len(layer_entity_counts)
 
         logger.info(f"Found {total_insertions} block insertions across {unique_blocks} unique blocks")
         logger.info(f"Found {total_entities} total entities across {unique_entity_types} entity types")
@@ -142,9 +142,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         result: ExtractionResult = {
             'block_counts': block_counts,
             'block_entities': block_entities,
-            'layer_insertions': layer_insertions,
-            'layer_entities': layer_entities,
-            'entity_types': entity_types
+            'layer_insertion_counts': layer_insertion_counts,
+            'layer_entity_counts': layer_entity_counts,
+            'entity_type_counts': entity_type_counts
         }
 
         return result
