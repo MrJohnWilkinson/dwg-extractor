@@ -58,7 +58,6 @@ dwg-extractor/
 - ai_docs/002-standardized-app-structure.md
 
 ## Working Directory Convention
-
 - **Always execute commands from project root** (`/home/john/github-projects-linux/dwg-extractor`) - never use `cd` commands
 - **Use `uv run --directory app <command>`** instead of `cd app && uv run <command>` for all Python/pytest operations
 - **Use relative paths from root** for file operations: `test -f app/tests/sample.dxf` instead of `cd app && test -f tests/sample.dxf`
