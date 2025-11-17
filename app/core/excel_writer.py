@@ -288,15 +288,23 @@ def _format_entity_summary_sheet(wb: Workbook) -> None:
 
 
 def _create_block_trimming_analysis_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
-    """Create the Block Trimming Analysis sheet with block geometry analysis data."""
+    """Create the Block Trimming Analysis sheet with block-layer pairs and geometry analysis data."""
     logger.info("Creating Block Trimming Analysis sheet...")
 
+    block_layer_pairs = data['block_layer_pairs']
     block_trimming_data = data['block_trimming_data']
 
-    if block_trimming_data:
-        # Build DataFrame rows from block trimming data
+    if block_layer_pairs:
+        # Build DataFrame rows from block-layer pairs with geometry data
         rows = []
-        for block_name, geometry_data in block_trimming_data.items():
+        for (block_name, layer_name), _insertion_count in block_layer_pairs.items():
+            # Look up geometry data for this block
+            geometry_data = block_trimming_data.get(block_name)
+
+            # Skip blocks without geometry data (anonymous blocks, etc.)
+            if geometry_data is None:
+                continue
+
             native_width = geometry_data['native_width']
             native_height = geometry_data['native_height']
             vertical_segments = geometry_data['vertical_segments']
@@ -308,6 +316,7 @@ def _create_block_trimming_analysis_sheet(data: ExtractionResult, writer: pd.Exc
 
             rows.append({
                 EXCEL_COLUMN_BLOCK_NAME: block_name,
+                EXCEL_COLUMN_BLOCK_LAYER_NAME: layer_name,
                 EXCEL_COLUMN_BLOCK_NATIVE_WIDTH: native_width,
                 EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: native_height,
                 EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS: vertical_segments_str,
@@ -321,6 +330,7 @@ def _create_block_trimming_analysis_sheet(data: ExtractionResult, writer: pd.Exc
         # Create empty DataFrame with headers only
         df = pd.DataFrame(columns=[
             EXCEL_COLUMN_BLOCK_NAME,
+            EXCEL_COLUMN_BLOCK_LAYER_NAME,
             EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
             EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
             EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
@@ -341,9 +351,10 @@ def _format_block_trimming_analysis_sheet(wb: Workbook) -> None:
 
     # Set column widths
     ws.column_dimensions['A'].width = 30  # block_name
-    ws.column_dimensions['B'].width = 20  # block_native_width
-    ws.column_dimensions['C'].width = 20  # block_native_height
-    ws.column_dimensions['D'].width = 40  # block_vertical_segments
-    ws.column_dimensions['E'].width = 40  # block_horizontal_segments
+    ws.column_dimensions['B'].width = 25  # block_layer_name
+    ws.column_dimensions['C'].width = 20  # block_native_width
+    ws.column_dimensions['D'].width = 20  # block_native_height
+    ws.column_dimensions['E'].width = 40  # block_vertical_segments
+    ws.column_dimensions['F'].width = 40  # block_horizontal_segments
 
     logger.info("Block Trimming Analysis sheet formatted")

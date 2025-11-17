@@ -370,20 +370,20 @@ class TestExcelWriter:
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
 
-        # Verify all expected columns are present
+        # Verify all expected columns are present in correct order
         expected_columns = [
             EXCEL_COLUMN_BLOCK_NAME,
+            EXCEL_COLUMN_BLOCK_LAYER_NAME,
             EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
             EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
             EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
             EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS
         ]
 
-        for col in expected_columns:
-            assert col in df.columns
+        assert list(df.columns) == expected_columns
 
-        # Verify exactly 5 columns
-        assert len(df.columns) == 5
+        # Verify exactly 6 columns
+        assert len(df.columns) == 6
 
     def test_block_trimming_analysis_data_types(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test Block Trimming Analysis sheet has correct data types."""
@@ -415,7 +415,7 @@ class TestExcelWriter:
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
 
-        # Find VALVE row (has multi-segment data)
+        # Find first VALVE row (has multi-segment data) - there will be multiple rows for VALVE
         valve_row = df[df[EXCEL_COLUMN_BLOCK_NAME] == 'VALVE'].iloc[0]
 
         # Verify segments are comma-separated strings
@@ -441,7 +441,7 @@ class TestExcelWriter:
         assert block_names == sorted(block_names)
 
     def test_block_trimming_analysis_empty_data(self, temp_dir: str) -> None:
-        """Test that empty block_trimming_data creates sheet with headers only."""
+        """Test that empty block_layer_pairs creates sheet with headers only."""
         empty_data: ExtractionResult = {
             'block_counts': {},
             'block_entities': {},
@@ -460,7 +460,7 @@ class TestExcelWriter:
 
         # Should have headers but no data rows
         assert len(df) == 0
-        assert len(df.columns) == 5
+        assert len(df.columns) == 6
 
     def test_block_trimming_analysis_auto_filter(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test that Block Trimming Analysis sheet has auto-filter applied."""
@@ -473,3 +473,134 @@ class TestExcelWriter:
         # Verify auto-filter is applied
         assert ws.auto_filter.ref is not None
         assert ws.auto_filter.ref != ''
+
+    def test_block_trimming_analysis_has_layer_column(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that Block Trimming Analysis sheet has block_layer_name column in position 2."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+
+        # Verify block_layer_name column exists
+        assert EXCEL_COLUMN_BLOCK_LAYER_NAME in df.columns
+
+        # Verify column order: block_name, block_layer_name, geometry columns
+        expected_columns = [
+            EXCEL_COLUMN_BLOCK_NAME,
+            EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+            EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
+            EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+            EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS
+        ]
+        assert list(df.columns) == expected_columns
+
+    def test_block_trimming_analysis_block_layer_pairs(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that Block Trimming Analysis sheet contains block-layer pairs with geometry data."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+
+        # Verify number of rows matches block-layer pairs (4 pairs in sample data)
+        assert len(df) == 4
+
+        # Verify VALVE appears on two layers with identical geometry
+        valve_rows = df[df[EXCEL_COLUMN_BLOCK_NAME] == 'VALVE']
+        assert len(valve_rows) == 2
+
+        # Verify both VALVE rows have identical geometry data
+        valve_layer1 = valve_rows[valve_rows[EXCEL_COLUMN_BLOCK_LAYER_NAME] == 'Layer1'].iloc[0]
+        valve_layer2 = valve_rows[valve_rows[EXCEL_COLUMN_BLOCK_LAYER_NAME] == 'Layer2'].iloc[0]
+
+        assert valve_layer1[EXCEL_COLUMN_BLOCK_NATIVE_WIDTH] == valve_layer2[EXCEL_COLUMN_BLOCK_NATIVE_WIDTH]
+        assert valve_layer1[EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT] == valve_layer2[EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT]
+        assert valve_layer1[EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS] == valve_layer2[EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS]
+        assert valve_layer1[EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS] == valve_layer2[EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS]
+
+        # Verify geometry data is correct
+        assert valve_layer1[EXCEL_COLUMN_BLOCK_NATIVE_WIDTH] == 100.0
+        assert valve_layer1[EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT] == 50.0
+
+    def test_block_trimming_analysis_column_widths(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that Block Trimming Analysis sheet has appropriate column widths for 6 columns."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS]
+
+        # Verify column widths for 6-column layout
+        assert ws.column_dimensions['A'].width == 30  # block_name
+        assert ws.column_dimensions['B'].width == 25  # block_layer_name
+        assert ws.column_dimensions['C'].width == 20  # block_native_width
+        assert ws.column_dimensions['D'].width == 20  # block_native_height
+        assert ws.column_dimensions['E'].width == 40  # block_vertical_segments
+        assert ws.column_dimensions['F'].width == 40  # block_horizontal_segments
+
+    def test_block_trimming_analysis_empty_data_with_layer_column(self, temp_dir: str) -> None:
+        """Test that empty block_layer_pairs creates sheet with 6 column headers."""
+        empty_data: ExtractionResult = {
+            'block_counts': {},
+            'block_entities': {},
+            'block_layer_pairs': {},
+            'block_rotation_counts': {},
+            'layer_insertion_counts': {},
+            'layer_entity_counts': {},
+            'entity_type_counts': {},
+            'block_trimming_data': {}
+        }
+
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(empty_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+
+        # Should have headers but no data rows
+        assert len(df) == 0
+
+        # Verify 6 column headers including block_layer_name
+        expected_columns = [
+            EXCEL_COLUMN_BLOCK_NAME,
+            EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+            EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
+            EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+            EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS
+        ]
+        assert list(df.columns) == expected_columns
+
+    def test_block_trimming_analysis_missing_geometry(self, temp_dir: str) -> None:
+        """Test that blocks in block_layer_pairs but not in block_trimming_data are skipped gracefully."""
+        # Data with a block-layer pair that has no geometry data
+        data_with_missing_geometry: ExtractionResult = {
+            'block_counts': {'VALVE': 10, 'ANONYMOUS': 5},
+            'block_entities': {'VALVE': 8, 'ANONYMOUS': 0},
+            'block_layer_pairs': {
+                ('VALVE', 'Layer1'): 10,
+                ('ANONYMOUS', 'Layer1'): 5  # This block has no geometry data
+            },
+            'block_rotation_counts': {},
+            'layer_insertion_counts': {'Layer1': 15},
+            'layer_entity_counts': {'Layer1': 25},
+            'entity_type_counts': {'INSERT': 15},
+            'block_trimming_data': {
+                'VALVE': {
+                    'native_width': 100.0,
+                    'native_height': 50.0,
+                    'vertical_segments': [10.0, 80.0, 10.0],
+                    'horizontal_segments': [5.0, 40.0, 5.0]
+                }
+                # ANONYMOUS block intentionally missing from block_trimming_data
+            }
+        }
+
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(data_with_missing_geometry, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+
+        # Should only have VALVE row, ANONYMOUS should be skipped
+        assert len(df) == 1
+        assert df.iloc[0][EXCEL_COLUMN_BLOCK_NAME] == 'VALVE'
+        assert df.iloc[0][EXCEL_COLUMN_BLOCK_LAYER_NAME] == 'Layer1'
