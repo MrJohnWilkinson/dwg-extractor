@@ -18,6 +18,8 @@ dev = [
     "pandas-stubs>=2.0.0",
     "types-openpyxl>=3.1.0",
 ]
+
+[dependency-groups]
 build = [
     "pyinstaller>=6.0.0",
 ]
