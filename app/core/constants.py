@@ -11,17 +11,17 @@ Usage:
 """
 
 # File extensions
-SUPPORTED_EXTENSIONS = ('.dwg', '.dxf')
+SUPPORTED_EXTENSIONS: tuple[str, str] = ('.dwg', '.dxf')
 
 # Excel configuration
-EXCEL_COLUMN_BLOCK_NAME = 'Block Name'
-EXCEL_COLUMN_COUNT = 'Insertion Count'
-EXCEL_WORKSHEET_NAME = 'Block Summary'
+EXCEL_COLUMN_BLOCK_NAME: str = 'Block Name'
+EXCEL_COLUMN_COUNT: str = 'Insertion Count'
+EXCEL_WORKSHEET_NAME: str = 'Block Summary'
 
 # UI messages
-MSG_SELECT_FILE = 'Please select a DWG or DXF file'
-MSG_PROCESSING = 'Processing...'
-MSG_SUCCESS = 'Extraction complete'
-MSG_ERROR_INVALID_FILE = 'Invalid or corrupted file'
-MSG_ERROR_NO_BLOCKS = 'No blocks found in file'
-MSG_ERROR_FILE_NOT_FOUND = 'File not found'
+MSG_SELECT_FILE: str = 'Please select a DWG or DXF file'
+MSG_PROCESSING: str = 'Processing...'
+MSG_SUCCESS: str = 'Extraction complete'
+MSG_ERROR_INVALID_FILE: str = 'Invalid or corrupted file'
+MSG_ERROR_NO_BLOCKS: str = 'No blocks found in file'
+MSG_ERROR_FILE_NOT_FOUND: str = 'File not found'

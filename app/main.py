@@ -10,6 +10,7 @@ Usage:
     uv run python app/main.py
 """
 
+import logging
 import os
 import platform
 import subprocess
@@ -40,11 +41,11 @@ ctk.set_default_color_theme("blue")  # Themes: "blue" (default), "green", "dark-
 class DWGExtractorApp(ctk.CTk):
     """Main GUI application for DWG Block Extractor."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         # Initialize logger
-        self.logger = setup_logger(__name__)
+        self.logger: logging.Logger = setup_logger(__name__)
         self.logger.info("DWG Block Extractor application started")
 
         # Window configuration
@@ -53,12 +54,12 @@ class DWGExtractorApp(ctk.CTk):
         self.resizable(False, False)
 
         # Instance variables
-        self.selected_file_path = None
+        self.selected_file_path: str | None = None
 
         # Create UI
         self._create_widgets()
 
-    def _create_widgets(self):
+    def _create_widgets(self) -> None:
         """Create and layout all UI widgets."""
         # Main container with padding
         main_frame = ctk.CTkFrame(self)
@@ -121,7 +122,7 @@ class DWGExtractorApp(ctk.CTk):
         )
         self.status_label.pack()
 
-    def _browse_file(self):
+    def _browse_file(self) -> None:
         """Handle browse button click - open file dialog."""
         self.logger.info("User clicked Browse button")
 
@@ -150,7 +151,7 @@ class DWGExtractorApp(ctk.CTk):
         else:
             self.logger.info("File selection cancelled")
 
-    def _extract_blocks(self):
+    def _extract_blocks(self) -> None:
         """Handle extract button click - start extraction process."""
         # Validate file selected
         if not self.selected_file_path:
@@ -171,11 +172,16 @@ class DWGExtractorApp(ctk.CTk):
         thread = threading.Thread(target=self._extraction_worker, daemon=True)
         thread.start()
 
-    def _extraction_worker(self):
+    def _extraction_worker(self) -> None:
         """Background worker thread for extraction process."""
         try:
             # Step 1: Load file
             self._update_progress(0.2, "Loading file...")
+
+            # Validate file path exists
+            if not self.selected_file_path:
+                self._show_error("No file selected")
+                return
 
             block_counts = extract_blocks(self.selected_file_path)
 
@@ -216,21 +222,21 @@ class DWGExtractorApp(ctk.CTk):
             self.after(0, lambda: self.browse_button.configure(state="normal"))
             self.after(0, lambda: self.extract_button.configure(state="normal"))
 
-    def _update_progress(self, value: float, message: str):
+    def _update_progress(self, value: float, message: str) -> None:
         """Update progress bar and status message (thread-safe)."""
         self.after(0, lambda: self._update_progress_ui(value, message))
 
-    def _update_progress_ui(self, value: float, message: str):
+    def _update_progress_ui(self, value: float, message: str) -> None:
         """Actually update the progress UI (must run on main thread)."""
         self.progress_bar.set(value)
         self.status_label.configure(text=message)
         self.logger.info(f"Progress: {int(value*100)}% - {message}")
 
-    def _show_success(self, excel_path: str):
+    def _show_success(self, excel_path: str) -> None:
         """Show success message and open Excel file (thread-safe)."""
         self.after(0, lambda: self._show_success_ui(excel_path))
 
-    def _show_success_ui(self, excel_path: str):
+    def _show_success_ui(self, excel_path: str) -> None:
         """Actually show success dialog (must run on main thread)."""
         self.logger.info(f"Extraction completed successfully, Excel file: {excel_path}")
 
@@ -242,11 +248,11 @@ class DWGExtractorApp(ctk.CTk):
         # Auto-open Excel file
         self._open_excel_file(excel_path)
 
-    def _show_error(self, message: str):
+    def _show_error(self, message: str) -> None:
         """Show error message dialog (thread-safe)."""
         self.after(0, lambda: self._show_error_ui(message))
 
-    def _show_error_ui(self, message: str):
+    def _show_error_ui(self, message: str) -> None:
         """Actually show error dialog (must run on main thread)."""
         self.logger.error(f"Error shown to user: {message}")
 
@@ -255,7 +261,7 @@ class DWGExtractorApp(ctk.CTk):
             message
         )
 
-    def _open_excel_file(self, file_path: str):
+    def _open_excel_file(self, file_path: str) -> None:
         """Open Excel file with platform-specific command."""
         try:
             self.logger.info(f"Opening Excel file: {file_path}")
@@ -263,7 +269,7 @@ class DWGExtractorApp(ctk.CTk):
             system = platform.system()
 
             if system == "Windows":
-                os.startfile(file_path)
+                os.startfile(file_path)  # type: ignore[attr-defined]
             elif system == "Linux":
                 subprocess.run(['xdg-open', file_path], check=False)
             elif system == "Darwin":  # macOS
@@ -275,13 +281,13 @@ class DWGExtractorApp(ctk.CTk):
             # Don't show error to user - file was created successfully
             self.logger.warning(f"Failed to open Excel file: {str(e)}")
 
-    def destroy(self):
+    def destroy(self) -> None:
         """Override destroy to log application close."""
         self.logger.info("Application closed")
         super().destroy()
 
 
-def main():
+def main() -> None:
     """Main entry point for the application."""
     app = DWGExtractorApp()
     app.mainloop()

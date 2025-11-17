@@ -20,6 +20,7 @@ Extracts block reference counts from AutoCAD drawings and generates Excel report
 - **Excel Generation:** openpyxl (formatted Excel files)
 - **GUI Framework:** customtkinter (modern desktop UI)
 - **Testing:** pytest with coverage reporting
+- **Type Checking:** mypy with strict configuration
 - **Package Manager:** uv (all dependency management)
 
 ## Project Structure
@@ -54,6 +55,7 @@ dwg-extractor/
   - Run tests: `uv run pytest app/tests/`
   - Run application: `uv run python app/main.py`
   - Coverage: `uv run pytest --cov=app/core app/tests/`
+  - Type checking: `uv run mypy app/`
 - **File operations use root-relative paths**: `test -f app/tests/assets/sample.dxf`
 - **Scripts follow convention**: `scripts/start.sh` uses `uv run python app/main.py` without changing directories
 - **Project structure**: `pyproject.toml` and `.venv` at root, application code in `app/`

@@ -66,7 +66,7 @@ def extract_blocks(file_path: str) -> dict[str, int]:
         msp = doc.modelspace()
 
         # Initialize block counts dictionary
-        block_counts = {}
+        block_counts: dict[str, int] = {}
 
         # Iterate through modelspace entities and count INSERT entities
         for entity in msp:
