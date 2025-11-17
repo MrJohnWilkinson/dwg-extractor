@@ -35,8 +35,7 @@ dwg-extractor/
 │   ├── tests/                    # Test suite
 │   │   ├── core/                 # Unit tests
 │   │   └── assets/               # Test fixtures
-│   ├── main.py                   # GUI entry point
-│   └── pyproject.toml            # Dependencies (uv)
+│   └── main.py                   # GUI entry point
 │
 ├── specs/                        # Implementation plans
 │   └── README.md                 # Spec writing guide
@@ -48,9 +47,12 @@ dwg-extractor/
 │   ├── commands/                 # Slash commands
 │   └── hooks/                    # Workflow automation
 │
-└── ai_output/                    # Planning documents
-    ├── 001-starting-plan.md      # Initial specification
-    └── 002-implementation-plan.md # Phase breakdown
+├── ai_output/                    # Planning documents
+│   ├── 001-starting-plan.md      # Initial specification
+│   └── 002-implementation-plan.md # Phase breakdown
+│
+├── .venv/                        # Virtual environment (managed by uv)
+└── pyproject.toml                # Dependencies and project config (uv)
 ```
 
 ## Reference Files

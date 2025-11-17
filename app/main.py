@@ -7,7 +7,7 @@ and exporting them to formatted Excel files.
 Usage:
     python main.py
     or
-    uv run python main.py
+    uv run python app/main.py
 """
 
 import os
