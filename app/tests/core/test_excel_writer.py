@@ -31,6 +31,11 @@ from core.constants import (
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
     EXCEL_COLUMN_BLOCK_LAYER_NAME,
+    EXCEL_COLUMN_BLOCK_ROTATION_0,
+    EXCEL_COLUMN_BLOCK_ROTATION_90,
+    EXCEL_COLUMN_BLOCK_ROTATION_180,
+    EXCEL_COLUMN_BLOCK_ROTATION_270,
+    EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
     EXCEL_COLUMN_LAYER_NAME,
     EXCEL_COLUMN_LAYER_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
@@ -60,6 +65,14 @@ class TestExcelWriter:
                 ('PIPE', 'Layer1'): 5,
                 ('TAG', 'Layer1'): 3
             },
+            'block_rotation_counts': {
+                ('VALVE', 'Layer1', '0'): 5,
+                ('VALVE', 'Layer1', '90'): 2,
+                ('VALVE', 'Layer2', '0'): 3,
+                ('PIPE', 'Layer1', '0'): 3,
+                ('PIPE', 'Layer1', '180'): 2,
+                ('TAG', 'Layer1', 'other'): 3
+            },
             'layer_insertion_counts': {'Layer1': 15, 'Layer2': 3},
             'layer_entity_counts': {'Layer1': 25, 'Layer2': 10},
             'entity_type_counts': {'INSERT': 18, 'LINE': 15, 'CIRCLE': 8}
@@ -88,12 +101,17 @@ class TestExcelWriter:
         # Load Block Counts sheet
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
 
-        # Verify headers include block_layer_name
+        # Verify headers include block_layer_name and rotation columns
         assert list(df.columns) == [
             EXCEL_COLUMN_BLOCK_NAME,
             EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
             EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME
+            EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            EXCEL_COLUMN_BLOCK_ROTATION_0,
+            EXCEL_COLUMN_BLOCK_ROTATION_90,
+            EXCEL_COLUMN_BLOCK_ROTATION_180,
+            EXCEL_COLUMN_BLOCK_ROTATION_270,
+            EXCEL_COLUMN_BLOCK_ROTATION_OTHER
         ]
 
         # Verify data rows (4 block-layer pairs)
@@ -199,6 +217,11 @@ class TestExcelWriter:
         assert ws_blocks.column_dimensions['B'].width == 25  # block_insertion_count
         assert ws_blocks.column_dimensions['C'].width == 25  # block_entity_count
         assert ws_blocks.column_dimensions['D'].width == 25  # block_layer_name
+        assert ws_blocks.column_dimensions['E'].width == 12  # block_rotation_0
+        assert ws_blocks.column_dimensions['F'].width == 12  # block_rotation_90
+        assert ws_blocks.column_dimensions['G'].width == 12  # block_rotation_180
+        assert ws_blocks.column_dimensions['H'].width == 12  # block_rotation_270
+        assert ws_blocks.column_dimensions['I'].width == 12  # block_rotation_other
 
         # Layer Analysis sheet
         ws_layers = wb[EXCEL_SHEET_LAYER_ANALYSIS]
@@ -217,6 +240,7 @@ class TestExcelWriter:
             'block_counts': {},
             'block_entities': {},
             'block_layer_pairs': {},
+            'block_rotation_counts': {},
             'layer_insertion_counts': {},
             'layer_entity_counts': {},
             'entity_type_counts': {}
@@ -234,7 +258,12 @@ class TestExcelWriter:
             EXCEL_COLUMN_BLOCK_NAME,
             EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
             EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME
+            EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            EXCEL_COLUMN_BLOCK_ROTATION_0,
+            EXCEL_COLUMN_BLOCK_ROTATION_90,
+            EXCEL_COLUMN_BLOCK_ROTATION_180,
+            EXCEL_COLUMN_BLOCK_ROTATION_270,
+            EXCEL_COLUMN_BLOCK_ROTATION_OTHER
         ]
 
         df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
@@ -242,6 +271,42 @@ class TestExcelWriter:
 
         df_entities = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
         assert len(df_entities) == 0
+
+    def test_rotation_counts_sum_to_total(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that rotation columns sum to block_insertion_count for each row."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Load Block Counts sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
+
+        # Verify sum of rotation counts equals insertion count for each row
+        for _, row in df.iterrows():
+            rotation_sum = (
+                row[EXCEL_COLUMN_BLOCK_ROTATION_0] +
+                row[EXCEL_COLUMN_BLOCK_ROTATION_90] +
+                row[EXCEL_COLUMN_BLOCK_ROTATION_180] +
+                row[EXCEL_COLUMN_BLOCK_ROTATION_270] +
+                row[EXCEL_COLUMN_BLOCK_ROTATION_OTHER]
+            )
+            assert rotation_sum == row[EXCEL_COLUMN_BLOCK_INSERTION_COUNT]
+
+    def test_rotation_counts_are_integers(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that all rotation counts are non-negative integers."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Load Block Counts sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
+
+        # Verify all rotation counts are non-negative integers
+        for col in [EXCEL_COLUMN_BLOCK_ROTATION_0, EXCEL_COLUMN_BLOCK_ROTATION_90,
+                    EXCEL_COLUMN_BLOCK_ROTATION_180, EXCEL_COLUMN_BLOCK_ROTATION_270,
+                    EXCEL_COLUMN_BLOCK_ROTATION_OTHER]:
+            for value in df[col]:
+                assert isinstance(value, (int, float))  # pandas may use int64 or float64
+                assert value >= 0
+                assert value == int(value)  # No fractional parts
 
     def test_filename_format_unchanged(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test that timestamped filename format is maintained."""

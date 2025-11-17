@@ -30,6 +30,11 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
     EXCEL_COLUMN_BLOCK_LAYER_NAME,
+    EXCEL_COLUMN_BLOCK_ROTATION_0,
+    EXCEL_COLUMN_BLOCK_ROTATION_90,
+    EXCEL_COLUMN_BLOCK_ROTATION_180,
+    EXCEL_COLUMN_BLOCK_ROTATION_270,
+    EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
     EXCEL_COLUMN_LAYER_NAME,
     EXCEL_COLUMN_LAYER_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
@@ -116,33 +121,52 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
 
 
 def _create_block_counts_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
-    """Create the Block Counts sheet with block-layer pairs, insertion counts, and entity counts."""
+    """Create the Block Counts sheet with block-layer pairs, insertion counts, entity counts, and rotation breakdowns."""
     logger.info("Creating Block Counts sheet...")
 
     block_layer_pairs = data['block_layer_pairs']
     block_entities = data['block_entities']
+    block_rotation_counts = data['block_rotation_counts']
 
     if block_layer_pairs:
-        # Unpack block-layer pairs into DataFrame rows
+        # Unpack block-layer pairs into DataFrame rows with rotation breakdowns
         rows = []
         for (block_name, layer_name), insertion_count in block_layer_pairs.items():
             entity_count = block_entities.get(block_name, 0)
+
+            # Calculate rotation counts for this block-layer pair
+            rot_0 = block_rotation_counts.get((block_name, layer_name, '0'), 0)
+            rot_90 = block_rotation_counts.get((block_name, layer_name, '90'), 0)
+            rot_180 = block_rotation_counts.get((block_name, layer_name, '180'), 0)
+            rot_270 = block_rotation_counts.get((block_name, layer_name, '270'), 0)
+            rot_other = block_rotation_counts.get((block_name, layer_name, 'other'), 0)
+
             rows.append({
                 EXCEL_COLUMN_BLOCK_NAME: block_name,
                 EXCEL_COLUMN_BLOCK_INSERTION_COUNT: insertion_count,
                 EXCEL_COLUMN_BLOCK_ENTITY_COUNT: entity_count,
-                EXCEL_COLUMN_BLOCK_LAYER_NAME: layer_name
+                EXCEL_COLUMN_BLOCK_LAYER_NAME: layer_name,
+                EXCEL_COLUMN_BLOCK_ROTATION_0: rot_0,
+                EXCEL_COLUMN_BLOCK_ROTATION_90: rot_90,
+                EXCEL_COLUMN_BLOCK_ROTATION_180: rot_180,
+                EXCEL_COLUMN_BLOCK_ROTATION_270: rot_270,
+                EXCEL_COLUMN_BLOCK_ROTATION_OTHER: rot_other
             })
 
         df = pd.DataFrame(rows)
         df.sort_values(by=EXCEL_COLUMN_BLOCK_INSERTION_COUNT, ascending=False, inplace=True)
     else:
-        # Create empty DataFrame with headers only
+        # Create empty DataFrame with headers only (all 9 columns)
         df = pd.DataFrame(columns=[
             EXCEL_COLUMN_BLOCK_NAME,
             EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
             EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME
+            EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            EXCEL_COLUMN_BLOCK_ROTATION_0,
+            EXCEL_COLUMN_BLOCK_ROTATION_90,
+            EXCEL_COLUMN_BLOCK_ROTATION_180,
+            EXCEL_COLUMN_BLOCK_ROTATION_270,
+            EXCEL_COLUMN_BLOCK_ROTATION_OTHER
         ])
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_BLOCK_COUNTS, index=False)
@@ -201,7 +225,7 @@ def _create_entity_summary_sheet(data: ExtractionResult, writer: pd.ExcelWriter)
 
 
 def _format_block_counts_sheet(wb: Workbook) -> None:
-    """Apply formatting to the Block Counts sheet."""
+    """Apply formatting to the Block Counts sheet with rotation columns."""
     ws = wb[EXCEL_SHEET_BLOCK_COUNTS]
 
     # Apply auto-filter
@@ -213,6 +237,11 @@ def _format_block_counts_sheet(wb: Workbook) -> None:
     ws.column_dimensions['B'].width = 25  # block_insertion_count
     ws.column_dimensions['C'].width = 25  # block_entity_count
     ws.column_dimensions['D'].width = 25  # block_layer_name
+    ws.column_dimensions['E'].width = 12  # block_rotation_0
+    ws.column_dimensions['F'].width = 12  # block_rotation_90
+    ws.column_dimensions['G'].width = 12  # block_rotation_180
+    ws.column_dimensions['H'].width = 12  # block_rotation_270
+    ws.column_dimensions['I'].width = 12  # block_rotation_other
 
     logger.info("Block Counts sheet formatted")
 

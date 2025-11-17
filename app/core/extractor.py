@@ -22,6 +22,49 @@ from .constants import SUPPORTED_EXTENSIONS
 logger = setup_logger(__name__)
 
 
+def _categorize_rotation(angle: float) -> str:
+    """
+    Categorize a rotation angle into standard rotation categories.
+
+    This function normalizes rotation angles to the 0-360 range and categorizes them
+    as standard orthogonal rotations (0°, 90°, 180°, 270°) or 'other'.
+    A tolerance of ±1° is used for standard angles to handle floating-point precision
+    and near-orthogonal manual rotations.
+
+    Args:
+        angle: Rotation angle in degrees (can be negative or > 360)
+
+    Returns:
+        String representing rotation category: '0', '90', '180', '270', or 'other'
+
+    Examples:
+        >>> _categorize_rotation(0.0)
+        '0'
+        >>> _categorize_rotation(90.5)
+        '90'
+        >>> _categorize_rotation(45.0)
+        'other'
+        >>> _categorize_rotation(-90.0)
+        '270'
+        >>> _categorize_rotation(450.0)
+        '90'
+    """
+    # Normalize angle to 0-360 range
+    normalized = angle % 360
+
+    # Check for standard angles with ±1° tolerance
+    if abs(normalized - 0) <= 1 or abs(normalized - 360) <= 1:
+        return '0'
+    elif abs(normalized - 90) <= 1:
+        return '90'
+    elif abs(normalized - 180) <= 1:
+        return '180'
+    elif abs(normalized - 270) <= 1:
+        return '270'
+    else:
+        return 'other'
+
+
 class ExtractionResult(TypedDict):
     """
     Comprehensive extraction result containing all CAD analysis data.
@@ -30,16 +73,20 @@ class ExtractionResult(TypedDict):
         block_counts: Dictionary mapping block names to insertion counts
         block_entities: Dictionary mapping block names to entity count within their definition
         block_layer_pairs: Dictionary mapping (block_name, layer_name) tuples to insertion counts
+        block_rotation_counts: Dictionary mapping (block_name, layer_name, rotation_category) tuples to insertion counts
+                               Rotation categories are strings: '0', '90', '180', '270', 'other'
         layer_insertion_counts: Dictionary mapping layer names to block insertion counts on that layer
         layer_entity_counts: Dictionary mapping layer names to total entity counts on that layer
         entity_type_counts: Dictionary mapping entity type names to their total count in the drawing
 
     Examples:
         block_layer_pairs: {('DOOR', 'WALLS'): 5, ('DOOR', 'OPENINGS'): 3, ('WINDOW', 'WALLS'): 8}
+        block_rotation_counts: {('DOOR', 'WALLS', '0'): 12, ('DOOR', 'WALLS', '90'): 18, ('DOOR', 'WALLS', '180'): 10}
     """
     block_counts: dict[str, int]
     block_entities: dict[str, int]
     block_layer_pairs: dict[tuple[str, str], int]
+    block_rotation_counts: dict[tuple[str, str, str], int]
     layer_insertion_counts: dict[str, int]
     layer_entity_counts: dict[str, int]
     entity_type_counts: dict[str, int]
@@ -101,6 +148,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         block_counts: dict[str, int] = {}
         block_entities: dict[str, int] = {}
         block_layer_pairs: dict[tuple[str, str], int] = {}
+        block_rotation_counts: dict[tuple[str, str, str], int] = {}
         layer_insertion_counts: dict[str, int] = {}
         layer_entity_counts: dict[str, int] = {}
         entity_type_counts: dict[str, int] = {}
@@ -140,6 +188,12 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 pair_key = (block_name, layer_name)
                 block_layer_pairs[pair_key] = block_layer_pairs.get(pair_key, 0) + 1
 
+                # Track block rotation counts
+                rotation = entity.dxf.rotation
+                rotation_category = _categorize_rotation(rotation)
+                rotation_key = (block_name, layer_name, rotation_category)
+                block_rotation_counts[rotation_key] = block_rotation_counts.get(rotation_key, 0) + 1
+
         # Log summary
         total_insertions = sum(block_counts.values())
         unique_blocks = len(block_counts)
@@ -149,6 +203,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
         logger.info(f"Found {total_insertions} block insertions across {unique_blocks} unique blocks")
         logger.info(f"Found {len(block_layer_pairs)} unique block-layer pairs")
+        logger.info(f"Tracked rotations for {len(block_rotation_counts)} block-layer-rotation combinations")
         logger.info(f"Found {total_entities} total entities across {unique_entity_types} entity types")
         logger.info(f"Found {total_layers} layers in drawing")
 
@@ -157,6 +212,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             'block_counts': block_counts,
             'block_entities': block_entities,
             'block_layer_pairs': block_layer_pairs,
+            'block_rotation_counts': block_rotation_counts,
             'layer_insertion_counts': layer_insertion_counts,
             'layer_entity_counts': layer_entity_counts,
             'entity_type_counts': entity_type_counts

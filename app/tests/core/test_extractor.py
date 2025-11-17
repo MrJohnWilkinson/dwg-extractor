@@ -12,7 +12,7 @@ This test suite validates the DWG/DXF extraction functionality including:
 
 import pytest
 from pathlib import Path
-from core.extractor import extract_blocks, ExtractionResult
+from core.extractor import extract_blocks, ExtractionResult, _categorize_rotation
 import ezdxf
 
 
@@ -226,3 +226,120 @@ class TestExtractor:
         assert isinstance(result['block_layer_pairs'], dict)
         assert len(result['block_layer_pairs']) == 0
         assert result['block_layer_pairs'] == {}
+
+    def test_categorize_rotation_standard_angles(self) -> None:
+        """Test rotation categorization for exact standard angles."""
+        assert _categorize_rotation(0.0) == '0'
+        assert _categorize_rotation(90.0) == '90'
+        assert _categorize_rotation(180.0) == '180'
+        assert _categorize_rotation(270.0) == '270'
+
+    def test_categorize_rotation_tolerance(self) -> None:
+        """Test rotation categorization with ±1° tolerance."""
+        # Test angles within ±1° of standard angles
+        assert _categorize_rotation(0.5) == '0'
+        assert _categorize_rotation(89.5) == '90'
+        assert _categorize_rotation(90.5) == '90'
+        assert _categorize_rotation(179.5) == '180'
+        assert _categorize_rotation(180.5) == '180'
+        assert _categorize_rotation(269.5) == '270'
+        assert _categorize_rotation(270.5) == '270'
+        assert _categorize_rotation(359.5) == '0'
+
+    def test_categorize_rotation_non_standard(self) -> None:
+        """Test rotation categorization for non-standard angles."""
+        assert _categorize_rotation(45.0) == 'other'
+        assert _categorize_rotation(135.0) == 'other'
+        assert _categorize_rotation(225.0) == 'other'
+        assert _categorize_rotation(315.0) == 'other'
+        assert _categorize_rotation(30.0) == 'other'
+        assert _categorize_rotation(60.0) == 'other'
+
+    def test_categorize_rotation_normalization(self) -> None:
+        """Test rotation normalization for negative and >360° angles."""
+        # Negative angles should normalize correctly
+        assert _categorize_rotation(-90.0) == '270'
+        assert _categorize_rotation(-180.0) == '180'
+        assert _categorize_rotation(-270.0) == '90'
+
+        # Angles > 360 should normalize correctly
+        assert _categorize_rotation(450.0) == '90'
+        assert _categorize_rotation(540.0) == '180'
+        assert _categorize_rotation(630.0) == '270'
+
+    def test_categorize_rotation_boundary_cases(self) -> None:
+        """Test rotation categorization for boundary edge cases."""
+        # Angles just outside tolerance should be 'other'
+        assert _categorize_rotation(1.5) == 'other'
+        assert _categorize_rotation(88.0) == 'other'
+        assert _categorize_rotation(92.0) == 'other'
+        assert _categorize_rotation(178.0) == 'other'
+        assert _categorize_rotation(182.0) == 'other'
+
+    def test_extract_block_rotation_counts(self) -> None:
+        """Test that block_rotation_counts field exists and contains correct structure."""
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
+
+        # Verify block_rotation_counts is present
+        assert 'block_rotation_counts' in result
+        assert isinstance(result['block_rotation_counts'], dict)
+
+        # Should have at least one entry for files with blocks
+        assert len(result['block_rotation_counts']) > 0
+
+    def test_block_rotation_counts_tuple_keys(self) -> None:
+        """Test that all block_rotation_counts keys are (str, str, str) tuples."""
+        result = extract_blocks('app/tests/assets/test_rotations.dxf')
+
+        # Verify all keys are 3-element tuples
+        for rotation_key in result['block_rotation_counts'].keys():
+            assert isinstance(rotation_key, tuple)
+            assert len(rotation_key) == 3
+            block_name, layer_name, rotation_category = rotation_key
+            assert isinstance(block_name, str)
+            assert isinstance(layer_name, str)
+            assert isinstance(rotation_category, str)
+            assert len(block_name) > 0
+            assert len(layer_name) > 0
+
+    def test_block_rotation_counts_valid_categories(self) -> None:
+        """Test that rotation categories are only valid values."""
+        result = extract_blocks('app/tests/assets/test_rotations.dxf')
+
+        valid_categories = {'0', '90', '180', '270', 'other'}
+
+        for rotation_key in result['block_rotation_counts'].keys():
+            _, _, rotation_category = rotation_key
+            assert rotation_category in valid_categories
+
+    def test_block_rotation_counts_conservation(self) -> None:
+        """Test that sum of rotation counts equals sum of block_layer_pairs."""
+        result = extract_blocks('app/tests/assets/test_rotations.dxf')
+
+        # Sum of all rotation counts should equal sum of block_layer_pairs
+        total_rotation_count = sum(result['block_rotation_counts'].values())
+        total_pair_count = sum(result['block_layer_pairs'].values())
+
+        assert total_rotation_count == total_pair_count
+
+    def test_block_rotation_counts_with_fixture(self) -> None:
+        """Test rotation extraction with test_rotations.dxf fixture with known counts."""
+        result = extract_blocks('app/tests/assets/test_rotations.dxf')
+
+        # Expected counts from the fixture:
+        # 5 blocks at 0° on LAYER_A
+        # 3 blocks at 90° on LAYER_A
+        # 2 blocks at 180° on LAYER_B
+        # 1 block at 270° on LAYER_B
+        # 2 blocks at non-standard angles (45°, 135°) on LAYER_C
+
+        # Verify specific rotation counts
+        assert result['block_rotation_counts'][('TEST_BLOCK', 'LAYER_A', '0')] == 5
+        assert result['block_rotation_counts'][('TEST_BLOCK', 'LAYER_A', '90')] == 3
+        assert result['block_rotation_counts'][('TEST_BLOCK', 'LAYER_B', '180')] == 2
+        assert result['block_rotation_counts'][('TEST_BLOCK', 'LAYER_B', '270')] == 1
+        assert result['block_rotation_counts'][('TEST_BLOCK', 'LAYER_C', 'other')] == 2
+
+        # Verify total count
+        total = sum(result['block_rotation_counts'].values())
+        assert total == 13  # 5 + 3 + 2 + 1 + 2

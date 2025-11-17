@@ -25,6 +25,14 @@ EXCEL_COLUMN_BLOCK_INSERTION_COUNT: str = 'block_insertion_count'
 EXCEL_COLUMN_BLOCK_ENTITY_COUNT: str = 'block_entity_count'
 EXCEL_COLUMN_BLOCK_LAYER_NAME: str = 'block_layer_name'  # See app_docs/005-field-naming-convention.md
 
+# Excel configuration - Block Counts sheet rotation columns
+# See app_docs/005-field-naming-convention.md for naming conventions
+EXCEL_COLUMN_BLOCK_ROTATION_0: str = 'block_rotation_0'
+EXCEL_COLUMN_BLOCK_ROTATION_90: str = 'block_rotation_90'
+EXCEL_COLUMN_BLOCK_ROTATION_180: str = 'block_rotation_180'
+EXCEL_COLUMN_BLOCK_ROTATION_270: str = 'block_rotation_270'
+EXCEL_COLUMN_BLOCK_ROTATION_OTHER: str = 'block_rotation_other'
+
 # Excel configuration - Layer Analysis sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
 EXCEL_COLUMN_LAYER_NAME: str = 'layer_name'
