@@ -89,7 +89,7 @@ IMPORTANT: Execute every step in order, top to bottom.
   - `MSG_ERROR_NO_BLOCKS = 'No blocks found in file'` - No blocks warning
   - `MSG_ERROR_FILE_NOT_FOUND = 'File not found'` - Missing file error
 - Add comprehensive module docstring explaining the purpose and usage of constants
-- Verify the file is importable: `cd app && uv run python -c "from core.constants import *; print('Constants loaded successfully')"`
+- Verify the file is importable: `uv run --directory app python -c "from core.constants import *; print('Constants loaded successfully')"`
 
 ### Step 2: Implement DWG/DXF Extraction Logic
 - Open `app/core/extractor.py` and implement complete extraction functionality
@@ -118,7 +118,7 @@ IMPORTANT: Execute every step in order, top to bottom.
     - General Exception: Log ERROR with traceback and re-raise
 - Add comprehensive docstring with parameter descriptions, return value, and raises section
 - Add type hints for all parameters and return values
-- Verify the module works: `cd app && uv run python -c "from core.extractor import extract_blocks; print('Extractor module loaded')"`
+- Verify the module works: `uv run --directory app python -c "from core.extractor import extract_blocks; print('Extractor module loaded')"`
 
 ### Step 3: Implement Excel Generation Logic
 - Open `app/core/excel_writer.py` and implement complete Excel writing functionality
@@ -154,7 +154,7 @@ IMPORTANT: Execute every step in order, top to bottom.
     - General Exception during write: Log ERROR with traceback and re-raise
 - Add comprehensive docstring with parameter descriptions, return value, and raises section
 - Add type hints for all parameters and return values
-- Verify the module works: `cd app && uv run python -c "from core.excel_writer import write_excel; print('Excel writer module loaded')"`
+- Verify the module works: `uv run --directory app python -c "from core.excel_writer import write_excel; print('Excel writer module loaded')"`
 
 ### Step 4: Create Test Fixtures
 - Create test fixture DXF files using ezdxf for automated testing
@@ -173,10 +173,10 @@ IMPORTANT: Execute every step in order, top to bottom.
     - Save immediately without adding blocks: `doc.saveas('app/tests/assets/empty_drawing.dxf')`
   - Generate `invalid.dxf` as corrupted file:
     - Write random text content to file to simulate corruption: `Path('app/tests/assets/invalid.dxf').write_text('INVALID DXF CONTENT\nNOT A REAL DXF FILE')`
-- Run the fixture generation script: `cd app && uv run python tests/assets/generate_fixtures.py`
+- Run the fixture generation script: `uv run --directory app python tests/assets/generate_fixtures.py`
 - Verify fixtures were created: `ls -la app/tests/assets/*.dxf`
 - Delete the generation script after fixtures are created: `rm app/tests/assets/generate_fixtures.py`
-- Verify sample_drawing.dxf can be loaded: `cd app && uv run python -c "import ezdxf; doc = ezdxf.readfile('tests/assets/sample_drawing.dxf'); print('Fixture valid')"`
+- Verify sample_drawing.dxf can be loaded: `uv run --directory app python -c "import ezdxf; doc = ezdxf.readfile('tests/assets/sample_drawing.dxf'); print('Fixture valid')"`
 
 ### Step 5: Implement Unit Tests for Extractor Module
 - Create `app/tests/core/test_extractor.py` with comprehensive test coverage
@@ -214,7 +214,7 @@ IMPORTANT: Execute every step in order, top to bottom.
     - Assert all keys are strings
     - Assert all values are integers
 - Add module docstring explaining test purpose and coverage
-- Verify tests can be discovered: `cd app && uv run pytest tests/core/test_extractor.py --collect-only`
+- Verify tests can be discovered: `uv run --directory app pytest tests/core/test_extractor.py --collect-only`
 
 ### Step 6: Implement Unit Tests for Excel Writer Module
 - Create `app/tests/core/test_excel_writer.py` with comprehensive test coverage
@@ -281,25 +281,25 @@ IMPORTANT: Execute every step in order, top to bottom.
   - `@pytest.fixture` for temp directory creation and cleanup
   - `@pytest.fixture` for sample block data
 - Add module docstring explaining test purpose and coverage
-- Verify tests can be discovered: `cd app && uv run pytest tests/core/test_excel_writer.py --collect-only`
+- Verify tests can be discovered: `uv run --directory app pytest tests/core/test_excel_writer.py --collect-only`
 
 ### Step 7: Run Unit Tests and Validate Coverage
-- Run all core tests: `cd app && uv run pytest tests/core/ -v`
+- Run all core tests: `uv run --directory app pytest tests/core/ -v`
 - Verify all tests pass with 0 failures
-- Run tests with coverage report: `cd app && uv run pytest tests/core/ --cov=core --cov-report=term-missing`
+- Run tests with coverage report: `uv run --directory app pytest tests/core/ --cov=core --cov-report=term-missing`
 - Verify code coverage is >80% for extractor.py and excel_writer.py
 - Review coverage report for any missing lines and add tests if needed
-- Generate HTML coverage report for detailed analysis: `cd app && uv run pytest tests/core/ --cov=core --cov-report=html`
+- Generate HTML coverage report for detailed analysis: `uv run --directory app pytest tests/core/ --cov=core --cov-report=html`
 - Fix any failing tests before proceeding
 
 ### Step 8: Integration Testing with Real DWG Files
 - Test extractor.py with real DWG files from app/tests/assets/:
-  - Extract blocks from `Supermarket-2020.dwg`: `cd app && uv run python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/Supermarket-2020.dwg'); print(f'Found {len(result)} unique blocks with {sum(result.values())} total insertions')"`
-  - Extract blocks from `floorplan supermarket v3.dwg`: `cd app && uv run python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/floorplan supermarket v3.dwg'); print(f'Found {len(result)} unique blocks')"`
-  - Extract blocks from `floorplan supermarket v3 new chilled dept.dwg`: `cd app && uv run python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/floorplan supermarket v3 new chilled dept.dwg'); print(f'Found {len(result)} unique blocks')"`
+  - Extract blocks from `Supermarket-2020.dwg`: `uv run --directory app python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/Supermarket-2020.dwg'); print(f'Found {len(result)} unique blocks with {sum(result.values())} total insertions')"`
+  - Extract blocks from `floorplan supermarket v3.dwg`: `uv run --directory app python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/floorplan supermarket v3.dwg'); print(f'Found {len(result)} unique blocks')"`
+  - Extract blocks from `floorplan supermarket v3 new chilled dept.dwg`: `uv run --directory app python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/floorplan supermarket v3 new chilled dept.dwg'); print(f'Found {len(result)} unique blocks')"`
 - Verify all extractions complete without errors and log to stdout correctly
 - Test end-to-end workflow (extraction + Excel generation):
-  - Create test script: `cd app && uv run python -c "from core.extractor import extract_blocks; from core.excel_writer import write_excel; blocks = extract_blocks('tests/assets/Supermarket-2020.dwg'); excel_path = write_excel(blocks, 'tests/assets/Supermarket-2020.dwg'); print(f'Excel created: {excel_path}')"`
+  - Create test script: `uv run --directory app python -c "from core.extractor import extract_blocks; from core.excel_writer import write_excel; blocks = extract_blocks('tests/assets/Supermarket-2020.dwg'); excel_path = write_excel(blocks, 'tests/assets/Supermarket-2020.dwg'); print(f'Excel created: {excel_path}')"`
   - Verify Excel file is created with correct format
   - Open Excel file manually to verify headers, sorting, and auto-filter
   - Clean up generated Excel files after verification
@@ -391,7 +391,7 @@ Not applicable for Phase 2. GUI testing will be implemented in Phase 3 after the
 - [ ] `test_extractor.py` has 6+ test cases with 100% pass rate
 - [ ] `test_excel_writer.py` has 7+ test cases with 100% pass rate
 - [ ] Code coverage for core modules is >80%
-- [ ] All unit tests pass: `cd app && uv run pytest tests/core/ -v`
+- [ ] All unit tests pass: `uv run --directory app pytest tests/core/ -v`
 - [ ] Integration testing with real DWG files completes successfully
 - [ ] All validation commands execute without errors
 - [ ] No regressions in Phase 1 functionality (logging still works correctly)
@@ -399,37 +399,37 @@ Not applicable for Phase 2. GUI testing will be implemented in Phase 3 after the
 ## Validation Commands
 Execute every command to validate the feature works correctly with zero regressions.
 
-- `cd app && uv run python -c "from core.constants import *; print(f'SUPPORTED_EXTENSIONS: {SUPPORTED_EXTENSIONS}'); print(f'EXCEL_COLUMN_BLOCK_NAME: {EXCEL_COLUMN_BLOCK_NAME}'); print(f'EXCEL_COLUMN_COUNT: {EXCEL_COLUMN_COUNT}'); print('Constants loaded successfully')"` - Verify constants module is implemented correctly
+- `uv run --directory app python -c "from core.constants import *; print(f'SUPPORTED_EXTENSIONS: {SUPPORTED_EXTENSIONS}'); print(f'EXCEL_COLUMN_BLOCK_NAME: {EXCEL_COLUMN_BLOCK_NAME}'); print(f'EXCEL_COLUMN_COUNT: {EXCEL_COLUMN_COUNT}'); print('Constants loaded successfully')"` - Verify constants module is implemented correctly
 
-- `cd app && uv run python -c "from core.extractor import extract_blocks; print('Extractor module imported successfully')"` - Verify extractor module is importable
+- `uv run --directory app python -c "from core.extractor import extract_blocks; print('Extractor module imported successfully')"` - Verify extractor module is importable
 
-- `cd app && uv run python -c "from core.excel_writer import write_excel; print('Excel writer module imported successfully')"` - Verify excel_writer module is importable
+- `uv run --directory app python -c "from core.excel_writer import write_excel; print('Excel writer module imported successfully')"` - Verify excel_writer module is importable
 
-- `cd app && test -f tests/assets/sample_drawing.dxf && echo 'sample_drawing.dxf exists'` - Verify sample test fixture exists
+- `test -f app/ -f tests/assets/sample_drawing.dxf && echo 'sample_drawing.dxf exists'` - Verify sample test fixture exists
 
-- `cd app && test -f tests/assets/empty_drawing.dxf && echo 'empty_drawing.dxf exists'` - Verify empty test fixture exists
+- `test -f app/ -f tests/assets/empty_drawing.dxf && echo 'empty_drawing.dxf exists'` - Verify empty test fixture exists
 
-- `cd app && test -f tests/assets/invalid.dxf && echo 'invalid.dxf exists'` - Verify invalid test fixture exists
+- `test -f app/ -f tests/assets/invalid.dxf && echo 'invalid.dxf exists'` - Verify invalid test fixture exists
 
-- `cd app && uv run python -c "import ezdxf; doc = ezdxf.readfile('tests/assets/sample_drawing.dxf'); msp = doc.modelspace(); print(f'Sample fixture loaded: {len(list(msp))} entities')"` - Verify sample fixture is valid DXF
+- `uv run --directory app python -c "import ezdxf; doc = ezdxf.readfile('tests/assets/sample_drawing.dxf'); msp = doc.modelspace(); print(f'Sample fixture loaded: {len(list(msp))} entities')"` - Verify sample fixture is valid DXF
 
-- `cd app && uv run python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/sample_drawing.dxf'); print(f'Extraction result: {result}'); assert result['VALVE_GATE'] == 10; assert result['PIPE_SUPPORT'] == 5; assert result['EQUIPMENT_TAG'] == 3; print('Extraction counts verified')"` - Verify extractor works with sample fixture
+- `uv run --directory app python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/sample_drawing.dxf'); print(f'Extraction result: {result}'); assert result['VALVE_GATE'] == 10; assert result['PIPE_SUPPORT'] == 5; assert result['EQUIPMENT_TAG'] == 3; print('Extraction counts verified')"` - Verify extractor works with sample fixture
 
-- `cd app && uv run python -c "from core.extractor import extract_blocks; from core.excel_writer import write_excel; blocks = extract_blocks('tests/assets/sample_drawing.dxf'); excel_path = write_excel(blocks, 'tests/assets/sample_drawing.dxf'); print(f'End-to-end test: Excel created at {excel_path}'); import os; os.remove(excel_path); print('Cleanup complete')"` - Verify end-to-end workflow (extraction + Excel generation)
+- `uv run --directory app python -c "from core.extractor import extract_blocks; from core.excel_writer import write_excel; blocks = extract_blocks('tests/assets/sample_drawing.dxf'); excel_path = write_excel(blocks, 'tests/assets/sample_drawing.dxf'); print(f'End-to-end test: Excel created at {excel_path}'); import os; os.remove(excel_path); print('Cleanup complete')"` - Verify end-to-end workflow (extraction + Excel generation)
 
-- `cd app && uv run pytest tests/core/test_extractor.py -v` - Run all extractor unit tests
+- `uv run --directory app pytest tests/core/test_extractor.py -v` - Run all extractor unit tests
 
-- `cd app && uv run pytest tests/core/test_excel_writer.py -v` - Run all excel_writer unit tests
+- `uv run --directory app pytest tests/core/test_excel_writer.py -v` - Run all excel_writer unit tests
 
-- `cd app && uv run pytest tests/core/ -v` - Run all core module tests
+- `uv run --directory app pytest tests/core/ -v` - Run all core module tests
 
-- `cd app && uv run pytest tests/core/ --cov=core --cov-report=term-missing` - Run tests with coverage report (must show >80% coverage)
+- `uv run --directory app pytest tests/core/ --cov=core --cov-report=term-missing` - Run tests with coverage report (must show >80% coverage)
 
-- `cd app && uv run python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/Supermarket-2020.dwg'); print(f'Real file test: Found {len(result)} unique blocks with {sum(result.values())} total insertions')"` - Test with real DWG file (Supermarket-2020.dwg)
+- `uv run --directory app python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/Supermarket-2020.dwg'); print(f'Real file test: Found {len(result)} unique blocks with {sum(result.values())} total insertions')"` - Test with real DWG file (Supermarket-2020.dwg)
 
-- `cd app && uv run python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/floorplan supermarket v3.dwg'); print(f'Real file test: Found {len(result)} unique blocks with {sum(result.values())} total insertions')"` - Test with real DWG file (floorplan supermarket v3.dwg)
+- `uv run --directory app python -c "from core.extractor import extract_blocks; result = extract_blocks('tests/assets/floorplan supermarket v3.dwg'); print(f'Real file test: Found {len(result)} unique blocks with {sum(result.values())} total insertions')"` - Test with real DWG file (floorplan supermarket v3.dwg)
 
-- `cd app && uv run python -c "from core.logger import setup_logger; logger = setup_logger('test'); logger.info('Phase 1 logger still works'); print('Logger validation successful')"` - Verify Phase 1 logging functionality has no regressions
+- `uv run --directory app python -c "from core.logger import setup_logger; logger = setup_logger('test'); logger.info('Phase 1 logger still works'); print('Logger validation successful')"` - Verify Phase 1 logging functionality has no regressions
 
 ## Notes
 - **Phase 2 Scope**: This phase implements only the core business logic (extraction and Excel generation). GUI implementation will happen in Phase 3.

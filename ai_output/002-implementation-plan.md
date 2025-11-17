@@ -116,16 +116,14 @@ Complete implementation roadmap for building the ultra-simple DWG/DXF block extr
 4. **Initialize dependencies with uv**
 
    ```bash
-   cd app
-
    # Install uv if not already installed
    # curl -LsSf https://astral.sh/uv/install.sh | sh
 
    # Sync dependencies from pyproject.toml
-   uv sync
+   uv sync --directory app
 
    # Verify installation
-   uv run python --version
+   uv run --directory app python --version
    ```
 
 5. **Create logging configuration in `app/core/logger.py`**
@@ -324,9 +322,8 @@ Complete implementation roadmap for building the ultra-simple DWG/DXF block extr
 
 4. **Run tests**
    ```bash
-   cd app
-   uv run pytest
-   uv run pytest --cov=core --cov-report=term-missing
+   uv run --directory app pytest
+   uv run --directory app pytest --cov=core --cov-report=term-missing
    ```
 
 ### Success Criteria
@@ -349,17 +346,16 @@ Complete implementation roadmap for building the ultra-simple DWG/DXF block extr
    #!/bin/bash
 
    # DWG Block Extractor Launcher
+   # Execute from project root
 
-   cd "$(dirname "$0")/../app" || exit 1
-
-   # Check if .python-version matches
+   # Check if python is available
    if ! command -v python &> /dev/null; then
        echo "Error: Python not found"
        exit 1
    fi
 
-   # Launch application
-   uv run python main.py
+   # Launch application from project root
+   uv run --directory app python main.py
    ```
 
    Make executable:
@@ -372,12 +368,11 @@ Complete implementation roadmap for building the ultra-simple DWG/DXF block extr
    #!/bin/bash
 
    # Build standalone Windows executable
-
-   cd "$(dirname "$0")/../app" || exit 1
+   # Execute from project root
 
    echo "Building Windows executable..."
 
-   uv run pyinstaller \
+   uv run --directory app pyinstaller \
        --onefile \
        --windowed \
        --name="DWG-Block-Extractor" \

@@ -98,16 +98,16 @@ IMPORTANT: Execute every step in order, top to bottom.
 ## Validation Commands
 Execute every command to validate the chore is complete with zero regressions.
 
-- `cd app && uv run python --version` - Verify Python 3.11+ is available via uv
-- `cd app && uv run python -c "import ezdxf; print(f'ezdxf: {ezdxf.__version__}')"` - Verify ezdxf dependency installed
-- `cd app && uv run python -c "import pandas; print(f'pandas: {pandas.__version__}')"` - Verify pandas dependency installed
-- `cd app && uv run python -c "import openpyxl; print(f'openpyxl: {openpyxl.__version__}')"` - Verify openpyxl dependency installed
-- `cd app && uv run python -c "import customtkinter; print(f'customtkinter: {customtkinter.__version__}')"` - Verify customtkinter dependency installed
-- `cd app && uv run python -c "from core.logger import setup_logger; logger = setup_logger('test'); logger.info('Logging test'); print('Logger setup successful')"` - Verify logger.py works and outputs to stdout
-- `cd app && uv run python -c "import core.constants; import core.extractor; import core.excel_writer; print('All core modules importable')"` - Verify all core modules are importable
-- `cd app && test -f pyproject.toml && echo 'pyproject.toml exists'` - Verify pyproject.toml exists
-- `cd app && test -f .python-version && echo '.python-version exists'` - Verify .python-version exists
-- `cd app && test -d core && test -d tests/core && test -d tests/assets && echo 'Directory structure complete'` - Verify complete directory structure
+- `uv run --directory app python --version` - Verify Python 3.11+ is available via uv
+- `uv run --directory app python -c "import ezdxf; print(f'ezdxf: {ezdxf.__version__}')"` - Verify ezdxf dependency installed
+- `uv run --directory app python -c "import pandas; print(f'pandas: {pandas.__version__}')"` - Verify pandas dependency installed
+- `uv run --directory app python -c "import openpyxl; print(f'openpyxl: {openpyxl.__version__}')"` - Verify openpyxl dependency installed
+- `uv run --directory app python -c "import customtkinter; print(f'customtkinter: {customtkinter.__version__}')"` - Verify customtkinter dependency installed
+- `uv run --directory app python -c "from core.logger import setup_logger; logger = setup_logger('test'); logger.info('Logging test'); print('Logger setup successful')"` - Verify logger.py works and outputs to stdout
+- `uv run --directory app python -c "import core.constants; import core.extractor; import core.excel_writer; print('All core modules importable')"` - Verify all core modules are importable
+- `test -f app/ -f pyproject.toml && echo 'pyproject.toml exists'` - Verify pyproject.toml exists
+- `test -f app/ -f .python-version && echo '.python-version exists'` - Verify .python-version exists
+- `test -f app/ -d core && test -d tests/core && test -d tests/assets && echo 'Directory structure complete'` - Verify complete directory structure
 
 ## Notes
 - **uv Package Manager**: This project exclusively uses uv for all dependency management. Do not use pip, conda, or other package managers.

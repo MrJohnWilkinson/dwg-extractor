@@ -47,7 +47,7 @@ IMPORTANT: Execute every step in order, top to bottom.
 Execute every command to validate completion with zero regressions.
 
 - `command 1` - What this validates
-- `cd app && uv run pytest` - All tests pass
+- `uv run --directory app pytest` - All tests pass
 
 ## Notes
 
@@ -90,8 +90,8 @@ Always include:
 
 Examples:
 ```bash
-cd app && uv run pytest
-cd app && uv run pytest --cov=core
+uv run --directory app pytest
+uv run --directory app pytest --cov=core
 test -f path/to/file && echo "File exists"
 wc -l README.md
 ```
@@ -105,7 +105,7 @@ claude /dev:implement @specs/feature-name.md
 
 ### ADW Automatic
 ```bash
-cd adws
+# cd adws (removed - use working directory convention)
 uv run adw_plan_build.py <issue-number>
 ```
 

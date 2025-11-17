@@ -70,7 +70,7 @@ Integrate the GUI with existing core logic and ensure smooth end-to-end operatio
 IMPORTANT: Execute every step in order, top to bottom.
 
 ### Step 1: Verify Phase 2 Dependencies
-- Run `cd app && uv sync` to ensure all dependencies including CustomTkinter are installed
+- Run `uv sync --directory app` to ensure all dependencies including CustomTkinter are installed
 - Verify that `app/core/extractor.py`, `app/core/excel_writer.py`, `app/core/constants.py`, and `app/core/logger.py` exist
 - Check that test assets exist in `app/tests/assets/` for manual GUI testing
 - Confirm Python version is 3.8+ by running `python --version`
@@ -178,7 +178,7 @@ IMPORTANT: Execute every step in order, top to bottom.
 - Log application exit when window closes: `self.logger.info("Application closed")`
 
 ### Step 12: Manual Testing with Sample Files
-- Run `cd app && uv run python main.py` to launch the GUI
+- Run `uv run --directory app python main.py` to launch the GUI
 - Test browse functionality: click Browse and select a test file from `app/tests/assets/`
 - Test successful extraction: select a valid DWG/DXF file and click Extract
 - Verify progress bar updates during processing
@@ -245,13 +245,13 @@ Not applicable for this phase. The application is a desktop GUI (not web-based),
 ## Validation Commands
 Execute every command to validate the feature works correctly with zero regressions.
 
-- `cd app && uv sync` - Ensure all dependencies including CustomTkinter are installed
-- `cd app && python --version` - Verify Python 3.8+ is being used
-- `cd app && uv run pytest` - Run all existing unit tests to ensure zero regressions in core logic
-- `cd app && uv run pytest --cov=core --cov-report=term-missing` - Verify core module test coverage remains >80%
+- `uv sync --directory app` - Ensure all dependencies including CustomTkinter are installed
+- `uv run --directory app python --version` - Verify Python 3.8+ is being used
+- `uv run --directory app pytest` - Run all existing unit tests to ensure zero regressions in core logic
+- `uv run --directory app pytest --cov=core --cov-report=term-missing` - Verify core module test coverage remains >80%
 - `test -f app/main.py && echo "main.py exists" || echo "main.py missing"` - Confirm GUI file was created
 - `wc -l app/main.py` - Verify implementation is approximately 120-200 lines as estimated
-- `cd app && uv run python main.py` - Launch GUI application (manual testing required)
+- `uv run --directory app python main.py` - Launch GUI application (manual testing required)
 
 **Manual Validation Steps** (execute while GUI is running):
 1. Click Browse button → file dialog opens with DWG/DXF filters
