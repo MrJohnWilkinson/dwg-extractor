@@ -23,6 +23,7 @@ EXCEL_SHEET_ENTITY_SUMMARY: str = 'Entity Summary'
 EXCEL_COLUMN_BLOCK_NAME: str = 'block_name'
 EXCEL_COLUMN_BLOCK_INSERTION_COUNT: str = 'block_insertion_count'
 EXCEL_COLUMN_BLOCK_ENTITY_COUNT: str = 'block_entity_count'
+EXCEL_COLUMN_BLOCK_LAYER_NAME: str = 'block_layer_name'  # See app_docs/005-field-naming-convention.md
 
 # Excel configuration - Layer Analysis sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions

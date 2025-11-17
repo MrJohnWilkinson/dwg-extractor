@@ -2,7 +2,7 @@
 name = "dwg-block-extractor"
 version = "0.1.0"
 description = "Extract block information from DWG/DXF files and generate Excel reports"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
     "ezdxf>=1.0.0",
     "pandas>=2.0.0",

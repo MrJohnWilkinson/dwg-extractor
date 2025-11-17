@@ -27,6 +27,7 @@ class TestExtractor:
         assert isinstance(result, dict)
         assert 'block_counts' in result
         assert 'block_entities' in result
+        assert 'block_layer_pairs' in result
         assert 'layer_insertion_counts' in result
         assert 'layer_entity_counts' in result
         assert 'entity_type_counts' in result
@@ -47,6 +48,7 @@ class TestExtractor:
         assert isinstance(result, dict)
         assert result['block_counts'] == {}
         assert isinstance(result['block_entities'], dict)
+        assert result['block_layer_pairs'] == {}
         assert isinstance(result['layer_insertion_counts'], dict)
         assert isinstance(result['layer_entity_counts'], dict)
         assert isinstance(result['entity_type_counts'], dict)
@@ -82,6 +84,7 @@ class TestExtractor:
         assert isinstance(result, dict)
         assert 'block_counts' in result
         assert 'block_entities' in result
+        assert 'block_layer_pairs' in result
         assert 'layer_insertion_counts' in result
         assert 'layer_entity_counts' in result
         assert 'entity_type_counts' in result
@@ -166,3 +169,60 @@ class TestExtractor:
             assert isinstance(block_name, str)
             assert isinstance(count, int)
             assert count > 0
+
+    def test_extract_block_layer_pairs(self) -> None:
+        """Test that block-layer pairs are extracted correctly."""
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
+
+        # Verify block_layer_pairs is present in result
+        assert 'block_layer_pairs' in result
+        assert isinstance(result['block_layer_pairs'], dict)
+
+        # Verify block_layer_pairs has at least one entry
+        assert len(result['block_layer_pairs']) > 0
+
+        # Verify all keys are tuples of (str, str) and values are positive integers
+        for pair_key, count in result['block_layer_pairs'].items():
+            assert isinstance(pair_key, tuple)
+            assert len(pair_key) == 2
+            assert isinstance(pair_key[0], str)  # block_name
+            assert isinstance(pair_key[1], str)  # layer_name
+            assert isinstance(count, int)
+            assert count > 0
+
+    def test_block_layer_pairs_conservation(self) -> None:
+        """Test that sum of block_layer_pairs equals sum of block_counts."""
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
+
+        # Sum of all block_layer_pairs should equal sum of all block_counts
+        total_pair_count = sum(result['block_layer_pairs'].values())
+        total_block_count = sum(result['block_counts'].values())
+
+        assert total_pair_count == total_block_count
+        assert total_pair_count == 18  # Known count from sample_drawing.dxf
+
+    def test_block_layer_pairs_tuple_keys(self) -> None:
+        """Test that all block_layer_pairs keys are (str, str) tuples."""
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
+
+        for pair_key in result['block_layer_pairs'].keys():
+            # Verify key is a tuple
+            assert isinstance(pair_key, tuple)
+            # Verify tuple has exactly 2 elements
+            assert len(pair_key) == 2
+            # Verify both elements are strings
+            block_name, layer_name = pair_key
+            assert isinstance(block_name, str)
+            assert isinstance(layer_name, str)
+            # Verify neither is empty
+            assert len(block_name) > 0
+            assert len(layer_name) > 0
+
+    def test_block_layer_pairs_empty_file(self) -> None:
+        """Test that empty file returns empty block_layer_pairs dict."""
+        result = extract_blocks('app/tests/assets/empty_drawing.dxf')
+
+        # Verify block_layer_pairs is an empty dict
+        assert isinstance(result['block_layer_pairs'], dict)
+        assert len(result['block_layer_pairs']) == 0
+        assert result['block_layer_pairs'] == {}
