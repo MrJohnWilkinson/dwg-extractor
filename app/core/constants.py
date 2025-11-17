@@ -13,10 +13,24 @@ Usage:
 # File extensions
 SUPPORTED_EXTENSIONS: tuple[str, str] = ('.dwg', '.dxf')
 
-# Excel configuration
+# Excel configuration - Sheet names
+EXCEL_SHEET_BLOCK_COUNTS: str = 'Block Counts'
+EXCEL_SHEET_LAYER_ANALYSIS: str = 'Layer Analysis'
+EXCEL_SHEET_ENTITY_SUMMARY: str = 'Entity Summary'
+
+# Excel configuration - Block Counts sheet columns
 EXCEL_COLUMN_BLOCK_NAME: str = 'Block Name'
 EXCEL_COLUMN_COUNT: str = 'Insertion Count'
-EXCEL_WORKSHEET_NAME: str = 'Block Summary'
+EXCEL_COLUMN_ENTITIES_IN_DEFINITION: str = 'Entities in Definition'
+
+# Excel configuration - Layer Analysis sheet columns
+EXCEL_COLUMN_LAYER_NAME: str = 'Layer Name'
+EXCEL_COLUMN_INSERTIONS_ON_LAYER: str = 'Insertions on Layer'
+EXCEL_COLUMN_ENTITIES_ON_LAYER: str = 'Entities on Layer'
+
+# Excel configuration - Entity Summary sheet columns
+EXCEL_COLUMN_ENTITY_TYPE: str = 'Entity Type'
+EXCEL_COLUMN_TOTAL_COUNT: str = 'Total Count'
 
 # UI messages
 MSG_SELECT_FILE: str = 'Please select a DWG or DXF file'

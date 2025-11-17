@@ -12,7 +12,7 @@ This test suite validates the DWG/DXF extraction functionality including:
 
 import pytest
 from pathlib import Path
-from core.extractor import extract_blocks
+from core.extractor import extract_blocks, ExtractionResult
 import ezdxf
 
 
@@ -23,25 +23,33 @@ class TestExtractor:
         """Test extraction from valid DXF file with known block counts."""
         result = extract_blocks('app/tests/assets/sample_drawing.dxf')
 
-        # Verify result is a dict
+        # Verify result is an ExtractionResult dict
         assert isinstance(result, dict)
+        assert 'block_counts' in result
+        assert 'block_entities' in result
+        assert 'layer_insertions' in result
+        assert 'layer_entities' in result
+        assert 'entity_types' in result
 
         # Verify we have exactly 3 block types
-        assert len(result) == 3
+        assert len(result['block_counts']) == 3
 
         # Verify correct counts for each block type
-        assert result['VALVE_GATE'] == 10
-        assert result['PIPE_SUPPORT'] == 5
-        assert result['EQUIPMENT_TAG'] == 3
+        assert result['block_counts']['VALVE_GATE'] == 10
+        assert result['block_counts']['PIPE_SUPPORT'] == 5
+        assert result['block_counts']['EQUIPMENT_TAG'] == 3
 
     def test_extract_empty_file(self) -> None:
         """Test extraction from valid DXF file with no blocks."""
         result = extract_blocks('app/tests/assets/empty_drawing.dxf')
 
-        # Verify result is an empty dict
+        # Verify result has all required keys with empty dicts
         assert isinstance(result, dict)
-        assert len(result) == 0
-        assert result == {}
+        assert result['block_counts'] == {}
+        assert isinstance(result['block_entities'], dict)
+        assert isinstance(result['layer_insertions'], dict)
+        assert isinstance(result['layer_entities'], dict)
+        assert isinstance(result['entity_types'], dict)
 
     def test_extract_invalid_file(self) -> None:
         """Test that invalid/corrupted files raise ValueError."""
@@ -58,11 +66,11 @@ class TestExtractor:
         result = extract_blocks('app/tests/assets/sample_drawing.dxf')
 
         # Total count should be 10 + 5 + 3 = 18
-        total_count = sum(result.values())
+        total_count = sum(result['block_counts'].values())
         assert total_count == 18
 
         # All counts should be positive integers
-        for count in result.values():
+        for count in result['block_counts'].values():
             assert isinstance(count, int)
             assert count > 0
 
@@ -70,15 +78,17 @@ class TestExtractor:
         """Test that return value has correct types."""
         result = extract_blocks('app/tests/assets/sample_drawing.dxf')
 
-        # Verify return type is dict
+        # Verify return type is dict with correct keys
         assert isinstance(result, dict)
+        assert 'block_counts' in result
+        assert 'block_entities' in result
+        assert 'layer_insertions' in result
+        assert 'layer_entities' in result
+        assert 'entity_types' in result
 
-        # Verify all keys are strings
-        for key in result.keys():
+        # Verify all block count keys are strings and values are integers
+        for key, value in result['block_counts'].items():
             assert isinstance(key, str)
-
-        # Verify all values are integers
-        for value in result.values():
             assert isinstance(value, int)
 
     def test_extract_unsupported_extension(self) -> None:
@@ -95,6 +105,50 @@ class TestExtractor:
             if temp_file.exists():
                 temp_file.unlink()
 
+    def test_extract_block_entities(self) -> None:
+        """Test that block definition entity counts are extracted."""
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
+
+        # Verify block_entities contains data for each block type
+        assert len(result['block_entities']) >= len(result['block_counts'])
+
+        # All values should be non-negative integers
+        for entity_count in result['block_entities'].values():
+            assert isinstance(entity_count, int)
+            assert entity_count >= 0
+
+    def test_extract_layer_metrics(self) -> None:
+        """Test that layer-based metrics are extracted."""
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
+
+        # Verify layer data is present
+        assert isinstance(result['layer_insertions'], dict)
+        assert isinstance(result['layer_entities'], dict)
+
+        # Should have at least one layer (layer "0" is default)
+        assert len(result['layer_entities']) > 0
+
+        # All layer entity counts should be positive
+        for count in result['layer_entities'].values():
+            assert isinstance(count, int)
+            assert count > 0
+
+    def test_extract_entity_types(self) -> None:
+        """Test that global entity type counts are extracted."""
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
+
+        # Verify entity_types contains data
+        assert len(result['entity_types']) > 0
+
+        # Should at least have INSERT entities (since we have blocks)
+        assert 'INSERT' in result['entity_types']
+        assert result['entity_types']['INSERT'] == 18  # 10 + 5 + 3
+
+        # All values should be positive integers
+        for count in result['entity_types'].values():
+            assert isinstance(count, int)
+            assert count > 0
+
     @pytest.mark.skip(reason="ezdxf.readfile() does not support DWG files directly - requires ODA File Converter or ezdxf.recover")
     def test_extract_real_dwg_file(self) -> None:
         """Test extraction from a real DWG file."""
@@ -103,11 +157,12 @@ class TestExtractor:
         # This test is skipped as it's beyond the scope of Phase 2
         result = extract_blocks('app/tests/assets/Supermarket-2020.dwg')
 
-        # Verify we get a dict result (don't check specific counts as we don't know them)
+        # Verify we get an ExtractionResult
         assert isinstance(result, dict)
+        assert 'block_counts' in result
 
-        # Verify all keys are strings and values are positive integers
-        for block_name, count in result.items():
+        # Verify all block names are strings and counts are positive integers
+        for block_name, count in result['block_counts'].items():
             assert isinstance(block_name, str)
             assert isinstance(count, int)
             assert count > 0

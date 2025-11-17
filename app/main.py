@@ -20,7 +20,7 @@ from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
-from core.extractor import extract_blocks
+from core.extractor import extract_blocks, ExtractionResult
 from core.excel_writer import write_excel
 from core.logger import setup_logger
 from core.constants import (
@@ -183,13 +183,13 @@ class DWGExtractorApp(ctk.CTk):
                 self._show_error("No file selected")
                 return
 
-            block_counts = extract_blocks(self.selected_file_path)
+            # Step 2: Extract comprehensive data
+            self._update_progress(0.5, "Analyzing CAD file...")
 
-            # Step 2: Count blocks
-            self._update_progress(0.5, "Counting blocks...")
+            extraction_result = extract_blocks(self.selected_file_path)
 
             # Check for empty results
-            if not block_counts:
+            if not extraction_result['block_counts']:
                 self.logger.warning(f"No blocks found in {self.selected_file_path}")
                 self._show_error(MSG_ERROR_NO_BLOCKS)
                 return
@@ -197,7 +197,7 @@ class DWGExtractorApp(ctk.CTk):
             # Step 3: Generate Excel
             self._update_progress(0.7, "Generating Excel...")
 
-            excel_path = write_excel(block_counts, self.selected_file_path)
+            excel_path = write_excel(extraction_result, self.selected_file_path)
 
             # Step 4: Complete
             self._update_progress(1.0, MSG_SUCCESS)

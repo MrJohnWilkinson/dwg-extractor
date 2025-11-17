@@ -2,16 +2,17 @@
 DWG/DXF extraction logic for the DWG Block Extractor.
 
 This module provides functionality to parse DWG and DXF files using the ezdxf library,
-iterate through modelspace INSERT entities, and count block insertions by name.
+extract comprehensive CAD analysis including block counts, layer metrics, and entity types.
 
 Usage:
     from core.extractor import extract_blocks
 
-    block_counts = extract_blocks('/path/to/drawing.dwg')
-    # Returns: {'VALVE_GATE': 10, 'PIPE_SUPPORT': 5, ...}
+    result = extract_blocks('/path/to/drawing.dwg')
+    # Returns: ExtractionResult with block_counts, block_entities, layer_insertions, etc.
 """
 
 from pathlib import Path
+from typing import TypedDict
 import ezdxf
 from ezdxf import DXFError
 
@@ -21,31 +22,54 @@ from .constants import SUPPORTED_EXTENSIONS
 logger = setup_logger(__name__)
 
 
-def extract_blocks(file_path: str) -> dict[str, int]:
+class ExtractionResult(TypedDict):
     """
-    Extract block insertion counts from a DWG or DXF file.
+    Comprehensive extraction result containing all CAD analysis data.
 
-    This function loads a CAD file, iterates through all INSERT entities in the
-    modelspace, and counts how many times each block is inserted.
+    Attributes:
+        block_counts: Dictionary mapping block names to insertion counts
+        block_entities: Dictionary mapping block names to entity count within their definition
+        layer_insertions: Dictionary mapping layer names to block insertion counts on that layer
+        layer_entities: Dictionary mapping layer names to total entity counts on that layer
+        entity_types: Dictionary mapping entity type names to their total count in the drawing
+    """
+    block_counts: dict[str, int]
+    block_entities: dict[str, int]
+    layer_insertions: dict[str, int]
+    layer_entities: dict[str, int]
+    entity_types: dict[str, int]
+
+
+def extract_blocks(file_path: str) -> ExtractionResult:
+    """
+    Extract comprehensive CAD analysis from a DWG or DXF file.
+
+    This function loads a CAD file and extracts:
+    - Block insertion counts
+    - Entity counts within each block definition
+    - Layer-based insertion counts
+    - Layer-based total entity counts
+    - Global entity type counts
 
     Args:
         file_path: Path to the DWG or DXF file to process
 
     Returns:
-        Dictionary mapping block names to insertion counts.
-        Returns empty dict {} if the file contains no block insertions.
+        ExtractionResult TypedDict containing all analysis data.
+        All dictionaries will be empty if the file contains no relevant data.
 
     Raises:
         FileNotFoundError: If the specified file does not exist
         ValueError: If the file extension is not supported or file is corrupted
 
     Examples:
-        >>> counts = extract_blocks('drawing.dwg')
-        >>> counts
-        {'VALVE_GATE': 142, 'PIPE_SUPPORT': 89, 'EQUIPMENT_TAG': 67}
-
-        >>> total_blocks = sum(counts.values())
-        >>> unique_blocks = len(counts)
+        >>> result = extract_blocks('drawing.dwg')
+        >>> result['block_counts']
+        {'VALVE_GATE': 142, 'PIPE_SUPPORT': 89}
+        >>> result['block_entities']
+        {'VALVE_GATE': 8, 'PIPE_SUPPORT': 12}
+        >>> result['layer_insertions']
+        {'Piping': 200, 'Equipment': 31}
     """
     logger.info(f"Starting block extraction from {file_path}")
 
@@ -65,20 +89,65 @@ def extract_blocks(file_path: str) -> dict[str, int]:
         doc = ezdxf.readfile(file_path)
         msp = doc.modelspace()
 
-        # Initialize block counts dictionary
+        # Initialize result dictionaries
         block_counts: dict[str, int] = {}
+        block_entities: dict[str, int] = {}
+        layer_insertions: dict[str, int] = {}
+        layer_entities: dict[str, int] = {}
+        entity_types: dict[str, int] = {}
 
-        # Iterate through modelspace entities and count INSERT entities
+        # Extract block definition entity counts
+        logger.info("Analyzing block definitions...")
+        for block_def in doc.blocks:
+            block_name = block_def.name
+            # Skip anonymous blocks and modelspace/paperspace
+            if block_name.startswith('*'):
+                continue
+
+            entity_count = sum(1 for _ in block_def)
+            block_entities[block_name] = entity_count
+
+        logger.info(f"Analyzed {len(block_entities)} block definitions")
+
+        # Iterate through modelspace entities
+        logger.info("Analyzing modelspace entities...")
         for entity in msp:
-            if entity.dxftype() == 'INSERT':
+            entity_type = entity.dxftype()
+            layer_name = entity.dxf.layer
+
+            # Count entity types
+            entity_types[entity_type] = entity_types.get(entity_type, 0) + 1
+
+            # Count entities per layer
+            layer_entities[layer_name] = layer_entities.get(layer_name, 0) + 1
+
+            # Count INSERT entities (block insertions)
+            if entity_type == 'INSERT':
                 block_name = entity.dxf.name
                 block_counts[block_name] = block_counts.get(block_name, 0) + 1
+                layer_insertions[layer_name] = layer_insertions.get(layer_name, 0) + 1
 
-        total_count = sum(block_counts.values())
-        unique_count = len(block_counts)
-        logger.info(f"Found {total_count} block insertions across {unique_count} unique blocks")
+        # Log summary
+        total_insertions = sum(block_counts.values())
+        unique_blocks = len(block_counts)
+        total_entities = sum(entity_types.values())
+        unique_entity_types = len(entity_types)
+        total_layers = len(layer_entities)
 
-        return block_counts
+        logger.info(f"Found {total_insertions} block insertions across {unique_blocks} unique blocks")
+        logger.info(f"Found {total_entities} total entities across {unique_entity_types} entity types")
+        logger.info(f"Found {total_layers} layers in drawing")
+
+        # Return comprehensive result
+        result: ExtractionResult = {
+            'block_counts': block_counts,
+            'block_entities': block_entities,
+            'layer_insertions': layer_insertions,
+            'layer_entities': layer_entities,
+            'entity_types': entity_types
+        }
+
+        return result
 
     except (DXFError, IOError, OSError) as e:
         logger.error(f"Invalid or corrupted DXF/DWG file: {file_path} - {str(e)}")

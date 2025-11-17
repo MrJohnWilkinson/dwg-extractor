@@ -1,14 +1,15 @@
 """
 Unit tests for the excel_writer module.
 
-This test suite validates the Excel generation functionality including:
-- Basic file creation with sample data
-- Header column name verification
-- Descending sort order validation
-- Auto-filter presence confirmation
+This test suite validates the multi-sheet Excel generation functionality including:
+- Three-sheet workbook creation
+- Correct headers on all sheets
+- Data distribution across sheets
+- Descending sort order on all sheets
+- Auto-filter presence on all sheets
+- Column width formatting on all sheets
 - Timestamped filename format verification
 - Empty data handling (headers only)
-- Column width formatting verification
 """
 
 import pytest
@@ -21,7 +22,20 @@ import re
 from typing import Iterator
 
 from core.excel_writer import write_excel
-from core.constants import EXCEL_COLUMN_BLOCK_NAME, EXCEL_COLUMN_COUNT, EXCEL_WORKSHEET_NAME
+from core.extractor import ExtractionResult
+from core.constants import (
+    EXCEL_SHEET_BLOCK_COUNTS,
+    EXCEL_SHEET_LAYER_ANALYSIS,
+    EXCEL_SHEET_ENTITY_SUMMARY,
+    EXCEL_COLUMN_BLOCK_NAME,
+    EXCEL_COLUMN_COUNT,
+    EXCEL_COLUMN_ENTITIES_IN_DEFINITION,
+    EXCEL_COLUMN_LAYER_NAME,
+    EXCEL_COLUMN_INSERTIONS_ON_LAYER,
+    EXCEL_COLUMN_ENTITIES_ON_LAYER,
+    EXCEL_COLUMN_ENTITY_TYPE,
+    EXCEL_COLUMN_TOTAL_COUNT
+)
 
 
 class TestExcelWriter:
@@ -34,71 +48,189 @@ class TestExcelWriter:
             yield tmpdir
 
     @pytest.fixture
-    def sample_block_data(self) -> dict[str, int]:
-        """Provide sample block data for testing."""
-        return {'VALVE': 10, 'PIPE': 5, 'TAG': 3}
+    def sample_extraction_data(self) -> ExtractionResult:
+        """Provide sample extraction data for testing."""
+        return {
+            'block_counts': {'VALVE': 10, 'PIPE': 5, 'TAG': 3},
+            'block_entities': {'VALVE': 8, 'PIPE': 12, 'TAG': 4},
+            'layer_insertions': {'Layer1': 15, 'Layer2': 3},
+            'layer_entities': {'Layer1': 25, 'Layer2': 10},
+            'entity_types': {'INSERT': 18, 'LINE': 15, 'CIRCLE': 8}
+        }
 
-    def test_write_excel_basic(self, temp_dir: str, sample_block_data: dict[str, int]) -> None:
-        """Test basic Excel file creation."""
+    def test_write_excel_three_sheets(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that three sheets are created with correct names."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
-
-        # Create the Excel file
-        excel_path = write_excel(sample_block_data, output_path)
+        excel_path = write_excel(sample_extraction_data, output_path)
 
         # Verify file exists
         assert Path(excel_path).exists()
 
-        # Verify it's a valid Excel file by loading it
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_WORKSHEET_NAME)
-        assert df is not None
-        assert len(df) == 3  # 3 rows of data
-
-    def test_excel_has_headers(self, temp_dir: str, sample_block_data: dict[str, int]) -> None:
-        """Test that Excel file has correct column headers."""
-        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
-        excel_path = write_excel(sample_block_data, output_path)
-
-        # Load and verify headers
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_WORKSHEET_NAME)
-        assert list(df.columns) == [EXCEL_COLUMN_BLOCK_NAME, EXCEL_COLUMN_COUNT]
-
-    def test_excel_sorted_descending(self, temp_dir: str) -> None:
-        """Test that Excel data is sorted by count in descending order."""
-        unsorted_data = {'VALVE': 5, 'PIPE': 10, 'TAG': 3}
-        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
-        excel_path = write_excel(unsorted_data, output_path)
-
-        # Load and verify sort order
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_WORKSHEET_NAME)
-
-        # First row should have count=10 (PIPE)
-        assert df.iloc[0][EXCEL_COLUMN_COUNT] == 10
-        assert df.iloc[0][EXCEL_COLUMN_BLOCK_NAME] == 'PIPE'
-
-        # Second row should have count=5 (VALVE)
-        assert df.iloc[1][EXCEL_COLUMN_COUNT] == 5
-
-        # Last row should have count=3 (TAG)
-        assert df.iloc[2][EXCEL_COLUMN_COUNT] == 3
-        assert df.iloc[2][EXCEL_COLUMN_BLOCK_NAME] == 'TAG'
-
-    def test_excel_autofilter(self, temp_dir: str, sample_block_data: dict[str, int]) -> None:
-        """Test that auto-filter is applied to headers."""
-        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
-        excel_path = write_excel(sample_block_data, output_path)
-
-        # Load workbook with openpyxl
+        # Load and verify sheet names
         wb = load_workbook(excel_path)
-        ws = wb[EXCEL_WORKSHEET_NAME]
+        assert EXCEL_SHEET_BLOCK_COUNTS in wb.sheetnames
+        assert EXCEL_SHEET_LAYER_ANALYSIS in wb.sheetnames
+        assert EXCEL_SHEET_ENTITY_SUMMARY in wb.sheetnames
+        assert len(wb.sheetnames) == 3
 
-        # Verify auto-filter is set
-        assert ws.auto_filter.ref is not None
-        assert ws.auto_filter.ref != ''
-
-    def test_filename_format(self, temp_dir: str, sample_block_data: dict[str, int]) -> None:
-        """Test that filename matches the expected timestamped pattern."""
+    def test_block_counts_sheet_structure(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test Block Counts sheet has correct columns and data."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
-        excel_path = write_excel(sample_block_data, output_path)
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Load Block Counts sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
+
+        # Verify headers
+        assert list(df.columns) == [
+            EXCEL_COLUMN_BLOCK_NAME,
+            EXCEL_COLUMN_COUNT,
+            EXCEL_COLUMN_ENTITIES_IN_DEFINITION
+        ]
+
+        # Verify data rows
+        assert len(df) == 3
+        assert df.iloc[0][EXCEL_COLUMN_BLOCK_NAME] == 'VALVE'
+        assert df.iloc[0][EXCEL_COLUMN_COUNT] == 10
+        assert df.iloc[0][EXCEL_COLUMN_ENTITIES_IN_DEFINITION] == 8
+
+    def test_layer_analysis_sheet_structure(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test Layer Analysis sheet has correct columns and data."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Load Layer Analysis sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
+
+        # Verify headers
+        assert list(df.columns) == [
+            EXCEL_COLUMN_LAYER_NAME,
+            EXCEL_COLUMN_INSERTIONS_ON_LAYER,
+            EXCEL_COLUMN_ENTITIES_ON_LAYER
+        ]
+
+        # Verify data rows
+        assert len(df) == 2
+        # Sorted by entities_on_layer descending
+        assert df.iloc[0][EXCEL_COLUMN_LAYER_NAME] == 'Layer1'
+        assert df.iloc[0][EXCEL_COLUMN_ENTITIES_ON_LAYER] == 25
+
+    def test_entity_summary_sheet_structure(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test Entity Summary sheet has correct columns and data."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Load Entity Summary sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
+
+        # Verify headers
+        assert list(df.columns) == [
+            EXCEL_COLUMN_ENTITY_TYPE,
+            EXCEL_COLUMN_TOTAL_COUNT
+        ]
+
+        # Verify data rows
+        assert len(df) == 3
+
+    def test_all_sheets_sorted(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that all sheets are sorted correctly."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Block Counts: sorted by insertion_count descending
+        df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
+        assert df_blocks.iloc[0][EXCEL_COLUMN_COUNT] == 10  # VALVE
+        assert df_blocks.iloc[1][EXCEL_COLUMN_COUNT] == 5   # PIPE
+        assert df_blocks.iloc[2][EXCEL_COLUMN_COUNT] == 3   # TAG
+
+        # Layer Analysis: sorted by entities_on_layer descending
+        df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
+        assert df_layers.iloc[0][EXCEL_COLUMN_ENTITIES_ON_LAYER] == 25  # Layer1
+        assert df_layers.iloc[1][EXCEL_COLUMN_ENTITIES_ON_LAYER] == 10  # Layer2
+
+        # Entity Summary: sorted by total_count descending
+        df_entities = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
+        assert df_entities.iloc[0][EXCEL_COLUMN_TOTAL_COUNT] == 18  # INSERT
+        assert df_entities.iloc[1][EXCEL_COLUMN_TOTAL_COUNT] == 15  # LINE
+        assert df_entities.iloc[2][EXCEL_COLUMN_TOTAL_COUNT] == 8   # CIRCLE
+
+    def test_all_sheets_autofilter(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that auto-filters are applied to all sheets."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+
+        # Verify auto-filter on Block Counts sheet
+        ws_blocks = wb[EXCEL_SHEET_BLOCK_COUNTS]
+        assert ws_blocks.auto_filter.ref is not None
+
+        # Verify auto-filter on Layer Analysis sheet
+        ws_layers = wb[EXCEL_SHEET_LAYER_ANALYSIS]
+        assert ws_layers.auto_filter.ref is not None
+
+        # Verify auto-filter on Entity Summary sheet
+        ws_entities = wb[EXCEL_SHEET_ENTITY_SUMMARY]
+        assert ws_entities.auto_filter.ref is not None
+
+    def test_all_sheets_column_widths(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that column widths are set correctly on all sheets."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+
+        # Block Counts sheet
+        ws_blocks = wb[EXCEL_SHEET_BLOCK_COUNTS]
+        assert ws_blocks.column_dimensions['A'].width == 30  # Block Name
+        assert ws_blocks.column_dimensions['B'].width == 20  # Insertion Count
+        assert ws_blocks.column_dimensions['C'].width == 25  # Entities in Definition
+
+        # Layer Analysis sheet
+        ws_layers = wb[EXCEL_SHEET_LAYER_ANALYSIS]
+        assert ws_layers.column_dimensions['A'].width == 30  # Layer Name
+        assert ws_layers.column_dimensions['B'].width == 20  # Insertions on Layer
+        assert ws_layers.column_dimensions['C'].width == 20  # Entities on Layer
+
+        # Entity Summary sheet
+        ws_entities = wb[EXCEL_SHEET_ENTITY_SUMMARY]
+        assert ws_entities.column_dimensions['A'].width == 25  # Entity Type
+        assert ws_entities.column_dimensions['B'].width == 20  # Total Count
+
+    def test_empty_data_all_sheets(self, temp_dir: str) -> None:
+        """Test that empty data creates headers-only sheets."""
+        empty_data: ExtractionResult = {
+            'block_counts': {},
+            'block_entities': {},
+            'layer_insertions': {},
+            'layer_entities': {},
+            'entity_types': {}
+        }
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(empty_data, output_path)
+
+        # Verify file exists
+        assert Path(excel_path).exists()
+
+        # Load all sheets and verify headers only
+        df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
+        assert len(df_blocks) == 0
+        assert list(df_blocks.columns) == [
+            EXCEL_COLUMN_BLOCK_NAME,
+            EXCEL_COLUMN_COUNT,
+            EXCEL_COLUMN_ENTITIES_IN_DEFINITION
+        ]
+
+        df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
+        assert len(df_layers) == 0
+
+        df_entities = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
+        assert len(df_entities) == 0
+
+    def test_filename_format_unchanged(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that timestamped filename format is maintained."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
 
         # Verify filename pattern: test_drawing_blocks_YYYYMMDD_HHMMSS.xlsx
         filename = Path(excel_path).name
@@ -108,59 +240,9 @@ class TestExcelWriter:
         # Verify file exists at the returned path
         assert Path(excel_path).exists()
 
-    def test_empty_data(self, temp_dir: str) -> None:
-        """Test handling of empty block data."""
-        empty_data: dict[str, int] = {}
-        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
-        excel_path = write_excel(empty_data, output_path)
-
-        # Verify file is created
-        assert Path(excel_path).exists()
-
-        # Load and verify it has headers but no data rows
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_WORKSHEET_NAME)
-        assert len(df) == 0  # No data rows
-        assert list(df.columns) == [EXCEL_COLUMN_BLOCK_NAME, EXCEL_COLUMN_COUNT]
-
-    def test_column_widths(self, temp_dir: str, sample_block_data: dict[str, int]) -> None:
-        """Test that column widths are set correctly."""
-        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
-        excel_path = write_excel(sample_block_data, output_path)
-
-        # Load workbook with openpyxl
-        wb = load_workbook(excel_path)
-        ws = wb[EXCEL_WORKSHEET_NAME]
-
-        # Verify column widths
-        assert ws.column_dimensions['A'].width == 30  # Block Name column
-        assert ws.column_dimensions['B'].width == 15  # Insertion Count column
-
     def test_none_data_raises_error(self, temp_dir: str) -> None:
         """Test that None data raises ValueError."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
 
-        with pytest.raises(ValueError, match="block_data cannot be None"):
+        with pytest.raises(ValueError, match="extraction_data cannot be None"):
             write_excel(None, output_path)  # type: ignore[arg-type]
-
-    def test_multiple_blocks(self, temp_dir: str) -> None:
-        """Test with a larger dataset."""
-        large_data = {
-            'BLOCK_A': 100,
-            'BLOCK_B': 50,
-            'BLOCK_C': 75,
-            'BLOCK_D': 25,
-            'BLOCK_E': 60,
-        }
-        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
-        excel_path = write_excel(large_data, output_path)
-
-        # Load and verify
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_WORKSHEET_NAME)
-        assert len(df) == 5
-
-        # Verify sorted correctly (descending)
-        assert df.iloc[0][EXCEL_COLUMN_COUNT] == 100  # BLOCK_A
-        assert df.iloc[1][EXCEL_COLUMN_COUNT] == 75   # BLOCK_C
-        assert df.iloc[2][EXCEL_COLUMN_COUNT] == 60   # BLOCK_E
-        assert df.iloc[3][EXCEL_COLUMN_COUNT] == 50   # BLOCK_B
-        assert df.iloc[4][EXCEL_COLUMN_COUNT] == 25   # BLOCK_D
