@@ -22,6 +22,7 @@ Extracts block reference counts from AutoCAD drawings and generates Excel report
 - **Testing:** pytest with coverage reporting
 - **Type Checking:** mypy with strict configuration
 - **Package Manager:** uv (all dependency management)
+- **Deployment:** PyInstaller (standalone executables)
 
 ## Project Structure
 
@@ -44,6 +45,88 @@ dwg-extractor/
 ├── .venv/                        # Virtual environment (managed by uv)
 └── pyproject.toml                # Dependencies and project config (uv)
 ```
+
+## Usage
+
+### Development Mode
+
+**Quick Start:**
+```bash
+# Launch application using the start script
+scripts/start.sh
+
+# Or run directly with uv
+uv run python app/main.py
+```
+
+The start script includes helpful features:
+- `-v, --verbose`: Show detailed startup diagnostics
+- `-h, --help`: Display help message
+- Automatic dependency checks and virtual environment setup
+
+**Running Tests:**
+```bash
+# Run all tests
+uv run pytest app/tests/
+
+# Run tests with coverage report
+uv run pytest --cov=app/core app/tests/
+
+# Type checking
+uv run mypy app/
+```
+
+### Building Executable
+
+Create a standalone executable that can run without Python installed:
+
+**Install Build Dependencies:**
+```bash
+uv pip install --group build
+```
+
+**Run Build:**
+```bash
+scripts/build.sh
+```
+
+Build script options:
+- `-v, --verbose`: Show detailed build output
+- `-p, --preserve`: Preserve build artifacts (build/, *.spec)
+- `-h, --help`: Display help message
+
+**Output Location:**
+- **Windows:** `dist/DWGBlockExtractor.exe`
+- **Linux/macOS:** `dist/DWGBlockExtractor`
+
+**Platform-Specific Notes:**
+- **Windows:** Double-click the .exe file or run from command prompt
+- **Linux:** May need to set executable permissions: `chmod +x dist/DWGBlockExtractor`
+- **macOS:** May need to allow the app in Security & Privacy settings
+
+### Production Mode
+
+The built executable is completely standalone:
+
+**Running the Executable:**
+```bash
+# Linux/macOS
+./dist/DWGBlockExtractor
+
+# Windows
+dist\DWGBlockExtractor.exe
+```
+
+**No Python Required:** End users can run the executable without installing Python or any dependencies.
+
+**Troubleshooting:**
+- **Permission Denied (Linux/macOS):** Run `chmod +x dist/DWGBlockExtractor`
+- **Missing Libraries (Linux):** Install system libraries: `sudo apt-get install libx11-6 libxext6 libxrender1 libfontconfig1`
+- **Security Warning (macOS):** Go to System Preferences → Security & Privacy and allow the application
+- **Windows Defender:** The executable may be flagged as unknown; click "More info" → "Run anyway"
+
+**Working Directory Convention:**
+All commands execute from the project root using root-relative paths. Scripts use `uv run` without changing directories, maintaining consistency across the project.
 
 ## Reference Files
 - ai_docs/001-naming-convention-guide.md
