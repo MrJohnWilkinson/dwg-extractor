@@ -67,3 +67,7 @@ dwg-extractor/
 - **Scripts follow convention**: `scripts/start.sh` uses `uv run python app/main.py` without changing directories
 - **Project structure**: `pyproject.toml` and `.venv` at root, application code in `app/`
 - **Enforced by Claude Code setting**: `.claude/settings.json` has `CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR: 1` to maintain context
+
+## Dev Environment
+- Running on WSL2 (Ubuntu on Windows 11)
+- Project dir `/home/john/github-projects-linux/dwg-extractor`
