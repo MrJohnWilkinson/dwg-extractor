@@ -37,19 +37,8 @@ dwg-extractor/
 │   │   └── assets/               # Test fixtures
 │   └── main.py                   # GUI entry point
 │
-├── specs/                        # Implementation plans
-│   └── README.md                 # Spec writing guide
-│
 ├── scripts/                      # Utility scripts
 │   └── start.sh                  # Launch application
-│
-├── .claude/                      # ADW configuration
-│   ├── commands/                 # Slash commands
-│   └── hooks/                    # Workflow automation
-│
-├── ai_output/                    # Planning documents
-│   ├── 001-starting-plan.md      # Initial specification
-│   └── 002-implementation-plan.md # Phase breakdown
 │
 ├── .venv/                        # Virtual environment (managed by uv)
 └── pyproject.toml                # Dependencies and project config (uv)
