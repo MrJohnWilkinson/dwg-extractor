@@ -241,41 +241,34 @@ function Install-BuildDependencies {
 function Build-Executable {
     Write-ColorOutput "Building executable..." -Type Info
 
-    # Build command
-    $buildCmd = "uv run pyinstaller app/main.py --name $APP_NAME --onefile --windowed --clean"
-    Write-VerboseLog "Running: $buildCmd"
+    # Build command arguments
+    $pyinstallerArgs = @(
+        "app/main.py",
+        "--name", $APP_NAME,
+        "--onefile",
+        "--windowed",
+        "--clean"
+    )
 
-    # Create a job to handle timeout
-    $buildJob = Start-Job -ScriptBlock {
-        param($cmd)
-        Invoke-Expression $cmd 2>&1
-    } -ArgumentList $buildCmd
+    Write-VerboseLog "Running: uv run pyinstaller $($pyinstallerArgs -join ' ')"
 
-    # Wait for job with timeout (10 minutes)
-    $timeout = 600
-    $completed = Wait-Job $buildJob -Timeout $timeout
-
-    if ($completed) {
-        $output = Receive-Job $buildJob
-
+    try {
         if ($VerbosePreference -eq 'Continue') {
-            Write-Host $output
+            # Show all output in verbose mode
+            uv run pyinstaller @pyinstallerArgs
+        }
+        else {
+            # Suppress output in normal mode, only show errors
+            uv run pyinstaller @pyinstallerArgs 2>&1 | Out-Null
         }
 
-        if ($buildJob.State -eq 'Failed') {
-            Write-ColorOutput "Error: PyInstaller build failed" -Type Error
-            Write-Host $output
-            Remove-Job $buildJob
-            exit 1
-        }
-
-        Remove-Job $buildJob
         Write-VerboseLog "Build completed"
     }
-    else {
-        Stop-Job $buildJob
-        Remove-Job $buildJob
-        Write-ColorOutput "Error: Build timed out after $timeout seconds" -Type Error
+    catch {
+        Write-ColorOutput "Error: PyInstaller build failed" -Type Error
+        Write-Host "Error details: $_"
+        Write-Host ""
+        Write-Host "Run with -Verbose flag for detailed build output"
         exit 1
     }
 
