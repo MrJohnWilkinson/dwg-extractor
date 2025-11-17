@@ -310,9 +310,13 @@ def _create_block_trimming_analysis_sheet(data: ExtractionResult, writer: pd.Exc
             vertical_segments = geometry_data['vertical_segments']
             horizontal_segments = geometry_data['horizontal_segments']
 
-            # Convert segment lists to comma-separated strings
-            vertical_segments_str = ", ".join(map(str, vertical_segments)) if vertical_segments else ""
-            horizontal_segments_str = ", ".join(map(str, horizontal_segments)) if horizontal_segments else ""
+            # Convert segment lists to comma-separated strings (no decimals for whole numbers)
+            def format_number(n: float) -> str:
+                """Format number without decimals if it's a whole number."""
+                return str(int(n)) if n == int(n) else str(n)
+
+            vertical_segments_str = ", ".join(map(format_number, vertical_segments)) if vertical_segments else ""
+            horizontal_segments_str = ", ".join(map(format_number, horizontal_segments)) if horizontal_segments else ""
 
             rows.append({
                 EXCEL_COLUMN_BLOCK_NAME: block_name,
