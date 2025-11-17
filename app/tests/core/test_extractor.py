@@ -21,7 +21,7 @@ class TestExtractor:
 
     def test_extract_valid_file(self):
         """Test extraction from valid DXF file with known block counts."""
-        result = extract_blocks('tests/assets/sample_drawing.dxf')
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
 
         # Verify result is a dict
         assert isinstance(result, dict)
@@ -36,7 +36,7 @@ class TestExtractor:
 
     def test_extract_empty_file(self):
         """Test extraction from valid DXF file with no blocks."""
-        result = extract_blocks('tests/assets/empty_drawing.dxf')
+        result = extract_blocks('app/tests/assets/empty_drawing.dxf')
 
         # Verify result is an empty dict
         assert isinstance(result, dict)
@@ -46,16 +46,16 @@ class TestExtractor:
     def test_extract_invalid_file(self):
         """Test that invalid/corrupted files raise ValueError."""
         with pytest.raises(ValueError, match="Invalid or corrupted"):
-            extract_blocks('tests/assets/invalid.dxf')
+            extract_blocks('app/tests/assets/invalid.dxf')
 
     def test_extract_missing_file(self):
         """Test that missing files raise FileNotFoundError."""
         with pytest.raises(FileNotFoundError, match="File not found"):
-            extract_blocks('tests/assets/nonexistent.dxf')
+            extract_blocks('app/tests/assets/nonexistent.dxf')
 
     def test_extract_counts_accuracy(self):
         """Test that total count is accurate."""
-        result = extract_blocks('tests/assets/sample_drawing.dxf')
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
 
         # Total count should be 10 + 5 + 3 = 18
         total_count = sum(result.values())
@@ -68,7 +68,7 @@ class TestExtractor:
 
     def test_extract_returns_dict(self):
         """Test that return value has correct types."""
-        result = extract_blocks('tests/assets/sample_drawing.dxf')
+        result = extract_blocks('app/tests/assets/sample_drawing.dxf')
 
         # Verify return type is dict
         assert isinstance(result, dict)
@@ -84,7 +84,7 @@ class TestExtractor:
     def test_extract_unsupported_extension(self):
         """Test that unsupported file extensions raise ValueError."""
         # Create a temporary file with wrong extension
-        temp_file = Path('tests/assets/test.txt')
+        temp_file = Path('app/tests/assets/test.txt')
         temp_file.write_text('test')
 
         try:
@@ -101,7 +101,7 @@ class TestExtractor:
         # Note: ezdxf.readfile() cannot read DWG files directly
         # DWG support requires ODA File Converter or ezdxf.recover module
         # This test is skipped as it's beyond the scope of Phase 2
-        result = extract_blocks('tests/assets/Supermarket-2020.dwg')
+        result = extract_blocks('app/tests/assets/Supermarket-2020.dwg')
 
         # Verify we get a dict result (don't check specific counts as we don't know them)
         assert isinstance(result, dict)
