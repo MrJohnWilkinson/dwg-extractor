@@ -44,7 +44,7 @@ Before implementing the GUI, verify that all Phase 2 components are working corr
 - Confirm `app/core/constants.py` contains all required UI message constants
 - Confirm `app/core/logger.py` provides stdout logging
 - Verify CustomTkinter is installed via `uv sync` in the app directory
-- Review the test fixtures in `app/tests/assets/` to identify sample files for manual testing
+- Review the test fixtures in `app/app/tests/assets/` to identify sample files for manual testing
 
 ### Phase 2: Core Implementation
 Create the main GUI application with all required components:
@@ -72,7 +72,7 @@ IMPORTANT: Execute every step in order, top to bottom.
 ### Step 1: Verify Phase 2 Dependencies
 - Run `uv sync --directory app` to ensure all dependencies including CustomTkinter are installed
 - Verify that `app/core/extractor.py`, `app/core/excel_writer.py`, `app/core/constants.py`, and `app/core/logger.py` exist
-- Check that test assets exist in `app/tests/assets/` for manual GUI testing
+- Check that test assets exist in `app/app/tests/assets/` for manual GUI testing
 - Confirm Python version is 3.8+ by running `python --version`
 
 ### Step 2: Create Main GUI Application File
@@ -178,8 +178,8 @@ IMPORTANT: Execute every step in order, top to bottom.
 - Log application exit when window closes: `self.logger.info("Application closed")`
 
 ### Step 12: Manual Testing with Sample Files
-- Run `uv run --directory app python main.py` to launch the GUI
-- Test browse functionality: click Browse and select a test file from `app/tests/assets/`
+- Run `uv run python main.py` to launch the GUI
+- Test browse functionality: click Browse and select a test file from `app/app/tests/assets/`
 - Test successful extraction: select a valid DWG/DXF file and click Extract
 - Verify progress bar updates during processing
 - Confirm Excel file opens automatically
@@ -246,16 +246,16 @@ Not applicable for this phase. The application is a desktop GUI (not web-based),
 Execute every command to validate the feature works correctly with zero regressions.
 
 - `uv sync --directory app` - Ensure all dependencies including CustomTkinter are installed
-- `uv run --directory app python --version` - Verify Python 3.8+ is being used
-- `uv run --directory app pytest` - Run all existing unit tests to ensure zero regressions in core logic
-- `uv run --directory app pytest --cov=core --cov-report=term-missing` - Verify core module test coverage remains >80%
+- `uv run python --version` - Verify Python 3.8+ is being used
+- `uv run pytest` - Run all existing unit tests to ensure zero regressions in core logic
+- `uv run pytest --cov=app/core --cov-report=term-missing` - Verify core module test coverage remains >80%
 - `test -f app/main.py && echo "main.py exists" || echo "main.py missing"` - Confirm GUI file was created
 - `wc -l app/main.py` - Verify implementation is approximately 120-200 lines as estimated
-- `uv run --directory app python main.py` - Launch GUI application (manual testing required)
+- `uv run python main.py` - Launch GUI application (manual testing required)
 
 **Manual Validation Steps** (execute while GUI is running):
 1. Click Browse button → file dialog opens with DWG/DXF filters
-2. Select a test file from `app/tests/assets/` → file path displays in entry field, Extract button enables
+2. Select a test file from `app/app/tests/assets/` → file path displays in entry field, Extract button enables
 3. Click Extract button → progress bar updates, status messages appear, Excel file opens automatically
 4. Verify stdout contains all logging messages from GUI and core modules
 5. Close application → no errors, clean exit

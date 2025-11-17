@@ -19,8 +19,13 @@ build = [
     "pyinstaller>=6.0.0",
 ]
 
+[tool.pytest.ini_options]
+# Configure pytest to run from app/ directory to support relative test paths
+testpaths = ["app/tests"]
+pythonpath = ["app"]
+
 [tool.hatch.build.targets.wheel]
-packages = ["core"]
+packages = ["app/core"]
 
 [build-system]
 requires = ["hatchling"]

@@ -9,5 +9,5 @@ if ! command -v python &> /dev/null; then
     exit 1
 fi
 
-# Launch application from project root
-uv run --directory app python main.py
+# Launch application using root-relative path
+uv run python app/main.py

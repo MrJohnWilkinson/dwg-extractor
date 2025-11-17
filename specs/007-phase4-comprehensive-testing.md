@@ -38,7 +38,7 @@ Use these files to resolve the chore:
 
 - **app/pyproject.toml** - Contains pytest and pytest-cov dependencies in [project.optional-dependencies.dev].
 
-- **README.md** - Documents the working directory convention (always run from project root using `uv run --directory app`).
+- **README.md** - Documents the working directory convention (always run from project root using `uv run` with root-relative paths).
 
 ### New Files
 No new files need to be created. All test files and fixtures already exist and are comprehensive.
@@ -52,19 +52,19 @@ IMPORTANT: Execute every step in order, top to bottom.
 - Confirm working directory convention is followed (execute from project root)
 
 ### Step 2: Run All Unit Tests
-- Execute pytest from project root using `uv run --directory app pytest` to run all tests
+- Execute pytest from project root using `uv run pytest` to run all tests
 - Verify all tests pass without errors or failures
 - Review any skipped tests (test_extract_real_dwg_file is expected to be skipped)
 - Capture test output to verify test count and results
 
 ### Step 3: Run Tests with Coverage Reporting
-- Execute pytest with coverage using `uv run --directory app pytest --cov=core --cov-report=term-missing`
+- Execute pytest with coverage using `uv run pytest --cov=app/core --cov-report=term-missing`
 - Verify code coverage is >80% for the core modules (extractor.py, excel_writer.py)
 - Review coverage report to identify any uncovered lines
 - Ensure coverage includes both normal paths and exception handling paths
 
 ### Step 4: Run Tests with Verbose Output
-- Execute pytest with verbose mode to see detailed test execution: `uv run --directory app pytest -v`
+- Execute pytest with verbose mode to see detailed test execution: `uv run pytest -v`
 - Verify each individual test case passes
 - Confirm test execution time is <5 seconds total
 - Review test output for any warnings or deprecation notices
@@ -96,17 +96,17 @@ IMPORTANT: Execute every step in order, top to bottom.
 ## Validation Commands
 Execute every command to validate the chore is complete with zero regressions.
 
-- `uv run --directory app pytest` - Run all unit tests from project root. All tests must pass.
-- `uv run --directory app pytest -v` - Run tests with verbose output. Verify individual test results and execution time <5 seconds.
-- `uv run --directory app pytest --cov=core --cov-report=term-missing` - Run tests with coverage. Coverage must be >80% for core modules.
-- `uv run --directory app pytest app/tests/core/test_extractor.py -v` - Run extractor tests only. All tests must pass.
-- `uv run --directory app pytest app/tests/core/test_excel_writer.py -v` - Run excel_writer tests only. All tests must pass.
+- `uv run pytest` - Run all unit tests from project root. All tests must pass.
+- `uv run pytest -v` - Run tests with verbose output. Verify individual test results and execution time <5 seconds.
+- `uv run pytest --cov=app/core --cov-report=term-missing` - Run tests with coverage. Coverage must be >80% for core modules.
+- `uv run pytest app/tests/core/test_extractor.py -v` - Run extractor tests only. All tests must pass.
+- `uv run pytest app/tests/core/test_excel_writer.py -v` - Run excel_writer tests only. All tests must pass.
 - `test -f app/tests/assets/sample_drawing.dxf` - Verify sample DXF fixture exists.
 - `test -f app/tests/assets/empty_drawing.dxf` - Verify empty DXF fixture exists.
 - `test -f app/tests/assets/invalid.dxf` - Verify invalid DXF fixture exists.
 
 ## Notes
-- **Working Directory Convention**: Always execute commands from project root (`/home/john/github-projects-linux/dwg-extractor`). Never use `cd` commands. Use `uv run --directory app` for all Python/pytest operations.
+- **Working Directory Convention**: Always execute commands from project root (`/home/john/github-projects-linux/dwg-extractor`). Never use `cd` commands. Use `uv run` with root-relative paths (e.g., `uv run pytest app/tests/`) for all Python/pytest operations.
 
 - **Test Fixtures**: The test assets already exist and were created according to the Phase 4 implementation plan. The sample_drawing.dxf was generated using ezdxf with known block counts for reproducible testing.
 
