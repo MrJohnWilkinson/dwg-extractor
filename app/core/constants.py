@@ -37,7 +37,7 @@ EXCEL_COLUMN_BLOCK_ROTATION_OTHER: str = 'block_rotation_other'
 # Excel configuration - Layer Analysis sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
 EXCEL_COLUMN_LAYER_NAME: str = 'layer_name'
-EXCEL_COLUMN_LAYER_INSERTION_COUNT: str = 'layer_insertion_count'
+EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT: str = 'layer_block_insertion_count'
 EXCEL_COLUMN_LAYER_ENTITY_COUNT: str = 'layer_entity_count'
 
 # Excel configuration - Entity Summary sheet columns

@@ -42,7 +42,7 @@ from core.constants import (
     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_LAYER_NAME,
-    EXCEL_COLUMN_LAYER_INSERTION_COUNT,
+    EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
     EXCEL_COLUMN_ENTITY_TYPE_NAME,
     EXCEL_COLUMN_ENTITY_TYPE_COUNT
@@ -78,7 +78,7 @@ class TestExcelWriter:
                 ('PIPE', 'Layer1', '180'): 2,
                 ('TAG', 'Layer1', 'other'): 3
             },
-            'layer_insertion_counts': {'Layer1': 15, 'Layer2': 3},
+            'layer_block_insertion_counts': {'Layer1': 15, 'Layer2': 3},
             'layer_entity_counts': {'Layer1': 25, 'Layer2': 10},
             'entity_type_counts': {'INSERT': 18, 'LINE': 15, 'CIRCLE': 8},
             'block_trimming_data': {
@@ -159,7 +159,7 @@ class TestExcelWriter:
         # Verify headers
         assert list(df.columns) == [
             EXCEL_COLUMN_LAYER_NAME,
-            EXCEL_COLUMN_LAYER_INSERTION_COUNT,
+            EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
             EXCEL_COLUMN_LAYER_ENTITY_COUNT
         ]
 
@@ -252,7 +252,7 @@ class TestExcelWriter:
         # Layer Analysis sheet
         ws_layers = wb[EXCEL_SHEET_LAYER_ANALYSIS]
         assert ws_layers.column_dimensions['A'].width == 30  # layer_name
-        assert ws_layers.column_dimensions['B'].width == 25  # layer_insertion_count
+        assert ws_layers.column_dimensions['B'].width == 25  # layer_block_insertion_count
         assert ws_layers.column_dimensions['C'].width == 25  # layer_entity_count
 
         # Entity Summary sheet
@@ -267,7 +267,7 @@ class TestExcelWriter:
             'block_entities': {},
             'block_layer_pairs': {},
             'block_rotation_counts': {},
-            'layer_insertion_counts': {},
+            'layer_block_insertion_counts': {},
             'layer_entity_counts': {},
             'entity_type_counts': {},
             'block_trimming_data': {}
@@ -422,12 +422,12 @@ class TestExcelWriter:
         vertical_segments = valve_row[EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS]
         assert isinstance(vertical_segments, str)
         assert ',' in vertical_segments
-        assert '10.0, 80.0, 10.0' == vertical_segments
+        assert '10, 80, 10' == vertical_segments
 
         horizontal_segments = valve_row[EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS]
         assert isinstance(horizontal_segments, str)
         assert ',' in horizontal_segments
-        assert '5.0, 40.0, 5.0' == horizontal_segments
+        assert '5, 40, 5' == horizontal_segments
 
     def test_block_trimming_analysis_sorting(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test that Block Trimming Analysis sheet is sorted alphabetically by block name."""
@@ -447,7 +447,7 @@ class TestExcelWriter:
             'block_entities': {},
             'block_layer_pairs': {},
             'block_rotation_counts': {},
-            'layer_insertion_counts': {},
+            'layer_block_insertion_counts': {},
             'layer_entity_counts': {},
             'entity_type_counts': {},
             'block_trimming_data': {}
@@ -545,7 +545,7 @@ class TestExcelWriter:
             'block_entities': {},
             'block_layer_pairs': {},
             'block_rotation_counts': {},
-            'layer_insertion_counts': {},
+            'layer_block_insertion_counts': {},
             'layer_entity_counts': {},
             'entity_type_counts': {},
             'block_trimming_data': {}
@@ -581,7 +581,7 @@ class TestExcelWriter:
                 ('ANONYMOUS', 'Layer1'): 5  # This block has no geometry data
             },
             'block_rotation_counts': {},
-            'layer_insertion_counts': {'Layer1': 15},
+            'layer_block_insertion_counts': {'Layer1': 15},
             'layer_entity_counts': {'Layer1': 25},
             'entity_type_counts': {'INSERT': 15},
             'block_trimming_data': {

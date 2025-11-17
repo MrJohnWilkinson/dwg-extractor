@@ -35,7 +35,7 @@ class TestExtractor:
         assert 'block_counts' in result
         assert 'block_entities' in result
         assert 'block_layer_pairs' in result
-        assert 'layer_insertion_counts' in result
+        assert 'layer_block_insertion_counts' in result
         assert 'layer_entity_counts' in result
         assert 'entity_type_counts' in result
 
@@ -56,7 +56,7 @@ class TestExtractor:
         assert result['block_counts'] == {}
         assert isinstance(result['block_entities'], dict)
         assert result['block_layer_pairs'] == {}
-        assert isinstance(result['layer_insertion_counts'], dict)
+        assert isinstance(result['layer_block_insertion_counts'], dict)
         assert isinstance(result['layer_entity_counts'], dict)
         assert isinstance(result['entity_type_counts'], dict)
 
@@ -92,7 +92,7 @@ class TestExtractor:
         assert 'block_counts' in result
         assert 'block_entities' in result
         assert 'block_layer_pairs' in result
-        assert 'layer_insertion_counts' in result
+        assert 'layer_block_insertion_counts' in result
         assert 'layer_entity_counts' in result
         assert 'entity_type_counts' in result
 
@@ -132,7 +132,7 @@ class TestExtractor:
         result = extract_blocks('app/tests/assets/sample_drawing.dxf')
 
         # Verify layer data is present
-        assert isinstance(result['layer_insertion_counts'], dict)
+        assert isinstance(result['layer_block_insertion_counts'], dict)
         assert isinstance(result['layer_entity_counts'], dict)
 
         # Should have at least one layer (layer "0" is default)

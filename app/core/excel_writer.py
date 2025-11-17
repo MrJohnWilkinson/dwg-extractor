@@ -41,7 +41,7 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_LAYER_NAME,
-    EXCEL_COLUMN_LAYER_INSERTION_COUNT,
+    EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
     EXCEL_COLUMN_ENTITY_TYPE_NAME,
     EXCEL_COLUMN_ENTITY_TYPE_COUNT
@@ -187,17 +187,17 @@ def _create_layer_analysis_sheet(data: ExtractionResult, writer: pd.ExcelWriter)
     """Create the Layer Analysis sheet with layer-based metrics."""
     logger.info("Creating Layer Analysis sheet...")
 
-    layer_insertion_counts = data['layer_insertion_counts']
+    layer_block_insertion_counts = data['layer_block_insertion_counts']
     layer_entity_counts = data['layer_entity_counts']
 
     if layer_entity_counts:
         # Merge layer data into single DataFrame
         rows = []
         for layer_name, entity_count in layer_entity_counts.items():
-            insertion_count = layer_insertion_counts.get(layer_name, 0)
+            insertion_count = layer_block_insertion_counts.get(layer_name, 0)
             rows.append({
                 EXCEL_COLUMN_LAYER_NAME: layer_name,
-                EXCEL_COLUMN_LAYER_INSERTION_COUNT: insertion_count,
+                EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT: insertion_count,
                 EXCEL_COLUMN_LAYER_ENTITY_COUNT: entity_count
             })
 
@@ -207,7 +207,7 @@ def _create_layer_analysis_sheet(data: ExtractionResult, writer: pd.ExcelWriter)
         # Create empty DataFrame with headers only
         df = pd.DataFrame(columns=[
             EXCEL_COLUMN_LAYER_NAME,
-            EXCEL_COLUMN_LAYER_INSERTION_COUNT,
+            EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
             EXCEL_COLUMN_LAYER_ENTITY_COUNT
         ])
 
@@ -266,7 +266,7 @@ def _format_layer_analysis_sheet(wb: Workbook) -> None:
 
     # Set column widths
     ws.column_dimensions['A'].width = 30  # layer_name
-    ws.column_dimensions['B'].width = 25  # layer_insertion_count
+    ws.column_dimensions['B'].width = 25  # layer_block_insertion_count
     ws.column_dimensions['C'].width = 25  # layer_entity_count
 
     logger.info("Layer Analysis sheet formatted")

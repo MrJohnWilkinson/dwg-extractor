@@ -33,8 +33,8 @@ block_total_entity_count        # insertion_count × entity_count
 ## Layer Domain Examples
 ```python
 layer_name                      # identifier
-layer_insertion_count           # block insertions on layer
-layer_entity_count              # total entities on layer
+layer_block_insertion_count     # INSERT entities (block references) on layer
+layer_entity_count              # all entities (INSERT, LINE, CIRCLE, etc.)
 layer_block_names               # blocks on layer (list)
 layer_unique_block_count        # distinct block count
 layer_dominant_block            # most common block

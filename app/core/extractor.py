@@ -282,7 +282,7 @@ class ExtractionResult(TypedDict):
         block_layer_pairs: Dictionary mapping (block_name, layer_name) tuples to insertion counts
         block_rotation_counts: Dictionary mapping (block_name, layer_name, rotation_category) tuples to insertion counts
                                Rotation categories are strings: '0', '90', '180', '270', 'other'
-        layer_insertion_counts: Dictionary mapping layer names to block insertion counts on that layer
+        layer_block_insertion_counts: Dictionary mapping layer names to block insertion counts on that layer
         layer_entity_counts: Dictionary mapping layer names to total entity counts on that layer
         entity_type_counts: Dictionary mapping entity type names to their total count in the drawing
         block_trimming_data: Dictionary mapping block names to their geometry analysis data.
@@ -300,7 +300,7 @@ class ExtractionResult(TypedDict):
     block_entities: dict[str, int]
     block_layer_pairs: dict[tuple[str, str], int]
     block_rotation_counts: dict[tuple[str, str, str], int]
-    layer_insertion_counts: dict[str, int]
+    layer_block_insertion_counts: dict[str, int]
     layer_entity_counts: dict[str, int]
     entity_type_counts: dict[str, int]
     block_trimming_data: dict[str, dict[str, Any]]
@@ -339,7 +339,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         {'VALVE_GATE': 8, 'PIPE_SUPPORT': 12}
         >>> result['block_layer_pairs']
         {('VALVE_GATE', 'Piping'): 100, ('VALVE_GATE', 'Equipment'): 42, ('PIPE_SUPPORT', 'Piping'): 89}
-        >>> result['layer_insertion_counts']
+        >>> result['layer_block_insertion_counts']
         {'Piping': 200, 'Equipment': 31}
         >>> result['block_trimming_data']
         {'SHELF_4FT': {'native_width': 1200.0, 'native_height': 600.0, 'vertical_segments': [50.0, 1100.0, 50.0], 'horizontal_segments': [25.0, 550.0, 25.0]}}
@@ -367,7 +367,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         block_entities: dict[str, int] = {}
         block_layer_pairs: dict[tuple[str, str], int] = {}
         block_rotation_counts: dict[tuple[str, str, str], int] = {}
-        layer_insertion_counts: dict[str, int] = {}
+        layer_block_insertion_counts: dict[str, int] = {}
         layer_entity_counts: dict[str, int] = {}
         entity_type_counts: dict[str, int] = {}
         block_trimming_data: dict[str, dict[str, Any]] = {}
@@ -418,7 +418,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             if entity_type == 'INSERT':
                 block_name = entity.dxf.name
                 block_counts[block_name] = block_counts.get(block_name, 0) + 1
-                layer_insertion_counts[layer_name] = layer_insertion_counts.get(layer_name, 0) + 1
+                layer_block_insertion_counts[layer_name] = layer_block_insertion_counts.get(layer_name, 0) + 1
 
                 # Track block-layer pairs
                 pair_key = (block_name, layer_name)
@@ -449,7 +449,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             'block_entities': block_entities,
             'block_layer_pairs': block_layer_pairs,
             'block_rotation_counts': block_rotation_counts,
-            'layer_insertion_counts': layer_insertion_counts,
+            'layer_block_insertion_counts': layer_block_insertion_counts,
             'layer_entity_counts': layer_entity_counts,
             'entity_type_counts': entity_type_counts,
             'block_trimming_data': block_trimming_data
