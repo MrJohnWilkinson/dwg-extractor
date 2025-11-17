@@ -52,3 +52,7 @@ dwg-extractor/
     ├── 001-starting-plan.md      # Initial specification
     └── 002-implementation-plan.md # Phase breakdown
 ```
+
+## Reference Files
+- ai_docs/001-naming-convention-guide.md
+- ai_docs/002-standardized-app-structure.md
