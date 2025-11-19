@@ -15,12 +15,12 @@ from pathlib import Path
 import ezdxf
 import pytest
 
-from core.extractor import (
+from core.extractor import extract_blocks
+from core.geometry import (
     _calculate_segments,
     _categorize_rotation,
     _get_block_bounding_box,
     _get_intersection_points,
-    extract_blocks,
 )
 
 

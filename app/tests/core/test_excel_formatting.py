@@ -1,0 +1,430 @@
+"""
+Unit tests for the excel_formatting module.
+
+This test suite validates Excel worksheet formatting utilities including:
+- Auto-filter application on all sheets
+- Column width settings for each sheet
+- Red highlighting for mirrored blocks (negative scales)
+- Handling of empty worksheets
+- Edge cases and boundary conditions
+"""
+
+import tempfile
+from pathlib import Path
+from typing import Iterator, cast
+
+import pandas as pd
+import pytest
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import PatternFill
+from openpyxl.worksheet.worksheet import Worksheet
+
+from core.constants import (
+    EXCEL_SHEET_BLOCK_ANALYSIS,
+    EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
+    EXCEL_SHEET_ENTITY_SUMMARY,
+    EXCEL_SHEET_LAYER_ANALYSIS,
+)
+from core.excel_formatting import (
+    _format_block_analysis_sheet,
+    _format_block_geometry_analysis_sheet,
+    _format_entity_summary_sheet,
+    _format_layer_analysis_sheet,
+)
+
+
+class TestBlockAnalysisFormatting:
+    """Test suite for _format_block_analysis_sheet function."""
+
+    @pytest.fixture
+    def temp_dir(self) -> Iterator[str]:
+        """Create a temporary directory for test outputs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield tmpdir
+
+    def test_format_block_analysis_autofilter(self, temp_dir: str) -> None:
+        """Test that auto-filter is applied to Block Analysis sheet."""
+        # Create test workbook with Block Analysis sheet
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_ANALYSIS
+
+        # Add headers and sample data
+        ws.append(["block_name", "block_insertion_count", "block_entity_count", "block_layer_name"])
+        ws.append(["VALVE", 10, 8, "Layer1"])
+
+        # Apply formatting
+        _format_block_analysis_sheet(wb)
+
+        # Verify auto-filter is applied
+        assert ws.auto_filter.ref is not None
+        assert ws.auto_filter.ref == "A1:D2"
+
+    def test_format_block_analysis_column_widths(self, temp_dir: str) -> None:
+        """Test that column widths are set correctly on Block Analysis sheet."""
+        # Create test workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_ANALYSIS
+        ws.append(["block_name", "block_insertion_count", "block_entity_count", "block_layer_name"])
+
+        # Apply formatting
+        _format_block_analysis_sheet(wb)
+
+        # Verify column widths (4 columns)
+        assert ws.column_dimensions["A"].width == 30  # block_name
+        assert ws.column_dimensions["B"].width == 25  # block_insertion_count
+        assert ws.column_dimensions["C"].width == 25  # block_entity_count
+        assert ws.column_dimensions["D"].width == 25  # block_layer_name
+
+    def test_format_block_analysis_empty_sheet(self, temp_dir: str) -> None:
+        """Test that empty Block Analysis sheet is handled gracefully."""
+        # Create empty workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_ANALYSIS
+
+        # Apply formatting (should not crash on empty sheet)
+        _format_block_analysis_sheet(wb)
+
+        # Column widths should still be set
+        assert ws.column_dimensions["A"].width == 30
+        assert ws.column_dimensions["B"].width == 25
+
+
+class TestLayerAnalysisFormatting:
+    """Test suite for _format_layer_analysis_sheet function."""
+
+    @pytest.fixture
+    def temp_dir(self) -> Iterator[str]:
+        """Create a temporary directory for test outputs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield tmpdir
+
+    def test_format_layer_analysis_autofilter(self, temp_dir: str) -> None:
+        """Test that auto-filter is applied to Layer Analysis sheet."""
+        # Create test workbook with Layer Analysis sheet
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_LAYER_ANALYSIS
+
+        # Add headers and sample data
+        ws.append(["layer_name", "layer_block_insertion_count", "layer_entity_count"])
+        ws.append(["Layer1", 15, 25])
+
+        # Apply formatting
+        _format_layer_analysis_sheet(wb)
+
+        # Verify auto-filter is applied
+        assert ws.auto_filter.ref is not None
+        assert ws.auto_filter.ref == "A1:C2"
+
+    def test_format_layer_analysis_column_widths(self, temp_dir: str) -> None:
+        """Test that column widths are set correctly on Layer Analysis sheet."""
+        # Create test workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_LAYER_ANALYSIS
+        ws.append(["layer_name", "layer_block_insertion_count", "layer_entity_count"])
+
+        # Apply formatting
+        _format_layer_analysis_sheet(wb)
+
+        # Verify column widths (3 columns)
+        assert ws.column_dimensions["A"].width == 30  # layer_name
+        assert ws.column_dimensions["B"].width == 25  # layer_block_insertion_count
+        assert ws.column_dimensions["C"].width == 25  # layer_entity_count
+
+    def test_format_layer_analysis_empty_sheet(self, temp_dir: str) -> None:
+        """Test that empty Layer Analysis sheet is handled gracefully."""
+        # Create empty workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_LAYER_ANALYSIS
+
+        # Apply formatting (should not crash on empty sheet)
+        _format_layer_analysis_sheet(wb)
+
+        # Column widths should still be set
+        assert ws.column_dimensions["A"].width == 30
+        assert ws.column_dimensions["B"].width == 25
+
+
+class TestEntitySummaryFormatting:
+    """Test suite for _format_entity_summary_sheet function."""
+
+    @pytest.fixture
+    def temp_dir(self) -> Iterator[str]:
+        """Create a temporary directory for test outputs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield tmpdir
+
+    def test_format_entity_summary_autofilter(self, temp_dir: str) -> None:
+        """Test that auto-filter is applied to Entity Summary sheet."""
+        # Create test workbook with Entity Summary sheet
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ENTITY_SUMMARY
+
+        # Add headers and sample data
+        ws.append(["entity_type_name", "entity_type_count"])
+        ws.append(["INSERT", 18])
+
+        # Apply formatting
+        _format_entity_summary_sheet(wb)
+
+        # Verify auto-filter is applied
+        assert ws.auto_filter.ref is not None
+        assert ws.auto_filter.ref == "A1:B2"
+
+    def test_format_entity_summary_column_widths(self, temp_dir: str) -> None:
+        """Test that column widths are set correctly on Entity Summary sheet."""
+        # Create test workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ENTITY_SUMMARY
+        ws.append(["entity_type_name", "entity_type_count"])
+
+        # Apply formatting
+        _format_entity_summary_sheet(wb)
+
+        # Verify column widths (2 columns)
+        assert ws.column_dimensions["A"].width == 25  # entity_type_name
+        assert ws.column_dimensions["B"].width == 25  # entity_type_count
+
+    def test_format_entity_summary_empty_sheet(self, temp_dir: str) -> None:
+        """Test that empty Entity Summary sheet is handled gracefully."""
+        # Create empty workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ENTITY_SUMMARY
+
+        # Apply formatting (should not crash on empty sheet)
+        _format_entity_summary_sheet(wb)
+
+        # Column widths should still be set
+        assert ws.column_dimensions["A"].width == 25
+
+
+class TestBlockGeometryAnalysisFormatting:
+    """Test suite for _format_block_geometry_analysis_sheet function."""
+
+    @pytest.fixture
+    def temp_dir(self) -> Iterator[str]:
+        """Create a temporary directory for test outputs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield tmpdir
+
+    def test_format_geometry_analysis_autofilter(self, temp_dir: str) -> None:
+        """Test that auto-filter is applied to Block Geometry Analysis sheet."""
+        # Create test workbook with Block Geometry Analysis sheet
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
+
+        # Add headers and sample data (13 columns)
+        ws.append([
+            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
+            "block_rotation_180", "block_rotation_270", "block_rotation_other",
+            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
+            "block_vertical_segments", "block_horizontal_segments"
+        ])
+        ws.append(["VALVE", "Layer1", 5, 2, 0, 0, 0, 1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
+
+        # Apply formatting
+        _format_block_geometry_analysis_sheet(wb)
+
+        # Verify auto-filter is applied
+        assert ws.auto_filter.ref is not None
+        assert ws.auto_filter.ref == "A1:M2"
+
+    def test_format_geometry_analysis_column_widths(self, temp_dir: str) -> None:
+        """Test that all 13 column widths are set correctly on Block Geometry Analysis sheet."""
+        # Create test workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
+        ws.append([
+            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
+            "block_rotation_180", "block_rotation_270", "block_rotation_other",
+            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
+            "block_vertical_segments", "block_horizontal_segments"
+        ])
+
+        # Apply formatting
+        _format_block_geometry_analysis_sheet(wb)
+
+        # Verify column widths (13 columns)
+        assert ws.column_dimensions["A"].width == 30  # block_name
+        assert ws.column_dimensions["B"].width == 25  # block_layer_name
+        assert ws.column_dimensions["C"].width == 12  # block_rotation_0
+        assert ws.column_dimensions["D"].width == 12  # block_rotation_90
+        assert ws.column_dimensions["E"].width == 12  # block_rotation_180
+        assert ws.column_dimensions["F"].width == 12  # block_rotation_270
+        assert ws.column_dimensions["G"].width == 12  # block_rotation_other
+        assert ws.column_dimensions["H"].width == 15  # block_scale_x
+        assert ws.column_dimensions["I"].width == 15  # block_scale_y
+        assert ws.column_dimensions["J"].width == 20  # block_native_width
+        assert ws.column_dimensions["K"].width == 20  # block_native_height
+        assert ws.column_dimensions["L"].width == 40  # block_vertical_segments
+        assert ws.column_dimensions["M"].width == 40  # block_horizontal_segments
+
+    def test_format_geometry_analysis_red_highlighting_negative_x_scale(self, temp_dir: str) -> None:
+        """Test that rows with negative X scale are highlighted in red."""
+        # Create test workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
+
+        # Add headers
+        ws.append([
+            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
+            "block_rotation_180", "block_rotation_270", "block_rotation_other",
+            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
+            "block_vertical_segments", "block_horizontal_segments"
+        ])
+
+        # Add data row with negative X scale (mirrored)
+        ws.append(["VALVE", "Layer1", 5, 0, 0, 0, 0, -1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
+
+        # Apply formatting
+        _format_block_geometry_analysis_sheet(wb)
+
+        # Verify red highlighting on row 2 (data row)
+        red_fill = PatternFill(start_color="FFFF0000", end_color="FFFF0000", fill_type="solid")
+        for col_idx in range(1, 14):  # Columns A through M
+            cell_fill = ws.cell(row=2, column=col_idx).fill
+            assert cell_fill.start_color.rgb == red_fill.start_color.rgb
+            assert cell_fill.fill_type == red_fill.fill_type
+
+    def test_format_geometry_analysis_red_highlighting_negative_y_scale(self, temp_dir: str) -> None:
+        """Test that rows with negative Y scale are highlighted in red."""
+        # Create test workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
+
+        # Add headers
+        ws.append([
+            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
+            "block_rotation_180", "block_rotation_270", "block_rotation_other",
+            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
+            "block_vertical_segments", "block_horizontal_segments"
+        ])
+
+        # Add data row with negative Y scale (mirrored)
+        ws.append(["PIPE", "Layer1", 3, 2, 0, 0, 0, 1.0, -1.0, 200.0, 100.0, "20, 160, 20", "10, 80, 10"])
+
+        # Apply formatting
+        _format_block_geometry_analysis_sheet(wb)
+
+        # Verify red highlighting on row 2 (data row)
+        red_fill = PatternFill(start_color="FFFF0000", end_color="FFFF0000", fill_type="solid")
+        for col_idx in range(1, 14):  # Columns A through M
+            cell_fill = ws.cell(row=2, column=col_idx).fill
+            assert cell_fill.start_color.rgb == red_fill.start_color.rgb
+
+    def test_format_geometry_analysis_red_highlighting_both_negative_scales(self, temp_dir: str) -> None:
+        """Test that rows with both negative scales are highlighted in red."""
+        # Create test workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
+
+        # Add headers
+        ws.append([
+            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
+            "block_rotation_180", "block_rotation_270", "block_rotation_other",
+            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
+            "block_vertical_segments", "block_horizontal_segments"
+        ])
+
+        # Add data row with both negative scales (mirrored in both axes)
+        ws.append(["TAG", "Layer1", 0, 0, 0, 0, 3, -1.0, -1.0, 50.0, 25.0, "50", "25"])
+
+        # Apply formatting
+        _format_block_geometry_analysis_sheet(wb)
+
+        # Verify red highlighting on row 2 (data row)
+        red_fill = PatternFill(start_color="FFFF0000", end_color="FFFF0000", fill_type="solid")
+        for col_idx in range(1, 14):  # Columns A through M
+            cell_fill = ws.cell(row=2, column=col_idx).fill
+            assert cell_fill.start_color.rgb == red_fill.start_color.rgb
+
+    def test_format_geometry_analysis_no_highlighting_positive_scales(self, temp_dir: str) -> None:
+        """Test that rows with positive scales are NOT highlighted."""
+        # Create test workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
+
+        # Add headers
+        ws.append([
+            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
+            "block_rotation_180", "block_rotation_270", "block_rotation_other",
+            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
+            "block_vertical_segments", "block_horizontal_segments"
+        ])
+
+        # Add data row with positive scales (not mirrored)
+        ws.append(["VALVE", "Layer1", 5, 0, 0, 0, 0, 1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
+
+        # Apply formatting
+        _format_block_geometry_analysis_sheet(wb)
+
+        # Verify NO red highlighting on row 2 (data row)
+        # Default fill should be PatternFill with no fill_type or None
+        for col_idx in range(1, 14):  # Columns A through M
+            cell_fill = ws.cell(row=2, column=col_idx).fill
+            # Check that it's not the red fill
+            if cell_fill.fill_type == "solid":
+                assert cell_fill.start_color.rgb != "FFFF0000"
+
+    def test_format_geometry_analysis_highlighting_count(self, temp_dir: str) -> None:
+        """Test that highlighting count is correct for multiple rows."""
+        # Create test workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
+
+        # Add headers
+        ws.append([
+            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
+            "block_rotation_180", "block_rotation_270", "block_rotation_other",
+            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
+            "block_vertical_segments", "block_horizontal_segments"
+        ])
+
+        # Add multiple data rows
+        ws.append(["VALVE", "Layer1", 5, 0, 0, 0, 0, 1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])  # No highlight
+        ws.append(["PIPE", "Layer1", 3, 2, 0, 0, 0, -1.0, 1.0, 200.0, 100.0, "20, 160, 20", "10, 80, 10"])  # Highlight
+        ws.append(["TAG", "Layer2", 0, 0, 0, 0, 2, 1.0, -1.0, 50.0, 25.0, "50", "25"])  # Highlight
+        ws.append(["DOOR", "Layer1", 10, 0, 0, 0, 0, 2.0, 2.0, 120.0, 60.0, "15, 90, 15", "10, 40, 10"])  # No highlight
+
+        # Apply formatting
+        _format_block_geometry_analysis_sheet(wb)
+
+        # Count highlighted rows (rows 3 and 4 should be highlighted)
+        red_fill = PatternFill(start_color="FFFF0000", end_color="FFFF0000", fill_type="solid")
+        highlighted_rows = 0
+        for row_idx in range(2, 6):  # Rows 2-5 (data rows)
+            cell_fill = ws.cell(row=row_idx, column=1).fill
+            if cell_fill.fill_type == "solid" and cell_fill.start_color.rgb == red_fill.start_color.rgb:
+                highlighted_rows += 1
+
+        # Should have 2 highlighted rows
+        assert highlighted_rows == 2
+
+    def test_format_geometry_analysis_empty_sheet(self, temp_dir: str) -> None:
+        """Test that empty Block Geometry Analysis sheet is handled gracefully."""
+        # Create empty workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
+
+        # Apply formatting (should not crash on empty sheet)
+        _format_block_geometry_analysis_sheet(wb)
+
+        # Column widths should still be set
+        assert ws.column_dimensions["A"].width == 30
+        assert ws.column_dimensions["H"].width == 15
