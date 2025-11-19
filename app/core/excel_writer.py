@@ -99,7 +99,7 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         # Create Excel writer
         with pd.ExcelWriter(full_path, engine='openpyxl') as writer:
             # Sheet 1: Block Analysis
-            _create_block_counts_sheet(extraction_data, writer)
+            _create_block_analysis_sheet(extraction_data, writer)
 
             # Sheet 2: Layer Analysis
             _create_layer_analysis_sheet(extraction_data, writer)
@@ -108,16 +108,16 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
             _create_entity_summary_sheet(extraction_data, writer)
 
             # Sheet 4: Block Geometry Analysis
-            _create_block_trimming_analysis_sheet(extraction_data, writer)
+            _create_block_geometry_analysis_sheet(extraction_data, writer)
 
         # Load workbook for post-processing (formatting)
         wb = load_workbook(full_path)
 
         # Apply formatting to all sheets
-        _format_block_counts_sheet(wb)
+        _format_block_analysis_sheet(wb)
         _format_layer_analysis_sheet(wb)
         _format_entity_summary_sheet(wb)
-        _format_block_trimming_analysis_sheet(wb)
+        _format_block_geometry_analysis_sheet(wb)
 
         # Save workbook with formatting
         wb.save(full_path)
@@ -133,7 +133,7 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         raise
 
 
-def _create_block_counts_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
+def _create_block_analysis_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
     """Create the Block Analysis sheet with simplified inventory data (no rotations)."""
     logger.info("Creating Block Analysis sheet...")
 
@@ -219,7 +219,7 @@ def _create_entity_summary_sheet(data: ExtractionResult, writer: pd.ExcelWriter)
     logger.info(f"Entity Summary sheet created with {len(df)} rows")
 
 
-def _format_block_counts_sheet(wb: Workbook) -> None:
+def _format_block_analysis_sheet(wb: Workbook) -> None:
     """Apply formatting to the Block Analysis sheet (simplified inventory)."""
     ws = wb[EXCEL_SHEET_BLOCK_ANALYSIS]
 
@@ -267,7 +267,7 @@ def _format_entity_summary_sheet(wb: Workbook) -> None:
     logger.info("Entity Summary sheet formatted")
 
 
-def _create_block_trimming_analysis_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
+def _create_block_geometry_analysis_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
     """Create the Block Geometry Analysis sheet with consolidated transformations and geometry data."""
     logger.info("Creating Block Geometry Analysis sheet...")
 
@@ -352,7 +352,7 @@ def _create_block_trimming_analysis_sheet(data: ExtractionResult, writer: pd.Exc
     logger.info(f"Block Geometry Analysis sheet created with {len(df)} rows")
 
 
-def _format_block_trimming_analysis_sheet(wb: Workbook) -> None:
+def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     """Apply formatting to the Block Geometry Analysis sheet with red highlighting for mirrored blocks."""
     from openpyxl.styles import PatternFill
 
