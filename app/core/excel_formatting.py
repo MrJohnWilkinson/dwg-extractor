@@ -205,6 +205,17 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
                 ws.cell(row=row_idx, column=col_idx).fill = yellow_fill
             highlighted_rows += 1
 
+    # Apply right-alignment to segment columns (L and M)
+    right_alignment = Alignment(horizontal="right")
+    for row_idx in range(2, ws.max_row + 1):
+        # Column L (12) - block_vertical_segments
+        l_cell = ws.cell(row=row_idx, column=12)
+        l_cell.alignment = right_alignment
+
+        # Column M (13) - block_horizontal_segments
+        m_cell = ws.cell(row=row_idx, column=13)
+        m_cell.alignment = right_alignment
+
     logger.info(
-        f"Block Geometry Analysis sheet formatted with {highlighted_rows} rows highlighted for scale variance"
+        f"Block Geometry Analysis sheet formatted with {highlighted_rows} rows highlighted for scale variance and segment columns right-aligned"
     )

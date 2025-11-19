@@ -484,3 +484,94 @@ class TestBlockGeometryAnalysisFormatting:
         # Column widths should still be set
         assert ws.column_dimensions["A"].width == 30
         assert ws.column_dimensions["H"].width == 15
+
+    def test_format_geometry_analysis_segment_columns_right_aligned(
+        self, temp_dir: str
+    ) -> None:
+        """Test that segment columns L and M are right-aligned in data rows."""
+        # Create test workbook with Block Geometry Analysis sheet
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
+
+        # Add headers and sample data rows (13 columns)
+        ws.append([
+            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
+            "block_rotation_180", "block_rotation_270", "block_rotation_other",
+            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
+            "block_vertical_segments", "block_horizontal_segments"
+        ])
+        ws.append(["VALVE", "Layer1", 5, 2, 0, 0, 0, 1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
+        ws.append(["PUMP", "Layer2", 10, 0, 0, 0, 0, 1.0, 1.0, 200.0, 100.0, "20, 160, 20", "10, 80, 10"])
+        ws.append(["TANK", "Layer3", 3, 1, 0, 0, 0, 1.0, 1.0, 150.0, 75.0, "15, 120, 15", "7, 60, 7"])
+
+        # Apply formatting
+        _format_block_geometry_analysis_sheet(wb)
+
+        # Verify columns L (12) and M (13) have right-alignment on data rows (rows 2-4)
+        for row_idx in range(2, 5):
+            l_cell = ws.cell(row=row_idx, column=12)  # Column L
+            m_cell = ws.cell(row=row_idx, column=13)  # Column M
+
+            assert l_cell.alignment is not None
+            assert l_cell.alignment.horizontal == "right"
+            assert m_cell.alignment is not None
+            assert m_cell.alignment.horizontal == "right"
+
+        # Verify header row (row 1) maintains wrap_text alignment (not right-aligned)
+        header_l = ws.cell(row=1, column=12)
+        header_m = ws.cell(row=1, column=13)
+        assert header_l.alignment is not None
+        assert header_l.alignment.wrap_text is True
+        assert header_m.alignment is not None
+        assert header_m.alignment.wrap_text is True
+
+        # Verify other columns (e.g., A, B, C) do not have right-alignment
+        for row_idx in range(2, 5):
+            a_cell = ws.cell(row=row_idx, column=1)  # Column A
+            b_cell = ws.cell(row=row_idx, column=2)  # Column B
+
+            # These cells may have alignment set for yellow highlighting, but not right
+            if a_cell.alignment is not None:
+                assert a_cell.alignment.horizontal != "right"
+            if b_cell.alignment is not None:
+                assert b_cell.alignment.horizontal != "right"
+
+    def test_format_geometry_analysis_segment_alignment_with_highlighting(
+        self, temp_dir: str
+    ) -> None:
+        """Test that right-alignment works correctly on highlighted rows with scale variance."""
+        # Create test workbook
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
+
+        # Add headers and sample data with VARIES in scale columns
+        ws.append([
+            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
+            "block_rotation_180", "block_rotation_270", "block_rotation_other",
+            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
+            "block_vertical_segments", "block_horizontal_segments"
+        ])
+        ws.append(["VALVE", "Layer1", 5, 2, 0, 0, 0, "VARIES", 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
+        ws.append(["PUMP", "Layer2", 10, 0, 0, 0, 0, 1.0, "VARIES", 200.0, 100.0, "20, 160, 20", "10, 80, 10"])
+
+        # Apply formatting
+        _format_block_geometry_analysis_sheet(wb)
+
+        # Verify that rows with VARIES have both yellow fill and right-alignment on columns L and M
+        for row_idx in [2, 3]:
+            l_cell = ws.cell(row=row_idx, column=12)  # Column L
+            m_cell = ws.cell(row=row_idx, column=13)  # Column M
+
+            # Verify yellow fill is applied
+            assert l_cell.fill is not None
+            assert l_cell.fill.start_color.rgb == "FFFFFF00"
+            assert m_cell.fill is not None
+            assert m_cell.fill.start_color.rgb == "FFFFFF00"
+
+            # Verify right-alignment is also applied
+            assert l_cell.alignment is not None
+            assert l_cell.alignment.horizontal == "right"
+            assert m_cell.alignment is not None
+            assert m_cell.alignment.horizontal == "right"
