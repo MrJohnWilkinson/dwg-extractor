@@ -51,6 +51,9 @@ dwg-extractor/
 - **Run Application:** `bash scripts/start.sh`
 - **Run Tests:** `uv run pytest app/tests/`
 - **Type Check:** `uv run mypy app/`
+- **Lint Code:** `uv run ruff check app/`
+- **Format Code:** `uv run ruff format app/`
+- **Auto-fix Issues:** `uv run ruff check app/ --fix`
 
 
 ## Reference Files

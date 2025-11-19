@@ -13,24 +13,21 @@ Usage:
     # Returns: '/path/to/drawing_blocks_20250117_143022.xlsx'
 """
 
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.workbook.workbook import Workbook
-from openpyxl.utils import get_column_letter
 
-from .logger import setup_logger
-from .extractor import ExtractionResult
 from .constants import (
-    EXCEL_SHEET_BLOCK_ANALYSIS,
-    EXCEL_SHEET_LAYER_ANALYSIS,
-    EXCEL_SHEET_ENTITY_SUMMARY,
-    EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
-    EXCEL_COLUMN_BLOCK_NAME,
-    EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
+    EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
+    EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_BLOCK_LAYER_NAME,
+    EXCEL_COLUMN_BLOCK_NAME,
+    EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
+    EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
     EXCEL_COLUMN_BLOCK_ROTATION_0,
     EXCEL_COLUMN_BLOCK_ROTATION_90,
     EXCEL_COLUMN_BLOCK_ROTATION_180,
@@ -38,16 +35,20 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
     EXCEL_COLUMN_BLOCK_SCALE_X,
     EXCEL_COLUMN_BLOCK_SCALE_Y,
-    EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
-    EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
-    EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
-    EXCEL_COLUMN_LAYER_NAME,
+    EXCEL_COLUMN_ENTITY_TYPE_COUNT,
+    EXCEL_COLUMN_ENTITY_TYPE_NAME,
     EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
-    EXCEL_COLUMN_ENTITY_TYPE_NAME,
-    EXCEL_COLUMN_ENTITY_TYPE_COUNT
+    EXCEL_COLUMN_LAYER_NAME,
+    EXCEL_SHEET_BLOCK_ANALYSIS,
+    EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
+    EXCEL_SHEET_ENTITY_SUMMARY,
+    EXCEL_SHEET_LAYER_ANALYSIS,
 )
+from .extractor import ExtractionResult
+from .logger import setup_logger
+
 
 logger = setup_logger(__name__)
 
@@ -91,13 +92,13 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
 
     try:
         # Generate timestamped filename
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         input_path = Path(output_path)
         filename = f"{input_path.stem}_blocks_{timestamp}.xlsx"
         full_path = input_path.parent / filename
 
         # Create Excel writer
-        with pd.ExcelWriter(full_path, engine='openpyxl') as writer:
+        with pd.ExcelWriter(full_path, engine="openpyxl") as writer:
             # Sheet 1: Block Analysis
             _create_block_analysis_sheet(extraction_data, writer)
 
@@ -129,16 +130,20 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         logger.error(f"Invalid input data: {str(e)}")
         raise
     except Exception as e:
-        logger.error(f"Unexpected error during Excel generation: {str(e)}", exc_info=True)
+        logger.error(
+            f"Unexpected error during Excel generation: {str(e)}", exc_info=True
+        )
         raise
 
 
-def _create_block_analysis_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
+def _create_block_analysis_sheet(
+    data: ExtractionResult, writer: pd.ExcelWriter
+) -> None:
     """Create the Block Analysis sheet with simplified inventory data (no rotations)."""
     logger.info("Creating Block Analysis sheet...")
 
-    block_layer_pairs = data['block_layer_pairs']
-    block_entities = data['block_entities']
+    block_layer_pairs = data["block_layer_pairs"]
+    block_entities = data["block_entities"]
 
     if block_layer_pairs:
         # Unpack block-layer pairs into DataFrame rows (simplified - no rotations)
@@ -146,74 +151,94 @@ def _create_block_analysis_sheet(data: ExtractionResult, writer: pd.ExcelWriter)
         for (block_name, layer_name), insertion_count in block_layer_pairs.items():
             entity_count = block_entities.get(block_name, 0)
 
-            rows.append({
-                EXCEL_COLUMN_BLOCK_NAME: block_name,
-                EXCEL_COLUMN_BLOCK_INSERTION_COUNT: insertion_count,
-                EXCEL_COLUMN_BLOCK_ENTITY_COUNT: entity_count,
-                EXCEL_COLUMN_BLOCK_LAYER_NAME: layer_name
-            })
+            rows.append(
+                {
+                    EXCEL_COLUMN_BLOCK_NAME: block_name,
+                    EXCEL_COLUMN_BLOCK_INSERTION_COUNT: insertion_count,
+                    EXCEL_COLUMN_BLOCK_ENTITY_COUNT: entity_count,
+                    EXCEL_COLUMN_BLOCK_LAYER_NAME: layer_name,
+                }
+            )
 
         df = pd.DataFrame(rows)
-        df.sort_values(by=EXCEL_COLUMN_BLOCK_INSERTION_COUNT, ascending=False, inplace=True)
+        df.sort_values(
+            by=EXCEL_COLUMN_BLOCK_INSERTION_COUNT, ascending=False, inplace=True
+        )
     else:
         # Create empty DataFrame with headers only (4 columns)
-        df = pd.DataFrame(columns=[
-            EXCEL_COLUMN_BLOCK_NAME,
-            EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
-            EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME
-        ])
+        df = pd.DataFrame(
+            columns=[
+                EXCEL_COLUMN_BLOCK_NAME,
+                EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
+                EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
+                EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            ]
+        )
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS, index=False)
     logger.info(f"Block Analysis sheet created with {len(df)} rows")
 
 
-def _create_layer_analysis_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
+def _create_layer_analysis_sheet(
+    data: ExtractionResult, writer: pd.ExcelWriter
+) -> None:
     """Create the Layer Analysis sheet with layer-based metrics."""
     logger.info("Creating Layer Analysis sheet...")
 
-    layer_block_insertion_counts = data['layer_block_insertion_counts']
-    layer_entity_counts = data['layer_entity_counts']
+    layer_block_insertion_counts = data["layer_block_insertion_counts"]
+    layer_entity_counts = data["layer_entity_counts"]
 
     if layer_entity_counts:
         # Merge layer data into single DataFrame
         rows = []
         for layer_name, entity_count in layer_entity_counts.items():
             insertion_count = layer_block_insertion_counts.get(layer_name, 0)
-            rows.append({
-                EXCEL_COLUMN_LAYER_NAME: layer_name,
-                EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT: insertion_count,
-                EXCEL_COLUMN_LAYER_ENTITY_COUNT: entity_count
-            })
+            rows.append(
+                {
+                    EXCEL_COLUMN_LAYER_NAME: layer_name,
+                    EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT: insertion_count,
+                    EXCEL_COLUMN_LAYER_ENTITY_COUNT: entity_count,
+                }
+            )
 
         df = pd.DataFrame(rows)
-        df.sort_values(by=EXCEL_COLUMN_LAYER_ENTITY_COUNT, ascending=False, inplace=True)
+        df.sort_values(
+            by=EXCEL_COLUMN_LAYER_ENTITY_COUNT, ascending=False, inplace=True
+        )
     else:
         # Create empty DataFrame with headers only
-        df = pd.DataFrame(columns=[
-            EXCEL_COLUMN_LAYER_NAME,
-            EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
-            EXCEL_COLUMN_LAYER_ENTITY_COUNT
-        ])
+        df = pd.DataFrame(
+            columns=[
+                EXCEL_COLUMN_LAYER_NAME,
+                EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
+                EXCEL_COLUMN_LAYER_ENTITY_COUNT,
+            ]
+        )
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS, index=False)
     logger.info(f"Layer Analysis sheet created with {len(df)} rows")
 
 
-def _create_entity_summary_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
+def _create_entity_summary_sheet(
+    data: ExtractionResult, writer: pd.ExcelWriter
+) -> None:
     """Create the Entity Summary sheet with global entity type counts."""
     logger.info("Creating Entity Summary sheet...")
 
-    entity_type_counts = data['entity_type_counts']
+    entity_type_counts = data["entity_type_counts"]
 
     if entity_type_counts:
         # Convert entity types to DataFrame
-        df = pd.DataFrame(list(entity_type_counts.items()),
-                         columns=[EXCEL_COLUMN_ENTITY_TYPE_NAME, EXCEL_COLUMN_ENTITY_TYPE_COUNT])
+        df = pd.DataFrame(
+            list(entity_type_counts.items()),
+            columns=[EXCEL_COLUMN_ENTITY_TYPE_NAME, EXCEL_COLUMN_ENTITY_TYPE_COUNT],
+        )
         df.sort_values(by=EXCEL_COLUMN_ENTITY_TYPE_COUNT, ascending=False, inplace=True)
     else:
         # Create empty DataFrame with headers only
-        df = pd.DataFrame(columns=[EXCEL_COLUMN_ENTITY_TYPE_NAME, EXCEL_COLUMN_ENTITY_TYPE_COUNT])
+        df = pd.DataFrame(
+            columns=[EXCEL_COLUMN_ENTITY_TYPE_NAME, EXCEL_COLUMN_ENTITY_TYPE_COUNT]
+        )
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY, index=False)
     logger.info(f"Entity Summary sheet created with {len(df)} rows")
@@ -228,10 +253,10 @@ def _format_block_analysis_sheet(wb: Workbook) -> None:
         ws.auto_filter.ref = ws.dimensions
 
     # Set column widths (4 columns only)
-    ws.column_dimensions['A'].width = 30  # block_name
-    ws.column_dimensions['B'].width = 25  # block_insertion_count
-    ws.column_dimensions['C'].width = 25  # block_entity_count
-    ws.column_dimensions['D'].width = 25  # block_layer_name
+    ws.column_dimensions["A"].width = 30  # block_name
+    ws.column_dimensions["B"].width = 25  # block_insertion_count
+    ws.column_dimensions["C"].width = 25  # block_entity_count
+    ws.column_dimensions["D"].width = 25  # block_layer_name
 
     logger.info("Block Analysis sheet formatted")
 
@@ -245,9 +270,9 @@ def _format_layer_analysis_sheet(wb: Workbook) -> None:
         ws.auto_filter.ref = ws.dimensions
 
     # Set column widths
-    ws.column_dimensions['A'].width = 30  # layer_name
-    ws.column_dimensions['B'].width = 25  # layer_block_insertion_count
-    ws.column_dimensions['C'].width = 25  # layer_entity_count
+    ws.column_dimensions["A"].width = 30  # layer_name
+    ws.column_dimensions["B"].width = 25  # layer_block_insertion_count
+    ws.column_dimensions["C"].width = 25  # layer_entity_count
 
     logger.info("Layer Analysis sheet formatted")
 
@@ -261,20 +286,22 @@ def _format_entity_summary_sheet(wb: Workbook) -> None:
         ws.auto_filter.ref = ws.dimensions
 
     # Set column widths
-    ws.column_dimensions['A'].width = 25  # entity_type_name
-    ws.column_dimensions['B'].width = 25  # entity_type_count
+    ws.column_dimensions["A"].width = 25  # entity_type_name
+    ws.column_dimensions["B"].width = 25  # entity_type_count
 
     logger.info("Entity Summary sheet formatted")
 
 
-def _create_block_geometry_analysis_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
+def _create_block_geometry_analysis_sheet(
+    data: ExtractionResult, writer: pd.ExcelWriter
+) -> None:
     """Create the Block Geometry Analysis sheet with consolidated transformations and geometry data."""
     logger.info("Creating Block Geometry Analysis sheet...")
 
-    block_layer_pairs = data['block_layer_pairs']
-    block_trimming_data = data['block_trimming_data']
-    block_rotation_counts = data['block_rotation_counts']
-    block_scale_data = data['block_scale_data']
+    block_layer_pairs = data["block_layer_pairs"]
+    block_trimming_data = data["block_trimming_data"]
+    block_rotation_counts = data["block_rotation_counts"]
+    block_scale_data = data["block_scale_data"]
 
     if block_layer_pairs:
         # Build DataFrame rows from block-layer pairs with all geometry data
@@ -288,65 +315,79 @@ def _create_block_geometry_analysis_sheet(data: ExtractionResult, writer: pd.Exc
                 continue
 
             # Extract rotation counts for this block-layer pair
-            rot_0 = block_rotation_counts.get((block_name, layer_name, '0'), 0)
-            rot_90 = block_rotation_counts.get((block_name, layer_name, '90'), 0)
-            rot_180 = block_rotation_counts.get((block_name, layer_name, '180'), 0)
-            rot_270 = block_rotation_counts.get((block_name, layer_name, '270'), 0)
-            rot_other = block_rotation_counts.get((block_name, layer_name, 'other'), 0)
+            rot_0 = block_rotation_counts.get((block_name, layer_name, "0"), 0)
+            rot_90 = block_rotation_counts.get((block_name, layer_name, "90"), 0)
+            rot_180 = block_rotation_counts.get((block_name, layer_name, "180"), 0)
+            rot_270 = block_rotation_counts.get((block_name, layer_name, "270"), 0)
+            rot_other = block_rotation_counts.get((block_name, layer_name, "other"), 0)
 
             # Extract scale data for this block-layer pair
-            x_scale, y_scale = block_scale_data.get((block_name, layer_name), (1.0, 1.0))
+            x_scale, y_scale = block_scale_data.get(
+                (block_name, layer_name), (1.0, 1.0)
+            )
 
             # Extract dimension data
-            native_width = geometry_data['native_width']
-            native_height = geometry_data['native_height']
-            vertical_segments = geometry_data['vertical_segments']
-            horizontal_segments = geometry_data['horizontal_segments']
+            native_width = geometry_data["native_width"]
+            native_height = geometry_data["native_height"]
+            vertical_segments = geometry_data["vertical_segments"]
+            horizontal_segments = geometry_data["horizontal_segments"]
 
             # Convert segment lists to comma-separated strings (no decimals for whole numbers)
             def format_number(n: float) -> str:
                 """Format number without decimals if it's a whole number."""
                 return str(int(n)) if n == int(n) else str(n)
 
-            vertical_segments_str = ", ".join(map(format_number, vertical_segments)) if vertical_segments else ""
-            horizontal_segments_str = ", ".join(map(format_number, horizontal_segments)) if horizontal_segments else ""
+            vertical_segments_str = (
+                ", ".join(map(format_number, vertical_segments))
+                if vertical_segments
+                else ""
+            )
+            horizontal_segments_str = (
+                ", ".join(map(format_number, horizontal_segments))
+                if horizontal_segments
+                else ""
+            )
 
-            rows.append({
-                EXCEL_COLUMN_BLOCK_NAME: block_name,
-                EXCEL_COLUMN_BLOCK_LAYER_NAME: layer_name,
-                EXCEL_COLUMN_BLOCK_ROTATION_0: rot_0,
-                EXCEL_COLUMN_BLOCK_ROTATION_90: rot_90,
-                EXCEL_COLUMN_BLOCK_ROTATION_180: rot_180,
-                EXCEL_COLUMN_BLOCK_ROTATION_270: rot_270,
-                EXCEL_COLUMN_BLOCK_ROTATION_OTHER: rot_other,
-                EXCEL_COLUMN_BLOCK_SCALE_X: x_scale,
-                EXCEL_COLUMN_BLOCK_SCALE_Y: y_scale,
-                EXCEL_COLUMN_BLOCK_NATIVE_WIDTH: native_width,
-                EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: native_height,
-                EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS: vertical_segments_str,
-                EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS: horizontal_segments_str
-            })
+            rows.append(
+                {
+                    EXCEL_COLUMN_BLOCK_NAME: block_name,
+                    EXCEL_COLUMN_BLOCK_LAYER_NAME: layer_name,
+                    EXCEL_COLUMN_BLOCK_ROTATION_0: rot_0,
+                    EXCEL_COLUMN_BLOCK_ROTATION_90: rot_90,
+                    EXCEL_COLUMN_BLOCK_ROTATION_180: rot_180,
+                    EXCEL_COLUMN_BLOCK_ROTATION_270: rot_270,
+                    EXCEL_COLUMN_BLOCK_ROTATION_OTHER: rot_other,
+                    EXCEL_COLUMN_BLOCK_SCALE_X: x_scale,
+                    EXCEL_COLUMN_BLOCK_SCALE_Y: y_scale,
+                    EXCEL_COLUMN_BLOCK_NATIVE_WIDTH: native_width,
+                    EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: native_height,
+                    EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS: vertical_segments_str,
+                    EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS: horizontal_segments_str,
+                }
+            )
 
         df = pd.DataFrame(rows)
         # Sort by block_name alphabetically
         df.sort_values(by=EXCEL_COLUMN_BLOCK_NAME, ascending=True, inplace=True)
     else:
         # Create empty DataFrame with headers only (all 13 columns)
-        df = pd.DataFrame(columns=[
-            EXCEL_COLUMN_BLOCK_NAME,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME,
-            EXCEL_COLUMN_BLOCK_ROTATION_0,
-            EXCEL_COLUMN_BLOCK_ROTATION_90,
-            EXCEL_COLUMN_BLOCK_ROTATION_180,
-            EXCEL_COLUMN_BLOCK_ROTATION_270,
-            EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
-            EXCEL_COLUMN_BLOCK_SCALE_X,
-            EXCEL_COLUMN_BLOCK_SCALE_Y,
-            EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
-            EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
-            EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
-            EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS
-        ])
+        df = pd.DataFrame(
+            columns=[
+                EXCEL_COLUMN_BLOCK_NAME,
+                EXCEL_COLUMN_BLOCK_LAYER_NAME,
+                EXCEL_COLUMN_BLOCK_ROTATION_0,
+                EXCEL_COLUMN_BLOCK_ROTATION_90,
+                EXCEL_COLUMN_BLOCK_ROTATION_180,
+                EXCEL_COLUMN_BLOCK_ROTATION_270,
+                EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
+                EXCEL_COLUMN_BLOCK_SCALE_X,
+                EXCEL_COLUMN_BLOCK_SCALE_Y,
+                EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+                EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
+                EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+                EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
+            ]
+        )
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS, index=False)
     logger.info(f"Block Geometry Analysis sheet created with {len(df)} rows")
@@ -363,22 +404,24 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
         ws.auto_filter.ref = ws.dimensions
 
     # Set column widths (13 columns)
-    ws.column_dimensions['A'].width = 30  # block_name
-    ws.column_dimensions['B'].width = 25  # block_layer_name
-    ws.column_dimensions['C'].width = 12  # block_rotation_0
-    ws.column_dimensions['D'].width = 12  # block_rotation_90
-    ws.column_dimensions['E'].width = 12  # block_rotation_180
-    ws.column_dimensions['F'].width = 12  # block_rotation_270
-    ws.column_dimensions['G'].width = 12  # block_rotation_other
-    ws.column_dimensions['H'].width = 15  # block_scale_x
-    ws.column_dimensions['I'].width = 15  # block_scale_y
-    ws.column_dimensions['J'].width = 20  # block_native_width
-    ws.column_dimensions['K'].width = 20  # block_native_height
-    ws.column_dimensions['L'].width = 40  # block_vertical_segments
-    ws.column_dimensions['M'].width = 40  # block_horizontal_segments
+    ws.column_dimensions["A"].width = 30  # block_name
+    ws.column_dimensions["B"].width = 25  # block_layer_name
+    ws.column_dimensions["C"].width = 12  # block_rotation_0
+    ws.column_dimensions["D"].width = 12  # block_rotation_90
+    ws.column_dimensions["E"].width = 12  # block_rotation_180
+    ws.column_dimensions["F"].width = 12  # block_rotation_270
+    ws.column_dimensions["G"].width = 12  # block_rotation_other
+    ws.column_dimensions["H"].width = 15  # block_scale_x
+    ws.column_dimensions["I"].width = 15  # block_scale_y
+    ws.column_dimensions["J"].width = 20  # block_native_width
+    ws.column_dimensions["K"].width = 20  # block_native_height
+    ws.column_dimensions["L"].width = 40  # block_vertical_segments
+    ws.column_dimensions["M"].width = 40  # block_horizontal_segments
 
     # Apply red highlighting to rows with negative scales (mirrored blocks)
-    red_fill = PatternFill(start_color='FFFF0000', end_color='FFFF0000', fill_type='solid')
+    red_fill = PatternFill(
+        start_color="FFFF0000", end_color="FFFF0000", fill_type="solid"
+    )
     highlighted_rows = 0
 
     # Iterate through data rows (skip header at row 1)
@@ -391,11 +434,16 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
         x_scale = x_scale_cell.value
         y_scale = y_scale_cell.value
 
-        if (x_scale is not None and isinstance(x_scale, (int, float)) and x_scale < 0) or \
-           (y_scale is not None and isinstance(y_scale, (int, float)) and y_scale < 0):
+        if (
+            x_scale is not None and isinstance(x_scale, (int, float)) and x_scale < 0
+        ) or (
+            y_scale is not None and isinstance(y_scale, (int, float)) and y_scale < 0
+        ):
             # Apply red fill to entire row (columns A-M)
             for col_idx in range(1, 14):  # Columns A through M
                 ws.cell(row=row_idx, column=col_idx).fill = red_fill
             highlighted_rows += 1
 
-    logger.info(f"Block Geometry Analysis sheet formatted with {highlighted_rows} rows highlighted for mirrored blocks")
+    logger.info(
+        f"Block Geometry Analysis sheet formatted with {highlighted_rows} rows highlighted for mirrored blocks"
+    )

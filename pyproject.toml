@@ -23,6 +23,9 @@ dev = [
 build = [
     "pyinstaller>=6.0.0",
 ]
+dev = [
+    "ruff>=0.14.5",
+]
 
 [tool.pytest.ini_options]
 # Configure pytest to run from app/ directory to support relative test paths
@@ -40,6 +43,24 @@ exclude = ['.venv', 'build', 'dist']
 [[tool.mypy.overrides]]
 module = ["ezdxf", "ezdxf.*", "customtkinter", "customtkinter.*"]
 ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+exclude = [".venv", "build", "dist", ".history"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]  # Line length handled by formatter, too restrictive for docstrings
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "core"]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
 
 [tool.hatch.build.targets.wheel]
 packages = ["app/core"]

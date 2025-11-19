@@ -12,18 +12,22 @@ Usage:
 """
 
 from pathlib import Path
-from typing import TypedDict, Any
+from typing import Any, TypedDict
+
 import ezdxf
 from ezdxf import DXFError
 from ezdxf.layouts import BlockLayout
 
-from .logger import setup_logger
 from .constants import SUPPORTED_EXTENSIONS
+from .logger import setup_logger
+
 
 logger = setup_logger(__name__)
 
 
-def _get_block_bounding_box(block_def: BlockLayout) -> tuple[float, float, float, float]:
+def _get_block_bounding_box(
+    block_def: BlockLayout,
+) -> tuple[float, float, float, float]:
     """
     Extract the bounding box (extents) of a block definition at 0° rotation.
 
@@ -42,10 +46,10 @@ def _get_block_bounding_box(block_def: BlockLayout) -> tuple[float, float, float
         >>> _get_block_bounding_box(block_def)
         (0.0, 0.0, 1200.0, 600.0)
     """
-    min_x = float('inf')
-    min_y = float('inf')
-    max_x = float('-inf')
-    max_y = float('-inf')
+    min_x = float("inf")
+    min_y = float("inf")
+    max_x = float("-inf")
+    max_y = float("-inf")
 
     has_geometry = False
 
@@ -53,7 +57,7 @@ def _get_block_bounding_box(block_def: BlockLayout) -> tuple[float, float, float
         entity_type = entity.dxftype()
 
         # Extract coordinates based on entity type
-        if entity_type == 'LINE':
+        if entity_type == "LINE":
             start = entity.dxf.start
             end = entity.dxf.end
             min_x = min(min_x, start.x, end.x)
@@ -62,7 +66,7 @@ def _get_block_bounding_box(block_def: BlockLayout) -> tuple[float, float, float
             max_y = max(max_y, start.y, end.y)
             has_geometry = True
 
-        elif entity_type in ('LWPOLYLINE', 'POLYLINE'):
+        elif entity_type in ("LWPOLYLINE", "POLYLINE"):
             try:
                 for point in entity.get_points():  # type: ignore[attr-defined]
                     x, y = point[0], point[1]
@@ -74,7 +78,7 @@ def _get_block_bounding_box(block_def: BlockLayout) -> tuple[float, float, float
             except (AttributeError, IndexError):
                 continue
 
-        elif entity_type == 'CIRCLE':
+        elif entity_type == "CIRCLE":
             center = entity.dxf.center
             radius = entity.dxf.radius
             min_x = min(min_x, center.x - radius)
@@ -83,7 +87,7 @@ def _get_block_bounding_box(block_def: BlockLayout) -> tuple[float, float, float
             max_y = max(max_y, center.y + radius)
             has_geometry = True
 
-        elif entity_type == 'ARC':
+        elif entity_type == "ARC":
             center = entity.dxf.center
             radius = entity.dxf.radius
             # Simplified bounding box for arcs (use full circle extents)
@@ -93,7 +97,7 @@ def _get_block_bounding_box(block_def: BlockLayout) -> tuple[float, float, float
             max_y = max(max_y, center.y + radius)
             has_geometry = True
 
-        elif entity_type == 'POINT':
+        elif entity_type == "POINT":
             location = entity.dxf.location
             min_x = min(min_x, location.x)
             max_x = max(max_x, location.x)
@@ -138,7 +142,7 @@ def _get_intersection_points(block_def: BlockLayout) -> tuple[list[float], list[
         entity_type = entity.dxftype()
 
         # Extract coordinates based on entity type
-        if entity_type == 'LINE':
+        if entity_type == "LINE":
             start = entity.dxf.start
             end = entity.dxf.end
             x_coords.add(start.x)
@@ -146,7 +150,7 @@ def _get_intersection_points(block_def: BlockLayout) -> tuple[list[float], list[
             y_coords.add(start.y)
             y_coords.add(end.y)
 
-        elif entity_type in ('LWPOLYLINE', 'POLYLINE'):
+        elif entity_type in ("LWPOLYLINE", "POLYLINE"):
             try:
                 for point in entity.get_points():  # type: ignore[attr-defined]
                     x_coords.add(point[0])
@@ -154,7 +158,7 @@ def _get_intersection_points(block_def: BlockLayout) -> tuple[list[float], list[
             except (AttributeError, IndexError):
                 continue
 
-        elif entity_type == 'CIRCLE':
+        elif entity_type == "CIRCLE":
             center = entity.dxf.center
             radius = entity.dxf.radius
             # Add circle bounding box corners
@@ -163,7 +167,7 @@ def _get_intersection_points(block_def: BlockLayout) -> tuple[list[float], list[
             y_coords.add(center.y - radius)
             y_coords.add(center.y + radius)
 
-        elif entity_type == 'ARC':
+        elif entity_type == "ARC":
             center = entity.dxf.center
             radius = entity.dxf.radius
             # Add arc bounding box corners (simplified)
@@ -172,7 +176,7 @@ def _get_intersection_points(block_def: BlockLayout) -> tuple[list[float], list[
             y_coords.add(center.y - radius)
             y_coords.add(center.y + radius)
 
-        elif entity_type == 'POINT':
+        elif entity_type == "POINT":
             location = entity.dxf.location
             x_coords.add(location.x)
             y_coords.add(location.y)
@@ -261,15 +265,15 @@ def _categorize_rotation(angle: float) -> str:
 
     # Check for standard angles with ±1° tolerance
     if abs(normalized - 0) <= 1 or abs(normalized - 360) <= 1:
-        return '0'
+        return "0"
     elif abs(normalized - 90) <= 1:
-        return '90'
+        return "90"
     elif abs(normalized - 180) <= 1:
-        return '180'
+        return "180"
     elif abs(normalized - 270) <= 1:
-        return '270'
+        return "270"
     else:
-        return 'other'
+        return "other"
 
 
 class ExtractionResult(TypedDict):
@@ -299,6 +303,7 @@ class ExtractionResult(TypedDict):
                                              'vertical_segments': [50.0, 1100.0, 50.0],
                                              'horizontal_segments': [25.0, 550.0, 25.0]}}
     """
+
     block_counts: dict[str, int]
     block_entities: dict[str, int]
     block_layer_pairs: dict[tuple[str, str], int]
@@ -358,8 +363,12 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
     # Validate file extension
     if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
-        logger.error(f"Unsupported file extension: {path.suffix}. Supported: {SUPPORTED_EXTENSIONS}")
-        raise ValueError(f"Unsupported file extension: {path.suffix}. Must be .dwg or .dxf")
+        logger.error(
+            f"Unsupported file extension: {path.suffix}. Supported: {SUPPORTED_EXTENSIONS}"
+        )
+        raise ValueError(
+            f"Unsupported file extension: {path.suffix}. Must be .dwg or .dxf"
+        )
 
     try:
         # Load DWG/DXF file
@@ -382,7 +391,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         for block_def in doc.blocks:
             block_name = block_def.name
             # Skip anonymous blocks and modelspace/paperspace
-            if block_name.startswith('*'):
+            if block_name.startswith("*"):
                 continue
 
             entity_count = sum(1 for _ in block_def)
@@ -398,14 +407,16 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             horizontal_segments = _calculate_segments(horizontal_points)
 
             block_trimming_data[block_name] = {
-                'native_width': native_width,
-                'native_height': native_height,
-                'vertical_segments': vertical_segments,
-                'horizontal_segments': horizontal_segments
+                "native_width": native_width,
+                "native_height": native_height,
+                "vertical_segments": vertical_segments,
+                "horizontal_segments": horizontal_segments,
             }
 
         logger.info(f"Analyzed {len(block_entities)} block definitions")
-        logger.info(f"Analyzed geometry for {len(block_trimming_data)} block definitions")
+        logger.info(
+            f"Analyzed geometry for {len(block_trimming_data)} block definitions"
+        )
 
         # Iterate through modelspace entities
         logger.info("Analyzing modelspace entities...")
@@ -420,10 +431,12 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             layer_entity_counts[layer_name] = layer_entity_counts.get(layer_name, 0) + 1
 
             # Count INSERT entities (block insertions)
-            if entity_type == 'INSERT':
+            if entity_type == "INSERT":
                 block_name = entity.dxf.name
                 block_counts[block_name] = block_counts.get(block_name, 0) + 1
-                layer_block_insertion_counts[layer_name] = layer_block_insertion_counts.get(layer_name, 0) + 1
+                layer_block_insertion_counts[layer_name] = (
+                    layer_block_insertion_counts.get(layer_name, 0) + 1
+                )
 
                 # Track block-layer pairs
                 pair_key = (block_name, layer_name)
@@ -433,7 +446,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 rotation = entity.dxf.rotation
                 rotation_category = _categorize_rotation(rotation)
                 rotation_key = (block_name, layer_name, rotation_category)
-                block_rotation_counts[rotation_key] = block_rotation_counts.get(rotation_key, 0) + 1
+                block_rotation_counts[rotation_key] = (
+                    block_rotation_counts.get(rotation_key, 0) + 1
+                )
 
                 # Extract scale data (X and Y scale factors)
                 try:
@@ -455,24 +470,32 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         unique_entity_types = len(entity_type_counts)
         total_layers = len(layer_entity_counts)
 
-        logger.info(f"Found {total_insertions} block insertions across {unique_blocks} unique blocks")
+        logger.info(
+            f"Found {total_insertions} block insertions across {unique_blocks} unique blocks"
+        )
         logger.info(f"Found {len(block_layer_pairs)} unique block-layer pairs")
-        logger.info(f"Tracked rotations for {len(block_rotation_counts)} block-layer-rotation combinations")
-        logger.info(f"Extracted scale data for {len(block_scale_data)} block-layer pairs")
-        logger.info(f"Found {total_entities} total entities across {unique_entity_types} entity types")
+        logger.info(
+            f"Tracked rotations for {len(block_rotation_counts)} block-layer-rotation combinations"
+        )
+        logger.info(
+            f"Extracted scale data for {len(block_scale_data)} block-layer pairs"
+        )
+        logger.info(
+            f"Found {total_entities} total entities across {unique_entity_types} entity types"
+        )
         logger.info(f"Found {total_layers} layers in drawing")
 
         # Return comprehensive result
         result: ExtractionResult = {
-            'block_counts': block_counts,
-            'block_entities': block_entities,
-            'block_layer_pairs': block_layer_pairs,
-            'block_rotation_counts': block_rotation_counts,
-            'block_scale_data': block_scale_data,
-            'layer_block_insertion_counts': layer_block_insertion_counts,
-            'layer_entity_counts': layer_entity_counts,
-            'entity_type_counts': entity_type_counts,
-            'block_trimming_data': block_trimming_data
+            "block_counts": block_counts,
+            "block_entities": block_entities,
+            "block_layer_pairs": block_layer_pairs,
+            "block_rotation_counts": block_rotation_counts,
+            "block_scale_data": block_scale_data,
+            "layer_block_insertion_counts": layer_block_insertion_counts,
+            "layer_entity_counts": layer_entity_counts,
+            "entity_type_counts": entity_type_counts,
+            "block_trimming_data": block_trimming_data,
         }
 
         return result
