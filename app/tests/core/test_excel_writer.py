@@ -1113,3 +1113,79 @@ class TestExcelWriter:
 
             assert block_a_found, "BLOCK_A not found in Block Analysis sheet"
             assert block_b_found, "BLOCK_B not found in Block Analysis sheet"
+
+    def test_all_sheets_frozen_panes(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that frozen panes are applied to all four sheets."""
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+
+        # Verify frozen panes on Block Analysis sheet
+        ws_blocks = wb[EXCEL_SHEET_BLOCK_ANALYSIS]
+        assert ws_blocks.freeze_panes is not None
+        assert ws_blocks.freeze_panes == "A2"
+
+        # Verify frozen panes on Layer Analysis sheet
+        ws_layers = wb[EXCEL_SHEET_LAYER_ANALYSIS]
+        assert ws_layers.freeze_panes is not None
+        assert ws_layers.freeze_panes == "A2"
+
+        # Verify frozen panes on Entity Summary sheet
+        ws_entities = wb[EXCEL_SHEET_ENTITY_SUMMARY]
+        assert ws_entities.freeze_panes is not None
+        assert ws_entities.freeze_panes == "A2"
+
+        # Verify frozen panes on Block Geometry Analysis sheet
+        ws_geometry = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+        assert ws_geometry.freeze_panes is not None
+        assert ws_geometry.freeze_panes == "A2"
+
+    def test_frozen_panes_with_empty_data(self, temp_dir: str) -> None:
+        """Test that frozen panes are applied even with headers-only sheets."""
+        empty_data: ExtractionResult = {
+            "block_counts": {},
+            "block_entities": {},
+            "block_layer_pairs": {},
+            "block_rotation_counts": {},
+            "block_scale_data": {},
+            "block_xdata_apps": {},
+            "layer_block_insertion_counts": {},
+            "layer_entity_counts": {},
+            "entity_type_counts": {},
+            "block_trimming_data": {},
+        }
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(empty_data, output_path)
+
+        wb = load_workbook(excel_path)
+
+        # Verify all sheets have frozen panes even with no data
+        ws_blocks = wb[EXCEL_SHEET_BLOCK_ANALYSIS]
+        assert ws_blocks.freeze_panes == "A2"
+
+        ws_layers = wb[EXCEL_SHEET_LAYER_ANALYSIS]
+        assert ws_layers.freeze_panes == "A2"
+
+        ws_entities = wb[EXCEL_SHEET_ENTITY_SUMMARY]
+        assert ws_entities.freeze_panes == "A2"
+
+        ws_geometry = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+        assert ws_geometry.freeze_panes == "A2"
+
+    def test_frozen_panes_position(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that frozen panes cell reference is exactly A2 (freeze row 1)."""
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+
+        # Verify exact frozen pane position for all sheets
+        assert wb[EXCEL_SHEET_BLOCK_ANALYSIS].freeze_panes == "A2"
+        assert wb[EXCEL_SHEET_LAYER_ANALYSIS].freeze_panes == "A2"
+        assert wb[EXCEL_SHEET_ENTITY_SUMMARY].freeze_panes == "A2"
+        assert wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS].freeze_panes == "A2"

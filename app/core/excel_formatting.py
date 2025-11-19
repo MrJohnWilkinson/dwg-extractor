@@ -83,6 +83,10 @@ def _format_block_analysis_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
+    # Freeze header row
+    ws.freeze_panes = "A2"
+    logger.info("Frozen panes applied to Block Analysis sheet")
+
     # Set column widths (5 columns)
     ws.column_dimensions["A"].width = 30  # block_name
     ws.column_dimensions["B"].width = 25  # block_insertion_count
@@ -106,6 +110,10 @@ def _format_layer_analysis_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
+    # Freeze header row
+    ws.freeze_panes = "A2"
+    logger.info("Frozen panes applied to Layer Analysis sheet")
+
     # Set column widths
     ws.column_dimensions["A"].width = 30  # layer_name
     ws.column_dimensions["B"].width = 25  # layer_block_insertion_count
@@ -127,6 +135,10 @@ def _format_entity_summary_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
+    # Freeze header row
+    ws.freeze_panes = "A2"
+    logger.info("Frozen panes applied to Entity Summary sheet")
+
     # Set column widths
     ws.column_dimensions["A"].width = 25  # entity_type_name
     ws.column_dimensions["B"].width = 25  # entity_type_count
@@ -146,6 +158,10 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     # Apply auto-filter
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
+
+    # Freeze header row
+    ws.freeze_panes = "A2"
+    logger.info("Frozen panes applied to Block Geometry Analysis sheet")
 
     # Set column widths (13 columns)
     ws.column_dimensions["A"].width = 30  # block_name
