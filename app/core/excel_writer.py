@@ -59,6 +59,83 @@ from .logger import setup_logger
 logger = setup_logger(__name__)
 
 
+def _has_x_scale_variance(scale_set: set[tuple[float, float]]) -> bool:
+    """
+    Check if a block has varying X scale values across its insertions.
+
+    Args:
+        scale_set: Set of unique (x_scale, y_scale) tuples for a block
+
+    Returns:
+        True if more than one unique X scale value exists, False otherwise
+
+    Examples:
+        >>> _has_x_scale_variance({(1.0, 1.0), (2.0, 1.0)})
+        True
+        >>> _has_x_scale_variance({(1.0, 1.0), (1.0, 2.0)})
+        False
+        >>> _has_x_scale_variance({(1.5, 1.5)})
+        False
+    """
+    x_scales = {x for x, _ in scale_set}
+    return len(x_scales) > 1
+
+
+def _has_y_scale_variance(scale_set: set[tuple[float, float]]) -> bool:
+    """
+    Check if a block has varying Y scale values across its insertions.
+
+    Args:
+        scale_set: Set of unique (x_scale, y_scale) tuples for a block
+
+    Returns:
+        True if more than one unique Y scale value exists, False otherwise
+
+    Examples:
+        >>> _has_y_scale_variance({(1.0, 1.0), (1.0, 2.0)})
+        True
+        >>> _has_y_scale_variance({(1.0, 1.0), (2.0, 1.0)})
+        False
+        >>> _has_y_scale_variance({(1.5, 1.5)})
+        False
+    """
+    y_scales = {y for _, y in scale_set}
+    return len(y_scales) > 1
+
+
+def _get_single_scale_value(scale_set: set[tuple[float, float]], axis: str) -> float:
+    """
+    Extract the single scale value for a given axis when no variance exists.
+
+    Args:
+        scale_set: Set of unique (x_scale, y_scale) tuples for a block
+        axis: Either 'x' or 'y' to specify which axis to extract
+
+    Returns:
+        The single scale value for the specified axis
+
+    Raises:
+        ValueError: If axis is not 'x' or 'y', or if scale_set is empty
+
+    Examples:
+        >>> _get_single_scale_value({(1.5, 2.0), (1.5, 3.0)}, 'x')
+        1.5
+        >>> _get_single_scale_value({(1.0, 2.5), (2.0, 2.5)}, 'y')
+        2.5
+    """
+    if not scale_set:
+        raise ValueError("scale_set cannot be empty")
+
+    if axis == 'x':
+        x_scales = {x for x, _ in scale_set}
+        return next(iter(x_scales))
+    elif axis == 'y':
+        y_scales = {y for _, y in scale_set}
+        return next(iter(y_scales))
+    else:
+        raise ValueError(f"axis must be 'x' or 'y', got '{axis}'")
+
+
 def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
     """
     Generate a multi-sheet Excel file from comprehensive CAD extraction data.
@@ -288,10 +365,19 @@ def _create_block_geometry_analysis_sheet(
             rot_270 = block_rotation_counts.get((block_name, layer_name, "270"), 0)
             rot_other = block_rotation_counts.get((block_name, layer_name, "other"), 0)
 
-            # Extract scale data for this block-layer pair
-            x_scale, y_scale = block_scale_data.get(
-                (block_name, layer_name), (1.0, 1.0)
-            )
+            # Extract scale data for this block (all insertions across all layers)
+            # Determine if X or Y scales vary, display "VARIES" or numeric value accordingly
+            scale_set = block_scale_data.get(block_name, {(1.0, 1.0)})
+
+            if _has_x_scale_variance(scale_set):
+                x_scale: str | float = "VARIES"
+            else:
+                x_scale = _get_single_scale_value(scale_set, 'x')
+
+            if _has_y_scale_variance(scale_set):
+                y_scale: str | float = "VARIES"
+            else:
+                y_scale = _get_single_scale_value(scale_set, 'y')
 
             # Extract dimension data
             native_width = geometry_data["native_width"]

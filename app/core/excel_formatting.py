@@ -139,7 +139,7 @@ def _format_entity_summary_sheet(wb: Workbook) -> None:
 
 
 def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
-    """Apply formatting to the Block Geometry Analysis sheet with red highlighting for mirrored blocks."""
+    """Apply formatting to the Block Geometry Analysis sheet with yellow highlighting for scale variance."""
     ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
 
     # Apply auto-filter
@@ -166,9 +166,9 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     for cell in ws[1]:
         cell.alignment = alignment
 
-    # Apply red highlighting to rows with negative scales (mirrored blocks)
-    red_fill = PatternFill(
-        start_color="FFFF0000", end_color="FFFF0000", fill_type="solid"
+    # Apply yellow highlighting to rows with "VARIES" in scale columns
+    yellow_fill = PatternFill(
+        start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid"
     )
     highlighted_rows = 0
 
@@ -178,20 +178,16 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
         x_scale_cell = ws.cell(row=row_idx, column=8)  # Column H
         y_scale_cell = ws.cell(row=row_idx, column=9)  # Column I
 
-        # Check if either scale is negative
+        # Check if either scale contains "VARIES"
         x_scale = x_scale_cell.value
         y_scale = y_scale_cell.value
 
-        if (
-            x_scale is not None and isinstance(x_scale, (int, float)) and x_scale < 0
-        ) or (
-            y_scale is not None and isinstance(y_scale, (int, float)) and y_scale < 0
-        ):
-            # Apply red fill to entire row (columns A-M)
+        if (x_scale == "VARIES") or (y_scale == "VARIES"):
+            # Apply yellow fill to entire row (columns A-M)
             for col_idx in range(1, 14):  # Columns A through M
-                ws.cell(row=row_idx, column=col_idx).fill = red_fill
+                ws.cell(row=row_idx, column=col_idx).fill = yellow_fill
             highlighted_rows += 1
 
     logger.info(
-        f"Block Geometry Analysis sheet formatted with {highlighted_rows} rows highlighted for mirrored blocks"
+        f"Block Geometry Analysis sheet formatted with {highlighted_rows} rows highlighted for scale variance"
     )

@@ -40,7 +40,8 @@ class ExtractionResult(TypedDict):
         block_layer_pairs: Dictionary mapping (block_name, layer_name) tuples to insertion counts
         block_rotation_counts: Dictionary mapping (block_name, layer_name, rotation_category) tuples to insertion counts
                                Rotation categories are strings: '0', '90', '180', '270', 'other'
-        block_scale_data: Dictionary mapping (block_name, layer_name) tuples to (x_scale, y_scale) tuples
+        block_scale_data: Dictionary mapping block names to sets of unique (x_scale, y_scale) tuples
+                          Tracks ALL unique scale combinations across all insertions and layers per block
                           Scale values indicate transformation factors (1.0 = normal, -1.0 = mirrored, 2.0 = 200%)
         layer_block_insertion_counts: Dictionary mapping layer names to block insertion counts on that layer
         layer_entity_counts: Dictionary mapping layer names to total entity counts on that layer
@@ -52,7 +53,7 @@ class ExtractionResult(TypedDict):
     Examples:
         block_layer_pairs: {('DOOR', 'WALLS'): 5, ('DOOR', 'OPENINGS'): 3, ('WINDOW', 'WALLS'): 8}
         block_rotation_counts: {('DOOR', 'WALLS', '0'): 12, ('DOOR', 'WALLS', '90'): 18, ('DOOR', 'WALLS', '180'): 10}
-        block_scale_data: {('DOOR', 'WALLS'): (1.0, 1.0), ('WINDOW', 'WALLS'): (-1.0, 1.0)}
+        block_scale_data: {'DOOR': {(1.0, 1.0), (2.0, 1.0)}, 'WINDOW': {(-1.0, 1.0)}}
         block_trimming_data: {'SHELF_4FT': {'native_width': 1200.0, 'native_height': 600.0,
                                              'vertical_segments': [50.0, 1100.0, 50.0],
                                              'horizontal_segments': [25.0, 550.0, 25.0]}}
@@ -62,7 +63,7 @@ class ExtractionResult(TypedDict):
     block_entities: dict[str, int]
     block_layer_pairs: dict[tuple[str, str], int]
     block_rotation_counts: dict[tuple[str, str, str], int]
-    block_scale_data: dict[tuple[str, str], tuple[float, float]]
+    block_scale_data: dict[str, set[tuple[float, float]]]
     layer_block_insertion_counts: dict[str, int]
     layer_entity_counts: dict[str, int]
     entity_type_counts: dict[str, int]
@@ -134,7 +135,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         block_entities: dict[str, int] = {}
         block_layer_pairs: dict[tuple[str, str], int] = {}
         block_rotation_counts: dict[tuple[str, str, str], int] = {}
-        block_scale_data: dict[tuple[str, str], tuple[float, float]] = {}
+        block_scale_data: dict[str, set[tuple[float, float]]] = {}
         layer_block_insertion_counts: dict[str, int] = {}
         layer_entity_counts: dict[str, int] = {}
         entity_type_counts: dict[str, int] = {}
@@ -213,9 +214,10 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                     x_scale = 1.0
                     y_scale = 1.0
 
-                # Store scale data for this block-layer pair (only first occurrence)
-                if pair_key not in block_scale_data:
-                    block_scale_data[pair_key] = (x_scale, y_scale)
+                # Store all unique scale combinations per block (across all layers)
+                if block_name not in block_scale_data:
+                    block_scale_data[block_name] = set()
+                block_scale_data[block_name].add((x_scale, y_scale))
 
         # Log summary
         total_insertions = sum(block_counts.values())
@@ -232,7 +234,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             f"Tracked rotations for {len(block_rotation_counts)} block-layer-rotation combinations"
         )
         logger.info(
-            f"Extracted scale data for {len(block_scale_data)} block-layer pairs"
+            f"Extracted scale data for {len(block_scale_data)} unique blocks"
         )
         logger.info(
             f"Found {total_entities} total entities across {unique_entity_types} entity types"

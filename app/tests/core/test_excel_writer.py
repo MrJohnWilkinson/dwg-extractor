@@ -83,10 +83,9 @@ class TestExcelWriter:
                 ("TAG", "Layer1", "other"): 3,
             },
             "block_scale_data": {
-                ("VALVE", "Layer1"): (1.0, 1.0),
-                ("VALVE", "Layer2"): (-1.0, 1.0),
-                ("PIPE", "Layer1"): (1.0, -1.0),
-                ("TAG", "Layer1"): (-1.0, -1.0),
+                "VALVE": {(1.0, 1.0), (-1.0, 1.0)},
+                "PIPE": {(1.0, -1.0)},
+                "TAG": {(-1.0, -1.0)},
             },
             "layer_block_insertion_counts": {"Layer1": 15, "Layer2": 3},
             "layer_entity_counts": {"Layer1": 25, "Layer2": 10},
@@ -346,11 +345,11 @@ class TestExcelWriter:
         assert format_header(EXCEL_COLUMN_BLOCK_SCALE_X) in df.columns
         assert format_header(EXCEL_COLUMN_BLOCK_SCALE_Y) in df.columns
 
-        # Verify scale data is present
+        # Verify scale data is present (can be numeric or "VARIES" string)
         for value in df[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)]:
-            assert isinstance(value, (int, float))
+            assert isinstance(value, (int, float, str))
         for value in df[format_header(EXCEL_COLUMN_BLOCK_SCALE_Y)]:
-            assert isinstance(value, (int, float))
+            assert isinstance(value, (int, float, str))
 
     def test_filename_format_unchanged(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -579,10 +578,10 @@ class TestExcelWriter:
         assert valve_layer1[format_header(EXCEL_COLUMN_BLOCK_NATIVE_WIDTH)] == 100.0
         assert valve_layer1[format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT)] == 50.0
 
-    def test_geometry_sheet_red_highlighting(
+    def test_geometry_sheet_variance_highlighting(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that mirrored blocks (negative scales) have red fill highlighting."""
+        """Test that blocks with scale variance have yellow fill highlighting."""
 
         output_path = os.path.join(temp_dir, "test_drawing.dwg")
         excel_path = write_excel(sample_extraction_data, output_path)
@@ -590,14 +589,13 @@ class TestExcelWriter:
         wb = load_workbook(excel_path)
         ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
 
-        # Check rows for red highlighting based on sample data
-        # VALVE/Layer2 has (-1.0, 1.0) - should be red (row 3 or 4 depending on sort)
-        # PIPE/Layer1 has (1.0, -1.0) - should be red
-        # TAG/Layer1 has (-1.0, -1.0) - should be red
-        # VALVE/Layer1 has (1.0, 1.0) - should NOT be red
+        # Check rows for yellow highlighting based on sample data
+        # VALVE has variance: {(1.0, 1.0), (-1.0, 1.0)} - X varies - should show "VARIES"
+        # PIPE has no variance: {(1.0, -1.0)} - should show numeric value
+        # TAG has no variance: {(-1.0, -1.0)} - should show numeric value
 
-        red_rows = 0
-        non_red_rows = 0
+        yellow_rows = 0
+        non_yellow_rows = 0
 
         # Iterate through data rows (skip header at row 1)
         for row_idx in range(2, ws.max_row + 1):
@@ -605,24 +603,23 @@ class TestExcelWriter:
             y_scale = ws.cell(row=row_idx, column=9).value  # Column I
             cell_fill = ws.cell(row=row_idx, column=1).fill  # Check first column fill
 
-            if (isinstance(x_scale, (int, float)) and x_scale < 0) or (
-                isinstance(y_scale, (int, float)) and y_scale < 0
-            ):
-                # Should have red fill
-                assert cell_fill.start_color.rgb == "FFFF0000", (
-                    f"Row {row_idx} with scales ({x_scale}, {y_scale}) should have red fill"
+            if x_scale == "VARIES" or y_scale == "VARIES":
+                # Should have yellow fill
+                assert cell_fill.start_color.rgb == "FFFFFF00", (
+                    f"Row {row_idx} with scales ({x_scale}, {y_scale}) should have yellow fill"
                 )
-                red_rows += 1
+                yellow_rows += 1
             else:
-                # Should NOT have red fill (no fill or different color)
-                assert cell_fill.start_color.rgb != "FFFF0000", (
-                    f"Row {row_idx} with scales ({x_scale}, {y_scale}) should NOT have red fill"
+                # Should NOT have yellow fill (no fill or different color)
+                assert cell_fill.start_color.rgb != "FFFFFF00", (
+                    f"Row {row_idx} with scales ({x_scale}, {y_scale}) should NOT have yellow fill"
                 )
-                non_red_rows += 1
+                non_yellow_rows += 1
 
-        # Verify we have both red and non-red rows
-        assert red_rows == 3, f"Expected 3 mirrored blocks, got {red_rows}"
-        assert non_red_rows == 1, f"Expected 1 non-mirrored block, got {non_red_rows}"
+        # Verify we have both yellow and non-yellow rows
+        # VALVE appears on 2 layers but has variance - both rows should be yellow
+        assert yellow_rows == 2, f"Expected 2 rows with variance (VALVE on both layers), got {yellow_rows}"
+        assert non_yellow_rows == 2, f"Expected 2 rows without variance (PIPE, TAG), got {non_yellow_rows}"
 
     def test_block_geometry_analysis_column_widths(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -839,25 +836,23 @@ class TestExcelWriter:
         assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_0) not in df_blocks.columns
         assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_90) not in df_blocks.columns
 
-        # Verify red highlighting for mirrored blocks (negative scales)
+        # Verify yellow highlighting for blocks with scale variance
         wb = load_workbook(excel_path)
         ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
 
-        # Check for at least one red-highlighted row (mirrored blocks)
-        has_red_highlight = False
+        # Check for at least one yellow-highlighted row (blocks with "VARIES")
+        has_yellow_highlight = False
         for row_idx in range(2, ws.max_row + 1):
             x_scale = ws.cell(row=row_idx, column=8).value
             y_scale = ws.cell(row=row_idx, column=9).value
-            if (isinstance(x_scale, (int, float)) and x_scale < 0) or (
-                isinstance(y_scale, (int, float)) and y_scale < 0
-            ):
+            if x_scale == "VARIES" or y_scale == "VARIES":
                 cell_fill = ws.cell(row=row_idx, column=1).fill
-                if cell_fill.start_color.rgb == "FFFF0000":
-                    has_red_highlight = True
+                if cell_fill.start_color.rgb == "FFFFFF00":
+                    has_yellow_highlight = True
                     break
 
-        assert has_red_highlight, (
-            "At least one mirrored block should have red highlighting"
+        assert has_yellow_highlight, (
+            "At least one block with scale variance should have yellow highlighting"
         )
 
     def test_spec_012_naming_conventions(
@@ -916,3 +911,123 @@ class TestExcelWriter:
         ]
         assert format_header(EXCEL_COLUMN_ENTITY_TYPE_NAME) in entity_type_columns
         assert format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT) in entity_type_columns
+
+    def test_scale_variance_detection_varies_x_only(self, temp_dir: str) -> None:
+        """Test that X scale variance is detected and displayed as VARIES."""
+        from core.extractor import extract_blocks
+
+        result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(result, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
+
+        # X_VARIES block has varying X scales: (1.0, 1.0), (2.0, 1.0), (1.5, 1.0)
+        x_varies_rows = df[df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "X_VARIES"]
+        assert len(x_varies_rows) > 0
+
+        # All rows for X_VARIES should show "VARIES" in X Scale column
+        for _, row in x_varies_rows.iterrows():
+            assert row[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)] == "VARIES"
+            # Y scale should be consistent (1.0)
+            assert row[format_header(EXCEL_COLUMN_BLOCK_SCALE_Y)] == 1.0
+
+    def test_scale_variance_detection_varies_y_only(self, temp_dir: str) -> None:
+        """Test that Y scale variance is detected and displayed as VARIES."""
+        from core.extractor import extract_blocks
+
+        result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(result, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
+
+        # Y_VARIES block has varying Y scales: (1.0, 1.0), (1.0, 2.0), (1.0, 0.5)
+        y_varies_rows = df[df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "Y_VARIES"]
+        assert len(y_varies_rows) > 0
+
+        # All rows for Y_VARIES should show "VARIES" in Y Scale column
+        for _, row in y_varies_rows.iterrows():
+            assert row[format_header(EXCEL_COLUMN_BLOCK_SCALE_Y)] == "VARIES"
+            # X scale should be consistent (1.0)
+            assert row[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)] == 1.0
+
+    def test_scale_variance_detection_varies_both(self, temp_dir: str) -> None:
+        """Test that both X and Y scale variance is detected and displayed as VARIES."""
+        from core.extractor import extract_blocks
+
+        result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(result, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
+
+        # BOTH_VARY block has varying X and Y scales: (1.0, 1.0), (2.0, 2.0), (-1.0, 1.5)
+        both_vary_rows = df[df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "BOTH_VARY"]
+        assert len(both_vary_rows) > 0
+
+        # All rows for BOTH_VARY should show "VARIES" in both scale columns
+        for _, row in both_vary_rows.iterrows():
+            assert row[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)] == "VARIES"
+            assert row[format_header(EXCEL_COLUMN_BLOCK_SCALE_Y)] == "VARIES"
+
+    def test_scale_variance_display_numeric_when_consistent(self, temp_dir: str) -> None:
+        """Test that numeric values are displayed when scales are consistent."""
+        from core.extractor import extract_blocks
+
+        result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(result, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
+
+        # CONSISTENT block has only one scale across all insertions: (1.5, 1.5)
+        consistent_rows = df[df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "CONSISTENT"]
+        assert len(consistent_rows) > 0
+
+        # All rows for CONSISTENT should show numeric values (1.5, 1.5)
+        for _, row in consistent_rows.iterrows():
+            assert row[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)] == 1.5
+            assert row[format_header(EXCEL_COLUMN_BLOCK_SCALE_Y)] == 1.5
+
+    def test_variance_yellow_highlighting_applied(self, temp_dir: str) -> None:
+        """Test that yellow highlighting is applied to rows with VARIES."""
+        from core.extractor import extract_blocks
+
+        result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(result, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Count rows with yellow highlighting
+        yellow_rows = 0
+        for row_idx in range(2, ws.max_row + 1):
+            cell_fill = ws.cell(row=row_idx, column=1).fill
+            if cell_fill.start_color.rgb == "FFFFFF00":
+                yellow_rows += 1
+
+        # Should have yellow highlighting for X_VARIES, Y_VARIES, and BOTH_VARY rows
+        # Each appears on 2-3 layers, but we expect at least 3 rows highlighted
+        assert yellow_rows >= 3, f"Expected at least 3 rows with yellow highlighting, got {yellow_rows}"
+
+    def test_no_variance_no_highlighting(self, temp_dir: str) -> None:
+        """Test that rows without VARIES have no yellow highlighting."""
+        from core.extractor import extract_blocks
+
+        result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(result, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Iterate through worksheet and verify CONSISTENT rows have no yellow fill
+        for row_idx in range(2, ws.max_row + 1):
+            block_name = ws.cell(row=row_idx, column=1).value
+            if block_name == "CONSISTENT":
+                cell_fill = ws.cell(row=row_idx, column=1).fill
+                assert cell_fill.start_color.rgb != "FFFFFF00", (
+                    f"CONSISTENT block at row {row_idx} should NOT have yellow highlighting"
+                )

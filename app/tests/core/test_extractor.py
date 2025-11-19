@@ -641,10 +641,13 @@ class TestExtractor:
 
             # Verify scale data exists (defaults to 1.0, 1.0 if missing)
             assert "block_scale_data" in result
-            # The scale should be (1.0, 1.0) whether explicit or defaulted
-            scale_key = ("NO_SCALE_BLOCK", "0")
-            if scale_key in result["block_scale_data"]:
-                x_scale, y_scale = result["block_scale_data"][scale_key]
+            # The scale data is now per-block (not per block-layer pair)
+            if "NO_SCALE_BLOCK" in result["block_scale_data"]:
+                scale_set = result["block_scale_data"]["NO_SCALE_BLOCK"]
+                assert isinstance(scale_set, set)
+                # Should have exactly one scale combination (default 1.0, 1.0)
+                assert len(scale_set) == 1
+                x_scale, y_scale = next(iter(scale_set))
                 assert isinstance(x_scale, (int, float))
                 assert isinstance(y_scale, (int, float))
                 # Verify default value of 1.0 (or 1 as int)
@@ -720,3 +723,68 @@ class TestExtractor:
         # A block is mirrored if either x_scale or y_scale is negative
         actual_mirrored = x_scale < 0 or y_scale < 0
         assert actual_mirrored == is_mirrored
+
+    def test_block_scale_data_structure_is_per_block(self) -> None:
+        """Test that block_scale_data is now dict[str, set[tuple[float, float]]]."""
+        result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
+
+        # Verify block_scale_data structure
+        assert "block_scale_data" in result
+        assert isinstance(result["block_scale_data"], dict)
+
+        # All keys should be strings (block names), not tuples
+        for block_name in result["block_scale_data"].keys():
+            assert isinstance(block_name, str)
+
+        # All values should be sets of tuples
+        for scale_set in result["block_scale_data"].values():
+            assert isinstance(scale_set, set)
+            for scale_tuple in scale_set:
+                assert isinstance(scale_tuple, tuple)
+                assert len(scale_tuple) == 2
+                assert isinstance(scale_tuple[0], (int, float))
+                assert isinstance(scale_tuple[1], (int, float))
+
+    def test_block_scale_data_captures_all_unique_scales(self) -> None:
+        """Test that all unique scale combinations are captured per block."""
+        result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
+
+        # X_VARIES block has scales: (1.0, 1.0), (2.0, 1.0), (1.5, 1.0)
+        x_varies_scales = result["block_scale_data"]["X_VARIES"]
+        assert len(x_varies_scales) == 3
+        assert (1.0, 1.0) in x_varies_scales
+        assert (2.0, 1.0) in x_varies_scales
+        assert (1.5, 1.0) in x_varies_scales
+
+        # Y_VARIES block has scales: (1.0, 1.0), (1.0, 2.0), (1.0, 0.5)
+        y_varies_scales = result["block_scale_data"]["Y_VARIES"]
+        assert len(y_varies_scales) == 3
+        assert (1.0, 1.0) in y_varies_scales
+        assert (1.0, 2.0) in y_varies_scales
+        assert (1.0, 0.5) in y_varies_scales
+
+        # BOTH_VARY block has scales: (1.0, 1.0), (2.0, 2.0), (-1.0, 1.5)
+        both_vary_scales = result["block_scale_data"]["BOTH_VARY"]
+        assert len(both_vary_scales) == 3
+        assert (1.0, 1.0) in both_vary_scales
+        assert (2.0, 2.0) in both_vary_scales
+        assert (-1.0, 1.5) in both_vary_scales
+
+        # CONSISTENT block has only one scale: (1.5, 1.5)
+        consistent_scales = result["block_scale_data"]["CONSISTENT"]
+        assert len(consistent_scales) == 1
+        assert (1.5, 1.5) in consistent_scales
+
+    def test_block_scale_data_aggregates_across_layers(self) -> None:
+        """Test that scale data aggregates across all layers for each block."""
+        result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
+
+        # X_VARIES appears on LAYER_A and LAYER_B with different scales
+        # The block_scale_data should capture all unique scales regardless of layer
+        x_varies_scales = result["block_scale_data"]["X_VARIES"]
+        assert len(x_varies_scales) == 3  # Three different scale combinations total
+
+        # Verify this is per-block, not per-layer
+        # (The old structure was per block-layer pair, new structure is just per block)
+        assert "X_VARIES" in result["block_scale_data"]
+        assert isinstance(result["block_scale_data"]["X_VARIES"], set)

@@ -325,8 +325,8 @@ class TestBlockGeometryAnalysisFormatting:
         assert ws.column_dimensions["L"].width == 40  # block_vertical_segments
         assert ws.column_dimensions["M"].width == 40  # block_horizontal_segments
 
-    def test_format_geometry_analysis_red_highlighting_negative_x_scale(self, temp_dir: str) -> None:
-        """Test that rows with negative X scale are highlighted in red."""
+    def test_format_geometry_analysis_yellow_highlighting_varies_x_scale(self, temp_dir: str) -> None:
+        """Test that rows with VARIES in X scale are highlighted in yellow."""
         # Create test workbook
         wb = Workbook()
         ws = cast(Worksheet, wb.active)
@@ -340,21 +340,21 @@ class TestBlockGeometryAnalysisFormatting:
             "block_vertical_segments", "block_horizontal_segments"
         ])
 
-        # Add data row with negative X scale (mirrored)
-        ws.append(["VALVE", "Layer1", 5, 0, 0, 0, 0, -1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
+        # Add data row with VARIES in X scale
+        ws.append(["VALVE", "Layer1", 5, 0, 0, 0, 0, "VARIES", 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
 
-        # Verify red highlighting on row 2 (data row)
-        red_fill = PatternFill(start_color="FFFF0000", end_color="FFFF0000", fill_type="solid")
+        # Verify yellow highlighting on row 2 (data row)
+        yellow_fill = PatternFill(start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid")
         for col_idx in range(1, 14):  # Columns A through M
             cell_fill = ws.cell(row=2, column=col_idx).fill
-            assert cell_fill.start_color.rgb == red_fill.start_color.rgb
-            assert cell_fill.fill_type == red_fill.fill_type
+            assert cell_fill.start_color.rgb == yellow_fill.start_color.rgb
+            assert cell_fill.fill_type == yellow_fill.fill_type
 
-    def test_format_geometry_analysis_red_highlighting_negative_y_scale(self, temp_dir: str) -> None:
-        """Test that rows with negative Y scale are highlighted in red."""
+    def test_format_geometry_analysis_yellow_highlighting_varies_y_scale(self, temp_dir: str) -> None:
+        """Test that rows with VARIES in Y scale are highlighted in yellow."""
         # Create test workbook
         wb = Workbook()
         ws = cast(Worksheet, wb.active)
@@ -368,20 +368,20 @@ class TestBlockGeometryAnalysisFormatting:
             "block_vertical_segments", "block_horizontal_segments"
         ])
 
-        # Add data row with negative Y scale (mirrored)
-        ws.append(["PIPE", "Layer1", 3, 2, 0, 0, 0, 1.0, -1.0, 200.0, 100.0, "20, 160, 20", "10, 80, 10"])
+        # Add data row with VARIES in Y scale
+        ws.append(["PIPE", "Layer1", 3, 2, 0, 0, 0, 1.0, "VARIES", 200.0, 100.0, "20, 160, 20", "10, 80, 10"])
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
 
-        # Verify red highlighting on row 2 (data row)
-        red_fill = PatternFill(start_color="FFFF0000", end_color="FFFF0000", fill_type="solid")
+        # Verify yellow highlighting on row 2 (data row)
+        yellow_fill = PatternFill(start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid")
         for col_idx in range(1, 14):  # Columns A through M
             cell_fill = ws.cell(row=2, column=col_idx).fill
-            assert cell_fill.start_color.rgb == red_fill.start_color.rgb
+            assert cell_fill.start_color.rgb == yellow_fill.start_color.rgb
 
-    def test_format_geometry_analysis_red_highlighting_both_negative_scales(self, temp_dir: str) -> None:
-        """Test that rows with both negative scales are highlighted in red."""
+    def test_format_geometry_analysis_yellow_highlighting_both_vary(self, temp_dir: str) -> None:
+        """Test that rows with VARIES in both scales are highlighted in yellow."""
         # Create test workbook
         wb = Workbook()
         ws = cast(Worksheet, wb.active)
@@ -395,20 +395,20 @@ class TestBlockGeometryAnalysisFormatting:
             "block_vertical_segments", "block_horizontal_segments"
         ])
 
-        # Add data row with both negative scales (mirrored in both axes)
-        ws.append(["TAG", "Layer1", 0, 0, 0, 0, 3, -1.0, -1.0, 50.0, 25.0, "50", "25"])
+        # Add data row with VARIES in both scales
+        ws.append(["TAG", "Layer1", 0, 0, 0, 0, 3, "VARIES", "VARIES", 50.0, 25.0, "50", "25"])
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
 
-        # Verify red highlighting on row 2 (data row)
-        red_fill = PatternFill(start_color="FFFF0000", end_color="FFFF0000", fill_type="solid")
+        # Verify yellow highlighting on row 2 (data row)
+        yellow_fill = PatternFill(start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid")
         for col_idx in range(1, 14):  # Columns A through M
             cell_fill = ws.cell(row=2, column=col_idx).fill
-            assert cell_fill.start_color.rgb == red_fill.start_color.rgb
+            assert cell_fill.start_color.rgb == yellow_fill.start_color.rgb
 
-    def test_format_geometry_analysis_no_highlighting_positive_scales(self, temp_dir: str) -> None:
-        """Test that rows with positive scales are NOT highlighted."""
+    def test_format_geometry_analysis_no_highlighting_numeric_scales(self, temp_dir: str) -> None:
+        """Test that rows with numeric scales (no VARIES) are NOT highlighted."""
         # Create test workbook
         wb = Workbook()
         ws = cast(Worksheet, wb.active)
@@ -422,19 +422,19 @@ class TestBlockGeometryAnalysisFormatting:
             "block_vertical_segments", "block_horizontal_segments"
         ])
 
-        # Add data row with positive scales (not mirrored)
+        # Add data row with numeric scales (no variance)
         ws.append(["VALVE", "Layer1", 5, 0, 0, 0, 0, 1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
 
-        # Verify NO red highlighting on row 2 (data row)
+        # Verify NO yellow highlighting on row 2 (data row)
         # Default fill should be PatternFill with no fill_type or None
         for col_idx in range(1, 14):  # Columns A through M
             cell_fill = ws.cell(row=2, column=col_idx).fill
-            # Check that it's not the red fill
+            # Check that it's not the yellow fill
             if cell_fill.fill_type == "solid":
-                assert cell_fill.start_color.rgb != "FFFF0000"
+                assert cell_fill.start_color.rgb != "FFFFFF00"
 
     def test_format_geometry_analysis_highlighting_count(self, temp_dir: str) -> None:
         """Test that highlighting count is correct for multiple rows."""
@@ -453,19 +453,19 @@ class TestBlockGeometryAnalysisFormatting:
 
         # Add multiple data rows
         ws.append(["VALVE", "Layer1", 5, 0, 0, 0, 0, 1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])  # No highlight
-        ws.append(["PIPE", "Layer1", 3, 2, 0, 0, 0, -1.0, 1.0, 200.0, 100.0, "20, 160, 20", "10, 80, 10"])  # Highlight
-        ws.append(["TAG", "Layer2", 0, 0, 0, 0, 2, 1.0, -1.0, 50.0, 25.0, "50", "25"])  # Highlight
+        ws.append(["PIPE", "Layer1", 3, 2, 0, 0, 0, "VARIES", 1.0, 200.0, 100.0, "20, 160, 20", "10, 80, 10"])  # Highlight
+        ws.append(["TAG", "Layer2", 0, 0, 0, 0, 2, 1.0, "VARIES", 50.0, 25.0, "50", "25"])  # Highlight
         ws.append(["DOOR", "Layer1", 10, 0, 0, 0, 0, 2.0, 2.0, 120.0, 60.0, "15, 90, 15", "10, 40, 10"])  # No highlight
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
 
-        # Count highlighted rows (rows 3 and 4 should be highlighted)
-        red_fill = PatternFill(start_color="FFFF0000", end_color="FFFF0000", fill_type="solid")
+        # Count highlighted rows (rows 3 and 4 should be highlighted in yellow)
+        yellow_fill = PatternFill(start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid")
         highlighted_rows = 0
         for row_idx in range(2, 6):  # Rows 2-5 (data rows)
             cell_fill = ws.cell(row=row_idx, column=1).fill
-            if cell_fill.fill_type == "solid" and cell_fill.start_color.rgb == red_fill.start_color.rgb:
+            if cell_fill.fill_type == "solid" and cell_fill.start_color.rgb == yellow_fill.start_color.rgb:
                 highlighted_rows += 1
 
         # Should have 2 highlighted rows
