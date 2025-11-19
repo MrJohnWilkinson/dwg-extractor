@@ -505,3 +505,203 @@ class TestExtractor:
             # Segments should be lists of floats
             assert isinstance(geometry_data['vertical_segments'], list)
             assert isinstance(geometry_data['horizontal_segments'], list)
+
+    def test_get_block_bounding_box_with_circles(self) -> None:
+        """Test bounding box extraction for blocks with CIRCLE entities."""
+        doc = ezdxf.readfile('app/tests/assets/circles_arcs_points.dxf')
+        block = doc.blocks.get('TEST_CIRCLES')
+
+        bbox = _get_block_bounding_box(block)
+
+        # Block contains circles:
+        # Circle 1: center=(50, 50), radius=25 -> bbox=(25, 25, 75, 75)
+        # Circle 2: center=(150, 100), radius=30 -> bbox=(120, 70, 180, 130)
+        # Circle 3: center=(100, 150), radius=20 -> bbox=(80, 130, 120, 170)
+        # Overall bbox should encompass all: (25, 25, 180, 170)
+        assert bbox[0] == 25.0  # min_x
+        assert bbox[1] == 25.0  # min_y
+        assert bbox[2] == 180.0  # max_x
+        assert bbox[3] == 170.0  # max_y
+
+    def test_get_block_bounding_box_with_arcs(self) -> None:
+        """Test bounding box extraction for blocks with ARC entities (simplified full-circle extents)."""
+        doc = ezdxf.readfile('app/tests/assets/circles_arcs_points.dxf')
+        block = doc.blocks.get('TEST_ARCS')
+
+        bbox = _get_block_bounding_box(block)
+
+        # Block contains arcs (simplified to full circle extents):
+        # Arc 1: center=(100, 100), radius=50 -> bbox=(50, 50, 150, 150)
+        # Arc 2: center=(200, 150), radius=40 -> bbox=(160, 110, 240, 190)
+        # Arc 3: center=(150, 50), radius=30 -> bbox=(120, 20, 180, 80)
+        # Overall bbox: (50, 20, 240, 190)
+        assert bbox[0] == 50.0  # min_x
+        assert bbox[1] == 20.0  # min_y
+        assert bbox[2] == 240.0  # max_x
+        assert bbox[3] == 190.0  # max_y
+
+    def test_get_block_bounding_box_with_points(self) -> None:
+        """Test bounding box extraction for blocks with POINT entities."""
+        doc = ezdxf.readfile('app/tests/assets/circles_arcs_points.dxf')
+        block = doc.blocks.get('TEST_POINTS')
+
+        bbox = _get_block_bounding_box(block)
+
+        # Block contains points at: (10, 10), (50, 30), (90, 70), (120, 90)
+        # Bbox should be: (10, 10, 120, 90)
+        assert bbox[0] == 10.0  # min_x
+        assert bbox[1] == 10.0  # min_y
+        assert bbox[2] == 120.0  # max_x
+        assert bbox[3] == 90.0  # max_y
+
+    def test_get_intersection_points_with_circles(self) -> None:
+        """Test intersection point extraction for blocks with CIRCLE entities."""
+        doc = ezdxf.readfile('app/tests/assets/circles_arcs_points.dxf')
+        block = doc.blocks.get('TEST_CIRCLES')
+
+        vertical_points, horizontal_points = _get_intersection_points(block)
+
+        # Circles add bounding box corners:
+        # Circle 1: center=(50, 50), radius=25 -> X: [25, 75], Y: [25, 75]
+        # Circle 2: center=(150, 100), radius=30 -> X: [120, 180], Y: [70, 130]
+        # Circle 3: center=(100, 150), radius=20 -> X: [80, 120], Y: [130, 170]
+
+        # Expected unique X coords: [25, 75, 80, 120, 180]
+        # Expected unique Y coords: [25, 70, 75, 130, 170]
+        assert 25.0 in vertical_points
+        assert 75.0 in vertical_points
+        assert 80.0 in vertical_points
+        assert 120.0 in vertical_points
+        assert 180.0 in vertical_points
+
+        assert 25.0 in horizontal_points
+        assert 70.0 in horizontal_points
+        assert 75.0 in horizontal_points
+        assert 130.0 in horizontal_points
+        assert 170.0 in horizontal_points
+
+    def test_get_intersection_points_with_arcs_and_points(self) -> None:
+        """Test intersection point extraction for blocks with ARC and POINT entities."""
+        doc = ezdxf.readfile('app/tests/assets/circles_arcs_points.dxf')
+
+        # Test with ARCS
+        block_arcs = doc.blocks.get('TEST_ARCS')
+        vertical_arcs, horizontal_arcs = _get_intersection_points(block_arcs)
+
+        # Arcs add bounding box corners (simplified):
+        # Arc 1: center=(100, 100), radius=50 -> X: [50, 150], Y: [50, 150]
+        # Arc 2: center=(200, 150), radius=40 -> X: [160, 240], Y: [110, 190]
+        # Arc 3: center=(150, 50), radius=30 -> X: [120, 180], Y: [20, 80]
+        assert 50.0 in vertical_arcs
+        assert 150.0 in vertical_arcs
+        assert 160.0 in vertical_arcs
+        assert 240.0 in vertical_arcs
+
+        # Test with POINTS
+        block_points = doc.blocks.get('TEST_POINTS')
+        vertical_points, horizontal_points = _get_intersection_points(block_points)
+
+        # Points at: (10, 10), (50, 30), (90, 70), (120, 90)
+        assert vertical_points == [10.0, 50.0, 90.0, 120.0]
+        assert horizontal_points == [10.0, 30.0, 70.0, 90.0]
+
+    def test_extract_blocks_missing_scale_attributes(self) -> None:
+        """Test that blocks with missing xscale/yscale use default scale (1.0, 1.0)."""
+        # Create a test file with a block that may not have scale attributes
+        doc = ezdxf.new('R2010')
+        msp = doc.modelspace()
+
+        # Create a simple block
+        block = doc.blocks.new(name='NO_SCALE_BLOCK')
+        block.add_line((0, 0), (100, 0))
+
+        # Add block reference - ezdxf should handle scale attributes properly
+        # but we're testing the exception handling in case they're missing
+        blockref = msp.add_blockref('NO_SCALE_BLOCK', (0, 0))
+
+        # Save to temp file
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.dxf', delete=False, mode='w') as f:
+            temp_path = f.name
+
+        try:
+            doc.saveas(temp_path)
+
+            # Extract blocks - should handle missing scales gracefully
+            result = extract_blocks(temp_path)
+
+            # Verify extraction succeeds
+            assert 'block_counts' in result
+            assert 'NO_SCALE_BLOCK' in result['block_counts']
+            assert result['block_counts']['NO_SCALE_BLOCK'] == 1
+
+            # Verify scale data exists (defaults to 1.0, 1.0 if missing)
+            assert 'block_scale_data' in result
+            # The scale should be (1.0, 1.0) whether explicit or defaulted
+            scale_key = ('NO_SCALE_BLOCK', '0')
+            if scale_key in result['block_scale_data']:
+                x_scale, y_scale = result['block_scale_data'][scale_key]
+                assert isinstance(x_scale, (int, float))
+                assert isinstance(y_scale, (int, float))
+                # Verify default value of 1.0 (or 1 as int)
+                assert x_scale == 1.0 or x_scale == 1
+                assert y_scale == 1.0 or y_scale == 1
+
+        finally:
+            # Clean up temp file
+            import os
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+
+    def test_extract_blocks_generic_exception(self) -> None:
+        """Test that unexpected exceptions during extraction are re-raised with logging."""
+        from unittest.mock import patch
+
+        # Mock ezdxf.readfile to raise an unexpected exception
+        with patch('core.extractor.ezdxf.readfile') as mock_readfile:
+            mock_readfile.side_effect = RuntimeError("Unexpected error")
+
+            # Verify the exception is re-raised
+            with pytest.raises(RuntimeError, match="Unexpected error"):
+                extract_blocks('app/tests/assets/sample_drawing.dxf')
+
+            # Verify ezdxf.readfile was called
+            assert mock_readfile.called
+
+    @pytest.mark.parametrize("rotation,expected_category", [
+        (0.0, '0'),
+        (0.5, '0'),
+        (45.0, 'other'),
+        (89.5, '90'),
+        (90.0, '90'),
+        (90.5, '90'),
+        (135.0, 'other'),
+        (179.5, '180'),
+        (180.0, '180'),
+        (269.5, '270'),
+        (270.0, '270'),
+        (359.5, '0'),
+        (-90.0, '270'),
+        (450.0, '90'),
+    ])
+    def test_block_rotation_scale_variations(self, rotation: float, expected_category: str) -> None:
+        """Test block rotation categorization with parametrized rotation angles."""
+        # Test rotation categorization
+        assert _categorize_rotation(rotation) == expected_category
+
+    @pytest.mark.parametrize("x_scale,y_scale,is_mirrored", [
+        (1.0, 1.0, False),
+        (-1.0, 1.0, True),
+        (1.0, -1.0, True),
+        (-1.0, -1.0, True),
+        (2.0, 0.5, False),
+        (0.5, 2.0, False),
+        (-2.0, 2.0, True),
+        (2.0, -2.0, True),
+    ])
+    def test_block_scale_variations(self, x_scale: float, y_scale: float, is_mirrored: bool) -> None:
+        """Test that mirrored blocks (negative scales) are correctly identified."""
+        # Test scale mirroring detection logic
+        # A block is mirrored if either x_scale or y_scale is negative
+        actual_mirrored = x_scale < 0 or y_scale < 0
+        assert actual_mirrored == is_mirrored

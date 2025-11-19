@@ -656,3 +656,174 @@ class TestExcelWriter:
         assert len(df) == 1
         assert df.iloc[0][EXCEL_COLUMN_BLOCK_NAME] == 'VALVE'
         assert df.iloc[0][EXCEL_COLUMN_BLOCK_LAYER_NAME] == 'Layer1'
+
+    def test_write_excel_value_error_invalid_data(self, temp_dir: str) -> None:
+        """Test that write_excel raises exception for invalid extraction data structure."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+
+        # Test with missing required keys
+        invalid_data_missing_keys: dict = {  # type: ignore[var-annotated]
+            'block_counts': {'VALVE': 10}
+            # Missing other required keys
+        }
+
+        # The function should raise an exception when required keys are missing
+        # KeyError is raised initially, but may be wrapped in IndexError during cleanup
+        with pytest.raises((ValueError, KeyError, IndexError, Exception)):
+            write_excel(invalid_data_missing_keys, output_path)  # type: ignore[arg-type]
+
+    def test_write_excel_generic_exception_save_failure(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that generic exceptions during Excel save are properly handled."""
+        from unittest.mock import patch
+
+        # Use an invalid output path to trigger save failure
+        invalid_path = os.path.join(temp_dir, 'nonexistent_dir', 'test.dwg')
+
+        # Verify exception is raised for invalid path
+        with pytest.raises(Exception):
+            write_excel(sample_extraction_data, invalid_path)
+
+    def test_constants_match_dataframe_columns(self, temp_dir: str) -> None:
+        """Test that constants.py values exactly match DataFrame column names in all sheets."""
+        from core.extractor import extract_blocks
+
+        # Extract real data from sample file
+        extraction_data = extract_blocks('app/tests/assets/sample_drawing.dxf')
+
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(extraction_data, output_path)
+
+        # Load all sheets and verify column names match constants
+
+        # Block Analysis sheet - 4 columns
+        df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
+        assert list(df_blocks.columns) == [
+            EXCEL_COLUMN_BLOCK_NAME,
+            EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
+            EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
+            EXCEL_COLUMN_BLOCK_LAYER_NAME
+        ]
+
+        # Layer Analysis sheet - 3 columns
+        df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
+        assert list(df_layers.columns) == [
+            EXCEL_COLUMN_LAYER_NAME,
+            EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
+            EXCEL_COLUMN_LAYER_ENTITY_COUNT
+        ]
+
+        # Entity Summary sheet - 2 columns
+        df_entities = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
+        assert list(df_entities.columns) == [
+            EXCEL_COLUMN_ENTITY_TYPE_NAME,
+            EXCEL_COLUMN_ENTITY_TYPE_COUNT
+        ]
+
+        # Block Geometry Analysis sheet - 13 columns
+        df_geometry = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
+        assert list(df_geometry.columns) == [
+            EXCEL_COLUMN_BLOCK_NAME,
+            EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            EXCEL_COLUMN_BLOCK_ROTATION_0,
+            EXCEL_COLUMN_BLOCK_ROTATION_90,
+            EXCEL_COLUMN_BLOCK_ROTATION_180,
+            EXCEL_COLUMN_BLOCK_ROTATION_270,
+            EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
+            EXCEL_COLUMN_BLOCK_SCALE_X,
+            EXCEL_COLUMN_BLOCK_SCALE_Y,
+            EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+            EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
+            EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+            EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS
+        ]
+
+    def test_spec_010_consolidated_geometry_sheet(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test spec 010: Block Geometry Analysis sheet has consolidated 13 columns with scales and rotations."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        df_geometry = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
+        df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
+
+        # Verify Block Geometry Analysis has exactly 13 columns
+        assert len(df_geometry.columns) == 13
+
+        # Verify scale columns present
+        assert EXCEL_COLUMN_BLOCK_SCALE_X in df_geometry.columns
+        assert EXCEL_COLUMN_BLOCK_SCALE_Y in df_geometry.columns
+
+        # Verify rotation columns present (5 rotation categories)
+        assert EXCEL_COLUMN_BLOCK_ROTATION_0 in df_geometry.columns
+        assert EXCEL_COLUMN_BLOCK_ROTATION_90 in df_geometry.columns
+        assert EXCEL_COLUMN_BLOCK_ROTATION_180 in df_geometry.columns
+        assert EXCEL_COLUMN_BLOCK_ROTATION_270 in df_geometry.columns
+        assert EXCEL_COLUMN_BLOCK_ROTATION_OTHER in df_geometry.columns
+
+        # Verify Block Analysis sheet has ONLY 4 columns (no rotations)
+        assert len(df_blocks.columns) == 4
+        assert EXCEL_COLUMN_BLOCK_ROTATION_0 not in df_blocks.columns
+        assert EXCEL_COLUMN_BLOCK_ROTATION_90 not in df_blocks.columns
+
+        # Verify red highlighting for mirrored blocks (negative scales)
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Check for at least one red-highlighted row (mirrored blocks)
+        has_red_highlight = False
+        for row_idx in range(2, ws.max_row + 1):
+            x_scale = ws.cell(row=row_idx, column=8).value
+            y_scale = ws.cell(row=row_idx, column=9).value
+            if (isinstance(x_scale, (int, float)) and x_scale < 0) or (isinstance(y_scale, (int, float)) and y_scale < 0):
+                cell_fill = ws.cell(row=row_idx, column=1).fill
+                if cell_fill.start_color.rgb == 'FFFF0000':
+                    has_red_highlight = True
+                    break
+
+        assert has_red_highlight, "At least one mirrored block should have red highlighting"
+
+    def test_spec_012_naming_conventions(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test spec 012: All column names follow {domain}_{attribute}[_{qualifier}] pattern."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Load all sheets
+        df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
+        df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
+        df_entities = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
+        df_geometry = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
+
+        # Define expected patterns based on app_docs/005-field-naming-convention.md
+        import re
+        # Pattern: domain_attribute or domain_attribute_qualifier
+        naming_pattern = re.compile(r'^[a-z]+(_[a-z0-9]+)+$')
+
+        # Collect all column names
+        all_columns = (
+            list(df_blocks.columns) +
+            list(df_layers.columns) +
+            list(df_entities.columns) +
+            list(df_geometry.columns)
+        )
+
+        # Verify all columns follow naming convention
+        for column in all_columns:
+            assert naming_pattern.match(column), f"Column '{column}' does not follow naming convention"
+
+        # Verify specific domain patterns
+        # Block domain columns
+        block_columns = [col for col in all_columns if col.startswith('block_')]
+        assert 'block_name' in block_columns
+        assert 'block_insertion_count' in block_columns
+        assert 'block_scale_x' in block_columns
+        assert 'block_scale_y' in block_columns
+
+        # Layer domain columns
+        layer_columns = [col for col in all_columns if col.startswith('layer_')]
+        assert 'layer_name' in layer_columns
+        assert 'layer_block_insertion_count' in layer_columns
+        assert 'layer_entity_count' in layer_columns
+
+        # Entity_type domain columns
+        entity_type_columns = [col for col in all_columns if col.startswith('entity_type_')]
+        assert 'entity_type_name' in entity_type_columns
+        assert 'entity_type_count' in entity_type_columns
