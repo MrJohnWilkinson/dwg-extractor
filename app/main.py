@@ -55,6 +55,7 @@ class DWGExtractorApp(ctk.CTk):
 
         # Instance variables
         self.selected_file_path: str | None = None
+        self.output_excel_path: str | None = None
 
         # Create UI
         self._create_widgets()
@@ -98,6 +99,16 @@ class DWGExtractorApp(ctk.CTk):
             state="disabled",
         )
         self.extract_button.pack(side="left")
+
+        # Open Folder button (initially disabled)
+        self.open_folder_button = ctk.CTkButton(
+            button_frame,
+            text="Open Folder",
+            width=120,
+            command=self._open_output_folder,
+            state="disabled",
+        )
+        self.open_folder_button.pack(side="left", padx=(10, 0))
 
         # Progress bar
         self.progress_bar = ctk.CTkProgressBar(main_frame, width=400, height=20)
@@ -181,6 +192,7 @@ class DWGExtractorApp(ctk.CTk):
             self._update_progress(0.7, "Generating Excel...")
 
             excel_path = write_excel(extraction_result, self.selected_file_path)
+            self.output_excel_path = excel_path
 
             # Step 4: Complete
             self._update_progress(1.0, MSG_SUCCESS)
@@ -228,6 +240,9 @@ class DWGExtractorApp(ctk.CTk):
             f"Extraction complete!\n\nExcel file created:\n{Path(excel_path).name}",
         )
 
+        # Enable Open Folder button
+        self.open_folder_button.configure(state="normal")
+
         # Auto-open Excel file
         self._open_excel_file(excel_path)
 
@@ -262,6 +277,38 @@ class DWGExtractorApp(ctk.CTk):
         except Exception as e:
             # Don't show error to user - file was created successfully
             self.logger.warning(f"Failed to open Excel file: {str(e)}")
+
+    def _open_output_folder(self) -> None:
+        """Open folder containing the Excel file with platform-specific command."""
+        # Validate we have an output path
+        if not self.output_excel_path:
+            self.logger.warning("Cannot open folder - no output path stored")
+            return
+
+        try:
+            self.logger.info(f"Opening folder for: {self.output_excel_path}")
+
+            system = platform.system()
+            file_path = self.output_excel_path
+
+            if system == "Windows":
+                # Open Explorer with file selected
+                subprocess.run(["explorer", "/select,", file_path], check=False)
+            elif system == "Linux":
+                # Open default file manager to folder
+                folder_path = str(Path(file_path).parent)
+                subprocess.run(["xdg-open", folder_path], check=False)
+            elif system == "Darwin":  # macOS
+                # Open Finder with file selected
+                subprocess.run(["open", "-R", file_path], check=False)
+            else:
+                self.logger.warning(
+                    f"Unknown platform: {system}, cannot open folder"
+                )
+
+        except Exception as e:
+            # Don't show error to user - this is a convenience feature
+            self.logger.warning(f"Failed to open output folder: {str(e)}")
 
     def destroy(self) -> None:
         """Override destroy to log application close."""

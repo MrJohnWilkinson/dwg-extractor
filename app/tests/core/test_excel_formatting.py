@@ -10,12 +10,10 @@ This test suite validates Excel worksheet formatting utilities including:
 """
 
 import tempfile
-from pathlib import Path
 from typing import Iterator, cast
 
-import pandas as pd
 import pytest
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 from openpyxl.worksheet.worksheet import Worksheet
 
