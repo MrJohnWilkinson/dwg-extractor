@@ -13,7 +13,7 @@ Usage:
     wb.save(excel_path)
 """
 
-from openpyxl.styles import PatternFill
+from openpyxl.styles import Alignment, PatternFill
 from openpyxl.workbook.workbook import Workbook
 
 from .constants import (
@@ -26,6 +26,53 @@ from .logger import setup_logger
 
 
 logger = setup_logger(__name__)
+
+
+def format_header(column_name: str) -> str:
+    """
+    Convert snake_case column names to Title Case with proper spacing for Excel display.
+
+    This function transforms code-level snake_case identifiers into human-readable
+    Excel column headers. It handles acronyms (DWG, DXF, CAD, ID) by keeping them
+    uppercase instead of title-cased.
+
+    Args:
+        column_name: Snake_case column name (e.g., "block_insertion_count")
+
+    Returns:
+        Title Case formatted string with spaces (e.g., "Block Insertion Count")
+
+    Examples:
+        >>> format_header("block_name")
+        'Block Name'
+        >>> format_header("layer_block_insertion_count")
+        'Layer Block Insertion Count'
+        >>> format_header("block_rotation_0")
+        'Block Rotation 0'
+        >>> format_header("count")
+        'Count'
+        >>> format_header("")
+        ''
+    """
+    if not column_name:
+        return ""
+
+    # Acronyms that should remain uppercase
+    acronym_overrides = {
+        "Dwg": "DWG",
+        "Dxf": "DXF",
+        "Cad": "CAD",
+        "Id": "ID",
+    }
+
+    # Split on underscores and convert to title case
+    words = column_name.split("_")
+    title_words = [word.title() for word in words]
+
+    # Apply acronym overrides
+    final_words = [acronym_overrides.get(word, word) for word in title_words]
+
+    return " ".join(final_words)
 
 
 def _format_block_analysis_sheet(wb: Workbook) -> None:
@@ -41,6 +88,11 @@ def _format_block_analysis_sheet(wb: Workbook) -> None:
     ws.column_dimensions["B"].width = 25  # block_insertion_count
     ws.column_dimensions["C"].width = 25  # block_entity_count
     ws.column_dimensions["D"].width = 25  # block_layer_name
+
+    # Enable text wrapping on header row
+    alignment = Alignment(wrap_text=True, vertical="top")
+    for cell in ws[1]:
+        cell.alignment = alignment
 
     logger.info("Block Analysis sheet formatted")
 
@@ -58,6 +110,11 @@ def _format_layer_analysis_sheet(wb: Workbook) -> None:
     ws.column_dimensions["B"].width = 25  # layer_block_insertion_count
     ws.column_dimensions["C"].width = 25  # layer_entity_count
 
+    # Enable text wrapping on header row
+    alignment = Alignment(wrap_text=True, vertical="top")
+    for cell in ws[1]:
+        cell.alignment = alignment
+
     logger.info("Layer Analysis sheet formatted")
 
 
@@ -72,6 +129,11 @@ def _format_entity_summary_sheet(wb: Workbook) -> None:
     # Set column widths
     ws.column_dimensions["A"].width = 25  # entity_type_name
     ws.column_dimensions["B"].width = 25  # entity_type_count
+
+    # Enable text wrapping on header row
+    alignment = Alignment(wrap_text=True, vertical="top")
+    for cell in ws[1]:
+        cell.alignment = alignment
 
     logger.info("Entity Summary sheet formatted")
 
@@ -98,6 +160,11 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     ws.column_dimensions["K"].width = 20  # block_native_height
     ws.column_dimensions["L"].width = 40  # block_vertical_segments
     ws.column_dimensions["M"].width = 40  # block_horizontal_segments
+
+    # Enable text wrapping on header row
+    alignment = Alignment(wrap_text=True, vertical="top")
+    for cell in ws[1]:
+        cell.alignment = alignment
 
     # Apply red highlighting to rows with negative scales (mirrored blocks)
     red_fill = PatternFill(

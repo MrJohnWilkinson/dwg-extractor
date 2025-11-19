@@ -50,6 +50,7 @@ from .excel_formatting import (
     _format_block_geometry_analysis_sheet,
     _format_entity_summary_sheet,
     _format_layer_analysis_sheet,
+    format_header,
 )
 from .extractor import ExtractionResult
 from .logger import setup_logger
@@ -180,6 +181,9 @@ def _create_block_analysis_sheet(
             ]
         )
 
+    # Format column headers for Excel display
+    df.columns = [format_header(col) for col in df.columns]
+
     df.to_excel(writer, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS, index=False)
     logger.info(f"Block Analysis sheet created with {len(df)} rows")
 
@@ -220,6 +224,9 @@ def _create_layer_analysis_sheet(
             ]
         )
 
+    # Format column headers for Excel display
+    df.columns = [format_header(col) for col in df.columns]
+
     df.to_excel(writer, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS, index=False)
     logger.info(f"Layer Analysis sheet created with {len(df)} rows")
 
@@ -244,6 +251,9 @@ def _create_entity_summary_sheet(
         df = pd.DataFrame(
             columns=[EXCEL_COLUMN_ENTITY_TYPE_NAME, EXCEL_COLUMN_ENTITY_TYPE_COUNT]
         )
+
+    # Format column headers for Excel display
+    df.columns = [format_header(col) for col in df.columns]
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY, index=False)
     logger.info(f"Entity Summary sheet created with {len(df)} rows")
@@ -345,6 +355,9 @@ def _create_block_geometry_analysis_sheet(
                 EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
             ]
         )
+
+    # Format column headers for Excel display
+    df.columns = [format_header(col) for col in df.columns]
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS, index=False)
     logger.info(f"Block Geometry Analysis sheet created with {len(df)} rows")

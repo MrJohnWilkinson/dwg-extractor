@@ -12,7 +12,7 @@
 2. Boolean fields: `is_`, `has_`, `can_` prefix
 3. Single count: `_count` | Sum: `_total`
 4. Collections: plural suffix (`_names`, `_values`, `_angles`)
-5. All snake_case (Python and Excel use identical names)
+5. Code uses snake_case, Excel displays Title Case (e.g., code: 'block_insertion_count', Excel: 'Block Insertion Count')
 
 ## Block Domain Examples
 ```python
@@ -58,6 +58,23 @@ EXCEL_COLUMN_BLOCK_INSERTION_COUNT: str = 'block_insertion_count'
 EXCEL_COLUMN_LAYER_NAME: str = 'layer_name'
 EXCEL_COLUMN_ENTITY_TYPE_NAME: str = 'entity_type_name'
 ```
+
+## Excel Display Format
+The `format_header()` function in `app/core/excel_formatting.py` automatically converts snake_case field names to Title Case with proper spacing for Excel display:
+
+- **Code (constants.py)**: Uses snake_case identifiers like `block_insertion_count`
+- **Excel Display**: Shows as Title Case like "Block Insertion Count"
+- **Acronym Handling**: Certain acronyms (DWG, DXF, CAD, ID) remain uppercase
+
+Examples:
+```python
+format_header("block_name")                    # → "Block Name"
+format_header("layer_block_insertion_count")  # → "Layer Block Insertion Count"
+format_header("block_rotation_0")             # → "Block Rotation 0"
+format_header("entity_type_count")            # → "Entity Type Count"
+```
+
+This separation allows code to maintain consistent snake_case naming while providing human-readable Excel headers for end users.
 
 ## Avoid
 ❌ `count` (no domain)

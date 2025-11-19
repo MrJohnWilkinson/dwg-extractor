@@ -48,6 +48,7 @@ from core.constants import (
     EXCEL_SHEET_ENTITY_SUMMARY,
     EXCEL_SHEET_LAYER_ANALYSIS,
 )
+from core.excel_formatting import format_header
 from core.excel_writer import write_excel
 from core.extractor import ExtractionResult
 
@@ -140,21 +141,21 @@ class TestExcelWriter:
         # Load Block Analysis sheet
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
 
-        # Verify headers - simplified to 4 columns only
+        # Verify headers - simplified to 4 columns only (formatted)
         assert list(df.columns) == [
-            EXCEL_COLUMN_BLOCK_NAME,
-            EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
-            EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            format_header(EXCEL_COLUMN_BLOCK_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT),
+            format_header(EXCEL_COLUMN_BLOCK_ENTITY_COUNT),
+            format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
         ]
 
         # Verify data rows (4 block-layer pairs)
         assert len(df) == 4
         # First row should be VALVE on Layer1 with 7 insertions (sorted by count descending)
-        assert df.iloc[0][EXCEL_COLUMN_BLOCK_NAME] == "VALVE"
-        assert df.iloc[0][EXCEL_COLUMN_BLOCK_INSERTION_COUNT] == 7
-        assert df.iloc[0][EXCEL_COLUMN_BLOCK_ENTITY_COUNT] == 8
-        assert df.iloc[0][EXCEL_COLUMN_BLOCK_LAYER_NAME] == "Layer1"
+        assert df.iloc[0][format_header(EXCEL_COLUMN_BLOCK_NAME)] == "VALVE"
+        assert df.iloc[0][format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT)] == 7
+        assert df.iloc[0][format_header(EXCEL_COLUMN_BLOCK_ENTITY_COUNT)] == 8
+        assert df.iloc[0][format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME)] == "Layer1"
 
     def test_layer_analysis_sheet_structure(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -166,18 +167,18 @@ class TestExcelWriter:
         # Load Layer Analysis sheet
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
 
-        # Verify headers
+        # Verify headers (formatted)
         assert list(df.columns) == [
-            EXCEL_COLUMN_LAYER_NAME,
-            EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
-            EXCEL_COLUMN_LAYER_ENTITY_COUNT,
+            format_header(EXCEL_COLUMN_LAYER_NAME),
+            format_header(EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT),
+            format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT),
         ]
 
         # Verify data rows
         assert len(df) == 2
         # Sorted by layer_entity_count descending
-        assert df.iloc[0][EXCEL_COLUMN_LAYER_NAME] == "Layer1"
-        assert df.iloc[0][EXCEL_COLUMN_LAYER_ENTITY_COUNT] == 25
+        assert df.iloc[0][format_header(EXCEL_COLUMN_LAYER_NAME)] == "Layer1"
+        assert df.iloc[0][format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT)] == 25
 
     def test_entity_summary_sheet_structure(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -189,10 +190,10 @@ class TestExcelWriter:
         # Load Entity Summary sheet
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
 
-        # Verify headers
+        # Verify headers (formatted)
         assert list(df.columns) == [
-            EXCEL_COLUMN_ENTITY_TYPE_NAME,
-            EXCEL_COLUMN_ENTITY_TYPE_COUNT,
+            format_header(EXCEL_COLUMN_ENTITY_TYPE_NAME),
+            format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT),
         ]
 
         # Verify data rows
@@ -208,22 +209,22 @@ class TestExcelWriter:
         # Block Analysis: sorted by block_insertion_count descending
         df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
         # First row should be VALVE/Layer1 with 7
-        assert df_blocks.iloc[0][EXCEL_COLUMN_BLOCK_INSERTION_COUNT] == 7
+        assert df_blocks.iloc[0][format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT)] == 7
         # Second row should be PIPE/Layer1 with 5
-        assert df_blocks.iloc[1][EXCEL_COLUMN_BLOCK_INSERTION_COUNT] == 5
+        assert df_blocks.iloc[1][format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT)] == 5
         # Third and fourth rows should both have 3
-        assert df_blocks.iloc[2][EXCEL_COLUMN_BLOCK_INSERTION_COUNT] == 3
+        assert df_blocks.iloc[2][format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT)] == 3
 
         # Layer Analysis: sorted by layer_entity_count descending
         df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
-        assert df_layers.iloc[0][EXCEL_COLUMN_LAYER_ENTITY_COUNT] == 25  # Layer1
-        assert df_layers.iloc[1][EXCEL_COLUMN_LAYER_ENTITY_COUNT] == 10  # Layer2
+        assert df_layers.iloc[0][format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT)] == 25  # Layer1
+        assert df_layers.iloc[1][format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT)] == 10  # Layer2
 
         # Entity Summary: sorted by entity_type_count descending
         df_entities = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
-        assert df_entities.iloc[0][EXCEL_COLUMN_ENTITY_TYPE_COUNT] == 18  # INSERT
-        assert df_entities.iloc[1][EXCEL_COLUMN_ENTITY_TYPE_COUNT] == 15  # LINE
-        assert df_entities.iloc[2][EXCEL_COLUMN_ENTITY_TYPE_COUNT] == 8  # CIRCLE
+        assert df_entities.iloc[0][format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT)] == 18  # INSERT
+        assert df_entities.iloc[1][format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT)] == 15  # LINE
+        assert df_entities.iloc[2][format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT)] == 8  # CIRCLE
 
     def test_all_sheets_autofilter(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -302,10 +303,10 @@ class TestExcelWriter:
         df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
         assert len(df_blocks) == 0
         assert list(df_blocks.columns) == [
-            EXCEL_COLUMN_BLOCK_NAME,
-            EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
-            EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            format_header(EXCEL_COLUMN_BLOCK_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT),
+            format_header(EXCEL_COLUMN_BLOCK_ENTITY_COUNT),
+            format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
         ]
 
         df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
@@ -324,12 +325,12 @@ class TestExcelWriter:
         # Load Block Geometry Analysis sheet
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
-        # Verify rotation columns exist
-        assert EXCEL_COLUMN_BLOCK_ROTATION_0 in df.columns
-        assert EXCEL_COLUMN_BLOCK_ROTATION_90 in df.columns
-        assert EXCEL_COLUMN_BLOCK_ROTATION_180 in df.columns
-        assert EXCEL_COLUMN_BLOCK_ROTATION_270 in df.columns
-        assert EXCEL_COLUMN_BLOCK_ROTATION_OTHER in df.columns
+        # Verify rotation columns exist (formatted)
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_0) in df.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_90) in df.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_180) in df.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_270) in df.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_OTHER) in df.columns
 
     def test_block_geometry_analysis_has_scales(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -341,14 +342,14 @@ class TestExcelWriter:
         # Load Block Geometry Analysis sheet
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
-        # Verify scale columns exist
-        assert EXCEL_COLUMN_BLOCK_SCALE_X in df.columns
-        assert EXCEL_COLUMN_BLOCK_SCALE_Y in df.columns
+        # Verify scale columns exist (formatted)
+        assert format_header(EXCEL_COLUMN_BLOCK_SCALE_X) in df.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_SCALE_Y) in df.columns
 
         # Verify scale data is present
-        for value in df[EXCEL_COLUMN_BLOCK_SCALE_X]:
+        for value in df[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)]:
             assert isinstance(value, (int, float))
-        for value in df[EXCEL_COLUMN_BLOCK_SCALE_Y]:
+        for value in df[format_header(EXCEL_COLUMN_BLOCK_SCALE_Y)]:
             assert isinstance(value, (int, float))
 
     def test_filename_format_unchanged(
@@ -394,21 +395,21 @@ class TestExcelWriter:
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
-        # Verify all expected columns are present in correct order
+        # Verify all expected columns are present in correct order (formatted)
         expected_columns = [
-            EXCEL_COLUMN_BLOCK_NAME,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME,
-            EXCEL_COLUMN_BLOCK_ROTATION_0,
-            EXCEL_COLUMN_BLOCK_ROTATION_90,
-            EXCEL_COLUMN_BLOCK_ROTATION_180,
-            EXCEL_COLUMN_BLOCK_ROTATION_270,
-            EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
-            EXCEL_COLUMN_BLOCK_SCALE_X,
-            EXCEL_COLUMN_BLOCK_SCALE_Y,
-            EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
-            EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
-            EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
-            EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
+            format_header(EXCEL_COLUMN_BLOCK_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_0),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_90),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_180),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_270),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_OTHER),
+            format_header(EXCEL_COLUMN_BLOCK_SCALE_X),
+            format_header(EXCEL_COLUMN_BLOCK_SCALE_Y),
+            format_header(EXCEL_COLUMN_BLOCK_NATIVE_WIDTH),
+            format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS),
+            format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS),
         ]
 
         assert list(df.columns) == expected_columns
@@ -417,7 +418,7 @@ class TestExcelWriter:
         assert len(df.columns) == 13
 
         # Verify sort by block_name alphabetical
-        block_names = df[EXCEL_COLUMN_BLOCK_NAME].tolist()
+        block_names = df[format_header(EXCEL_COLUMN_BLOCK_NAME)].tolist()
         assert block_names == sorted(block_names)
 
     def test_block_trimming_analysis_data_types(
@@ -429,20 +430,20 @@ class TestExcelWriter:
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
-        # Width and height should be numeric
-        for value in df[EXCEL_COLUMN_BLOCK_NATIVE_WIDTH]:
+        # Width and height should be numeric (formatted column names)
+        for value in df[format_header(EXCEL_COLUMN_BLOCK_NATIVE_WIDTH)]:
             assert isinstance(value, (int, float))
             assert value >= 0
 
-        for value in df[EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT]:
+        for value in df[format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT)]:
             assert isinstance(value, (int, float))
             assert value >= 0
 
         # Segments should be strings (comma-separated values)
-        for value in df[EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS]:
+        for value in df[format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS)]:
             assert isinstance(value, str) or pd.isna(value)
 
-        for value in df[EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS]:
+        for value in df[format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS)]:
             assert isinstance(value, str) or pd.isna(value)
 
     def test_block_trimming_analysis_segment_formatting(
@@ -454,16 +455,16 @@ class TestExcelWriter:
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
-        # Find first VALVE row (has multi-segment data) - there will be multiple rows for VALVE
-        valve_row = df[df[EXCEL_COLUMN_BLOCK_NAME] == "VALVE"].iloc[0]
+        # Find first VALVE row (has multi-segment data) - there will be multiple rows for VALVE (formatted column names)
+        valve_row = df[df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "VALVE"].iloc[0]
 
         # Verify segments are comma-separated strings
-        vertical_segments = valve_row[EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS]
+        vertical_segments = valve_row[format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS)]
         assert isinstance(vertical_segments, str)
         assert "," in vertical_segments
         assert "10, 80, 10" == vertical_segments
 
-        horizontal_segments = valve_row[EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS]
+        horizontal_segments = valve_row[format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS)]
         assert isinstance(horizontal_segments, str)
         assert "," in horizontal_segments
         assert "5, 40, 5" == horizontal_segments
@@ -477,8 +478,8 @@ class TestExcelWriter:
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
-        # Verify blocks are sorted alphabetically
-        block_names = df[EXCEL_COLUMN_BLOCK_NAME].tolist()
+        # Verify blocks are sorted alphabetically (formatted column names)
+        block_names = df[format_header(EXCEL_COLUMN_BLOCK_NAME)].tolist()
         assert block_names == sorted(block_names)
 
     def test_block_trimming_analysis_empty_data(self, temp_dir: str) -> None:
@@ -527,8 +528,8 @@ class TestExcelWriter:
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
-        # Verify blocks are sorted alphabetically
-        block_names = df[EXCEL_COLUMN_BLOCK_NAME].tolist()
+        # Verify blocks are sorted alphabetically (formatted column names)
+        block_names = df[format_header(EXCEL_COLUMN_BLOCK_NAME)].tolist()
         assert block_names == sorted(block_names), (
             "Block Geometry Analysis should be sorted alphabetically by block_name"
         )
@@ -546,37 +547,37 @@ class TestExcelWriter:
         assert len(df) == 4
 
         # Verify VALVE appears on two layers with identical geometry
-        valve_rows = df[df[EXCEL_COLUMN_BLOCK_NAME] == "VALVE"]
+        valve_rows = df[df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "VALVE"]
         assert len(valve_rows) == 2
 
         # Verify both VALVE rows have identical geometry data
         valve_layer1 = valve_rows[
-            valve_rows[EXCEL_COLUMN_BLOCK_LAYER_NAME] == "Layer1"
+            valve_rows[format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME)] == "Layer1"
         ].iloc[0]
         valve_layer2 = valve_rows[
-            valve_rows[EXCEL_COLUMN_BLOCK_LAYER_NAME] == "Layer2"
+            valve_rows[format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME)] == "Layer2"
         ].iloc[0]
 
         assert (
-            valve_layer1[EXCEL_COLUMN_BLOCK_NATIVE_WIDTH]
-            == valve_layer2[EXCEL_COLUMN_BLOCK_NATIVE_WIDTH]
+            valve_layer1[format_header(EXCEL_COLUMN_BLOCK_NATIVE_WIDTH)]
+            == valve_layer2[format_header(EXCEL_COLUMN_BLOCK_NATIVE_WIDTH)]
         )
         assert (
-            valve_layer1[EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT]
-            == valve_layer2[EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT]
+            valve_layer1[format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT)]
+            == valve_layer2[format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT)]
         )
         assert (
-            valve_layer1[EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS]
-            == valve_layer2[EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS]
+            valve_layer1[format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS)]
+            == valve_layer2[format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS)]
         )
         assert (
-            valve_layer1[EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS]
-            == valve_layer2[EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS]
+            valve_layer1[format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS)]
+            == valve_layer2[format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS)]
         )
 
         # Verify geometry data is correct
-        assert valve_layer1[EXCEL_COLUMN_BLOCK_NATIVE_WIDTH] == 100.0
-        assert valve_layer1[EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT] == 50.0
+        assert valve_layer1[format_header(EXCEL_COLUMN_BLOCK_NATIVE_WIDTH)] == 100.0
+        assert valve_layer1[format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT)] == 50.0
 
     def test_geometry_sheet_red_highlighting(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -670,21 +671,21 @@ class TestExcelWriter:
         # Should have headers but no data rows
         assert len(df) == 0
 
-        # Verify all 13 column headers
+        # Verify all 13 column headers (formatted)
         expected_columns = [
-            EXCEL_COLUMN_BLOCK_NAME,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME,
-            EXCEL_COLUMN_BLOCK_ROTATION_0,
-            EXCEL_COLUMN_BLOCK_ROTATION_90,
-            EXCEL_COLUMN_BLOCK_ROTATION_180,
-            EXCEL_COLUMN_BLOCK_ROTATION_270,
-            EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
-            EXCEL_COLUMN_BLOCK_SCALE_X,
-            EXCEL_COLUMN_BLOCK_SCALE_Y,
-            EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
-            EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
-            EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
-            EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
+            format_header(EXCEL_COLUMN_BLOCK_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_0),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_90),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_180),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_270),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_OTHER),
+            format_header(EXCEL_COLUMN_BLOCK_SCALE_X),
+            format_header(EXCEL_COLUMN_BLOCK_SCALE_Y),
+            format_header(EXCEL_COLUMN_BLOCK_NATIVE_WIDTH),
+            format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS),
+            format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS),
         ]
         assert list(df.columns) == expected_columns
 
@@ -721,8 +722,8 @@ class TestExcelWriter:
 
         # Should only have VALVE row, ANONYMOUS should be skipped
         assert len(df) == 1
-        assert df.iloc[0][EXCEL_COLUMN_BLOCK_NAME] == "VALVE"
-        assert df.iloc[0][EXCEL_COLUMN_BLOCK_LAYER_NAME] == "Layer1"
+        assert df.iloc[0][format_header(EXCEL_COLUMN_BLOCK_NAME)] == "VALVE"
+        assert df.iloc[0][format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME)] == "Layer1"
 
     def test_write_excel_value_error_invalid_data(self, temp_dir: str) -> None:
         """Test that write_excel raises exception for invalid extraction data structure."""
@@ -761,30 +762,30 @@ class TestExcelWriter:
         output_path = os.path.join(temp_dir, "test_drawing.dwg")
         excel_path = write_excel(extraction_data, output_path)
 
-        # Load all sheets and verify column names match constants
+        # Load all sheets and verify column names match formatted constants
 
         # Block Analysis sheet - 4 columns
         df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
         assert list(df_blocks.columns) == [
-            EXCEL_COLUMN_BLOCK_NAME,
-            EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
-            EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            format_header(EXCEL_COLUMN_BLOCK_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT),
+            format_header(EXCEL_COLUMN_BLOCK_ENTITY_COUNT),
+            format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
         ]
 
         # Layer Analysis sheet - 3 columns
         df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
         assert list(df_layers.columns) == [
-            EXCEL_COLUMN_LAYER_NAME,
-            EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
-            EXCEL_COLUMN_LAYER_ENTITY_COUNT,
+            format_header(EXCEL_COLUMN_LAYER_NAME),
+            format_header(EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT),
+            format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT),
         ]
 
         # Entity Summary sheet - 2 columns
         df_entities = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
         assert list(df_entities.columns) == [
-            EXCEL_COLUMN_ENTITY_TYPE_NAME,
-            EXCEL_COLUMN_ENTITY_TYPE_COUNT,
+            format_header(EXCEL_COLUMN_ENTITY_TYPE_NAME),
+            format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT),
         ]
 
         # Block Geometry Analysis sheet - 13 columns
@@ -792,19 +793,19 @@ class TestExcelWriter:
             excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
         )
         assert list(df_geometry.columns) == [
-            EXCEL_COLUMN_BLOCK_NAME,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME,
-            EXCEL_COLUMN_BLOCK_ROTATION_0,
-            EXCEL_COLUMN_BLOCK_ROTATION_90,
-            EXCEL_COLUMN_BLOCK_ROTATION_180,
-            EXCEL_COLUMN_BLOCK_ROTATION_270,
-            EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
-            EXCEL_COLUMN_BLOCK_SCALE_X,
-            EXCEL_COLUMN_BLOCK_SCALE_Y,
-            EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
-            EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
-            EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
-            EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
+            format_header(EXCEL_COLUMN_BLOCK_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_0),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_90),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_180),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_270),
+            format_header(EXCEL_COLUMN_BLOCK_ROTATION_OTHER),
+            format_header(EXCEL_COLUMN_BLOCK_SCALE_X),
+            format_header(EXCEL_COLUMN_BLOCK_SCALE_Y),
+            format_header(EXCEL_COLUMN_BLOCK_NATIVE_WIDTH),
+            format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS),
+            format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS),
         ]
 
     def test_spec_010_consolidated_geometry_sheet(
@@ -822,21 +823,21 @@ class TestExcelWriter:
         # Verify Block Geometry Analysis has exactly 13 columns
         assert len(df_geometry.columns) == 13
 
-        # Verify scale columns present
-        assert EXCEL_COLUMN_BLOCK_SCALE_X in df_geometry.columns
-        assert EXCEL_COLUMN_BLOCK_SCALE_Y in df_geometry.columns
+        # Verify scale columns present (formatted)
+        assert format_header(EXCEL_COLUMN_BLOCK_SCALE_X) in df_geometry.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_SCALE_Y) in df_geometry.columns
 
-        # Verify rotation columns present (5 rotation categories)
-        assert EXCEL_COLUMN_BLOCK_ROTATION_0 in df_geometry.columns
-        assert EXCEL_COLUMN_BLOCK_ROTATION_90 in df_geometry.columns
-        assert EXCEL_COLUMN_BLOCK_ROTATION_180 in df_geometry.columns
-        assert EXCEL_COLUMN_BLOCK_ROTATION_270 in df_geometry.columns
-        assert EXCEL_COLUMN_BLOCK_ROTATION_OTHER in df_geometry.columns
+        # Verify rotation columns present (5 rotation categories, formatted)
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_0) in df_geometry.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_90) in df_geometry.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_180) in df_geometry.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_270) in df_geometry.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_OTHER) in df_geometry.columns
 
         # Verify Block Analysis sheet has ONLY 4 columns (no rotations)
         assert len(df_blocks.columns) == 4
-        assert EXCEL_COLUMN_BLOCK_ROTATION_0 not in df_blocks.columns
-        assert EXCEL_COLUMN_BLOCK_ROTATION_90 not in df_blocks.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_0) not in df_blocks.columns
+        assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_90) not in df_blocks.columns
 
         # Verify red highlighting for mirrored blocks (negative scales)
         wb = load_workbook(excel_path)
@@ -862,7 +863,7 @@ class TestExcelWriter:
     def test_spec_012_naming_conventions(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test spec 012: All column names follow {domain}_{attribute}[_{qualifier}] pattern."""
+        """Test spec 012: Excel headers are formatted from snake_case constants to Title Case."""
         output_path = os.path.join(temp_dir, "test_drawing.dwg")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -874,11 +875,12 @@ class TestExcelWriter:
             excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
         )
 
-        # Define expected patterns based on app_docs/005-field-naming-convention.md
+        # Verify Excel headers are Title Case formatted from constants
+        # Pattern: Title Case with spaces (e.g., "Block Name", "Layer Entity Count", "Block Rotation 0")
         import re
 
-        # Pattern: domain_attribute or domain_attribute_qualifier
-        naming_pattern = re.compile(r"^[a-z]+(_[a-z0-9]+)+$")
+        # Pattern allows Title Case words followed by optional spaces and numbers
+        title_case_pattern = re.compile(r"^([A-Z][A-Za-z0-9]*\s?)+\d*$")
 
         # Collect all column names
         all_columns = (
@@ -888,29 +890,29 @@ class TestExcelWriter:
             + list(df_geometry.columns)
         )
 
-        # Verify all columns follow naming convention
+        # Verify all Excel headers follow Title Case pattern
         for column in all_columns:
-            assert naming_pattern.match(column), (
-                f"Column '{column}' does not follow naming convention"
+            assert title_case_pattern.match(column), (
+                f"Column '{column}' does not follow Title Case pattern"
             )
 
-        # Verify specific domain patterns
-        # Block domain columns
-        block_columns = [col for col in all_columns if col.startswith("block_")]
-        assert "block_name" in block_columns
-        assert "block_insertion_count" in block_columns
-        assert "block_scale_x" in block_columns
-        assert "block_scale_y" in block_columns
+        # Verify specific formatted headers are present
+        # Block domain columns (formatted)
+        block_columns = [col for col in all_columns if col.startswith("Block")]
+        assert format_header(EXCEL_COLUMN_BLOCK_NAME) in block_columns
+        assert format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT) in block_columns
+        assert format_header(EXCEL_COLUMN_BLOCK_SCALE_X) in block_columns
+        assert format_header(EXCEL_COLUMN_BLOCK_SCALE_Y) in block_columns
 
-        # Layer domain columns
-        layer_columns = [col for col in all_columns if col.startswith("layer_")]
-        assert "layer_name" in layer_columns
-        assert "layer_block_insertion_count" in layer_columns
-        assert "layer_entity_count" in layer_columns
+        # Layer domain columns (formatted)
+        layer_columns = [col for col in all_columns if col.startswith("Layer")]
+        assert format_header(EXCEL_COLUMN_LAYER_NAME) in layer_columns
+        assert format_header(EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT) in layer_columns
+        assert format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT) in layer_columns
 
-        # Entity_type domain columns
+        # Entity type domain columns (formatted)
         entity_type_columns = [
-            col for col in all_columns if col.startswith("entity_type_")
+            col for col in all_columns if col.startswith("Entity Type")
         ]
-        assert "entity_type_name" in entity_type_columns
-        assert "entity_type_count" in entity_type_columns
+        assert format_header(EXCEL_COLUMN_ENTITY_TYPE_NAME) in entity_type_columns
+        assert format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT) in entity_type_columns
