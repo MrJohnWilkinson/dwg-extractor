@@ -549,7 +549,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-5C
+4A
   9
 $SURFTAB1
  70
@@ -929,11 +929,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{0D80F1F4-79EE-40C0-9C03-5FA3EEEBAE40}
+{5DC7F207-1E3E-474A-BB61-9F4DF515CE74}
   9
 $VERSIONGUID
   2
-{E1C005E6-B0F8-462C-AC8F-9D2B1B09E59B}
+{77046A9F-024D-4F53-996D-B5B6FCBBC3F9}
   9
 $EXTNAMES
 290
@@ -1683,7 +1683,7 @@ APPID
 100
 AcDbSymbolTable
  70
-3
+5
   0
 APPID
   5
@@ -1701,7 +1701,35 @@ ACAD
   0
 APPID
   5
-59
+2F
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+CUSTOM_APP
+ 70
+0
+  0
+APPID
+  5
+30
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+BIM_TOOL
+ 70
+0
+  0
+APPID
+  5
+47
 330
 3
 100
@@ -1715,7 +1743,7 @@ HATCHBACKGROUNDCOLOR
   0
 APPID
   5
-5A
+48
 330
 3
 100
@@ -1891,7 +1919,7 @@ BLOCK_RECORD
 100
 AcDbSymbolTable
  70
-6
+4
   0
 BLOCK_RECORD
   5
@@ -1935,7 +1963,7 @@ AcDbBlockTableRecord
   0
 BLOCK_RECORD
   5
-2F
+31
 330
 9
 100
@@ -1943,7 +1971,7 @@ AcDbSymbolTableRecord
 100
 AcDbBlockTableRecord
   2
-X_VARIES
+WITH_XDATA
 340
 0
  70
@@ -1955,7 +1983,7 @@ X_VARIES
   0
 BLOCK_RECORD
   5
-33
+35
 330
 9
 100
@@ -1963,47 +1991,7 @@ AcDbSymbolTableRecord
 100
 AcDbBlockTableRecord
   2
-Y_VARIES
-340
-0
- 70
-0
-280
-1
-281
-0
-  0
-BLOCK_RECORD
-  5
-37
-330
-9
-100
-AcDbSymbolTableRecord
-100
-AcDbBlockTableRecord
-  2
-BOTH_VARY
-340
-0
- 70
-0
-280
-1
-281
-0
-  0
-BLOCK_RECORD
-  5
-3B
-330
-9
-100
-AcDbSymbolTableRecord
-100
-AcDbBlockTableRecord
-  2
-CONSISTENT
+NO_XDATA
 340
 0
  70
@@ -2099,9 +2087,9 @@ AcDbBlockEnd
   0
 BLOCK
   5
-30
+32
 330
-2F
+31
 100
 AcDbEntity
   8
@@ -2109,7 +2097,7 @@ AcDbEntity
 100
 AcDbBlockBegin
   2
-X_VARIES
+WITH_XDATA
  70
 0
  10
@@ -2119,273 +2107,109 @@ X_VARIES
  30
 0.0
   3
-X_VARIES
+WITH_XDATA
   1
 
   0
 LWPOLYLINE
-  5
-32
-330
-2F
-100
-AcDbEntity
-  8
-0
-100
-AcDbPolyline
- 90
-5
- 70
-0
- 10
-0.0
- 20
-0.0
- 10
-10.0
- 20
-0.0
- 10
-10.0
- 20
-5.0
- 10
-0.0
- 20
-5.0
- 10
-0.0
- 20
-0.0
-  0
-ENDBLK
-  5
-31
-330
-2F
-100
-AcDbEntity
-  8
-0
-100
-AcDbBlockEnd
-  0
-BLOCK
   5
 34
 330
-33
+31
 100
 AcDbEntity
   8
 0
 100
-AcDbBlockBegin
-  2
-Y_VARIES
+AcDbPolyline
+ 90
+5
  70
 0
  10
 0.0
  20
 0.0
- 30
+ 10
+10.0
+ 20
 0.0
-  3
-Y_VARIES
-  1
-
+ 10
+10.0
+ 20
+5.0
+ 10
+0.0
+ 20
+5.0
+ 10
+0.0
+ 20
+0.0
   0
-LWPOLYLINE
+ENDBLK
+  5
+33
+330
+31
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
   5
 36
 330
-33
+35
 100
 AcDbEntity
   8
 0
 100
-AcDbPolyline
- 90
-5
+AcDbBlockBegin
+  2
+NO_XDATA
  70
 0
  10
 0.0
  20
 0.0
- 10
-8.0
- 20
+ 30
 0.0
- 10
-8.0
- 20
-4.0
- 10
-0.0
- 20
-4.0
- 10
-0.0
- 20
-0.0
+  3
+NO_XDATA
+  1
+
   0
-ENDBLK
-  5
-35
-330
-33
-100
-AcDbEntity
-  8
-0
-100
-AcDbBlockEnd
-  0
-BLOCK
+CIRCLE
   5
 38
 330
-37
+35
 100
 AcDbEntity
   8
 0
 100
-AcDbBlockBegin
-  2
-BOTH_VARY
- 70
-0
- 10
-0.0
- 20
-0.0
- 30
-0.0
-  3
-BOTH_VARY
-  1
-
-  0
-LWPOLYLINE
-  5
-3A
-330
-37
-100
-AcDbEntity
-  8
-0
-100
-AcDbPolyline
- 90
-5
- 70
-0
- 10
-0.0
- 20
-0.0
- 10
-6.0
- 20
-0.0
- 10
-6.0
- 20
-6.0
- 10
-0.0
- 20
-6.0
- 10
-0.0
- 20
-0.0
-  0
-ENDBLK
-  5
-39
-330
-37
-100
-AcDbEntity
-  8
-0
-100
-AcDbBlockEnd
-  0
-BLOCK
-  5
-3C
-330
-3B
-100
-AcDbEntity
-  8
-0
-100
-AcDbBlockBegin
-  2
-CONSISTENT
- 70
-0
- 10
-0.0
- 20
-0.0
- 30
-0.0
-  3
-CONSISTENT
-  1
-
-  0
-LWPOLYLINE
-  5
-3E
-330
-3B
-100
-AcDbEntity
-  8
-0
-100
-AcDbPolyline
- 90
-5
- 70
-0
- 10
-0.0
- 20
-0.0
+AcDbCircle
  10
 5.0
  20
-0.0
- 10
 5.0
- 20
+ 30
+0.0
+ 40
 3.0
- 10
-0.0
- 20
-3.0
- 10
-0.0
- 20
-0.0
   0
 ENDBLK
   5
-3D
+37
 330
-3B
+35
 100
 AcDbEntity
   8
@@ -2401,7 +2225,7 @@ ENTITIES
   0
 INSERT
   5
-3F
+39
 330
 17
 100
@@ -2411,17 +2235,21 @@ LAYER_A
 100
 AcDbBlockReference
   2
-X_VARIES
+WITH_XDATA
  10
 0.0
  20
 0.0
  30
 0.0
+1001
+ACAD
+1000
+ACAD metadata
   0
 INSERT
   5
-41
+3B
 330
 17
 100
@@ -2431,19 +2259,49 @@ LAYER_A
 100
 AcDbBlockReference
   2
-X_VARIES
+WITH_XDATA
  10
 20.0
  20
 0.0
  30
 0.0
- 41
-2.0
+1001
+CUSTOM_APP
+1000
+Custom data
   0
 INSERT
   5
-43
+3D
+330
+17
+100
+AcDbEntity
+  8
+LAYER_A
+100
+AcDbBlockReference
+  2
+WITH_XDATA
+ 10
+40.0
+ 20
+0.0
+ 30
+0.0
+1001
+ACAD
+1000
+More ACAD data
+1001
+CUSTOM_APP
+1000
+More custom data
+  0
+INSERT
+  5
+3F
 330
 17
 100
@@ -2453,15 +2311,65 @@ LAYER_B
 100
 AcDbBlockReference
   2
-X_VARIES
+WITH_XDATA
  10
-40.0
- 20
 0.0
+ 20
+20.0
  30
 0.0
- 41
-1.5
+1001
+BIM_TOOL
+1000
+BIM metadata
+  0
+INSERT
+  5
+41
+330
+17
+100
+AcDbEntity
+  8
+LAYER_B
+100
+AcDbBlockReference
+  2
+WITH_XDATA
+ 10
+20.0
+ 20
+20.0
+ 30
+0.0
+1001
+ACAD
+1000
+ACAD on layer B
+1001
+BIM_TOOL
+1000
+More BIM data
+  0
+INSERT
+  5
+43
+330
+17
+100
+AcDbEntity
+  8
+LAYER_A
+100
+AcDbBlockReference
+  2
+NO_XDATA
+ 10
+0.0
+ 20
+40.0
+ 30
+0.0
   0
 INSERT
   5
@@ -2475,223 +2383,13 @@ LAYER_A
 100
 AcDbBlockReference
   2
-Y_VARIES
- 10
-0.0
- 20
-20.0
- 30
-0.0
-  0
-INSERT
-  5
-47
-330
-17
-100
-AcDbEntity
-  8
-LAYER_A
-100
-AcDbBlockReference
-  2
-Y_VARIES
- 10
-20.0
- 20
-20.0
- 30
-0.0
- 42
-2.0
-  0
-INSERT
-  5
-49
-330
-17
-100
-AcDbEntity
-  8
-LAYER_B
-100
-AcDbBlockReference
-  2
-Y_VARIES
- 10
-40.0
- 20
-20.0
- 30
-0.0
- 42
-0.5
-  0
-INSERT
-  5
-4B
-330
-17
-100
-AcDbEntity
-  8
-LAYER_A
-100
-AcDbBlockReference
-  2
-BOTH_VARY
- 10
-0.0
- 20
-40.0
- 30
-0.0
-  0
-INSERT
-  5
-4D
-330
-17
-100
-AcDbEntity
-  8
-LAYER_A
-100
-AcDbBlockReference
-  2
-BOTH_VARY
+NO_XDATA
  10
 20.0
  20
 40.0
  30
 0.0
- 41
-2.0
- 42
-2.0
-  0
-INSERT
-  5
-4F
-330
-17
-100
-AcDbEntity
-  8
-LAYER_B
-100
-AcDbBlockReference
-  2
-BOTH_VARY
- 10
-40.0
- 20
-40.0
- 30
-0.0
- 41
--1.0
- 42
-1.5
-  0
-INSERT
-  5
-51
-330
-17
-100
-AcDbEntity
-  8
-LAYER_A
-100
-AcDbBlockReference
-  2
-CONSISTENT
- 10
-0.0
- 20
-60.0
- 30
-0.0
- 41
-1.5
- 42
-1.5
-  0
-INSERT
-  5
-53
-330
-17
-100
-AcDbEntity
-  8
-LAYER_A
-100
-AcDbBlockReference
-  2
-CONSISTENT
- 10
-20.0
- 20
-60.0
- 30
-0.0
- 41
-1.5
- 42
-1.5
-  0
-INSERT
-  5
-55
-330
-17
-100
-AcDbEntity
-  8
-LAYER_B
-100
-AcDbBlockReference
-  2
-CONSISTENT
- 10
-40.0
- 20
-60.0
- 30
-0.0
- 41
-1.5
- 42
-1.5
-  0
-INSERT
-  5
-57
-330
-17
-100
-AcDbEntity
-  8
-LAYER_B
-100
-AcDbBlockReference
-  2
-CONSISTENT
- 10
-60.0
- 20
-60.0
- 30
-0.0
- 41
-1.5
- 42
-1.5
- 50
-90.0
   0
 ENDSEC
   0
@@ -3683,7 +3381,7 @@ CREATED_BY_EZDXF
   3
 WRITTEN_BY_EZDXF
 350
-5B
+49
   0
 DICTIONARYVAR
   5
@@ -3695,11 +3393,11 @@ DictionaryVariables
 280
 0
   1
-1.4.3 @ 2025-11-19T06:01:42.674883+00:00
+1.4.3 @ 2025-11-19T06:01:42.692261+00:00
   0
 DICTIONARYVAR
   5
-5B
+49
 330
 2D
 100
@@ -3707,7 +3405,7 @@ DictionaryVariables
 280
 0
   1
-1.4.3 @ 2025-11-19T06:01:42.679871+00:00
+1.4.3 @ 2025-11-19T06:01:42.695035+00:00
   0
 ENDSEC
   0

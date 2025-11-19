@@ -27,6 +27,8 @@ EXCEL_COLUMN_BLOCK_ENTITY_COUNT: str = "block_entity_count"
 EXCEL_COLUMN_BLOCK_LAYER_NAME: str = (
     "block_layer_name"  # See app_docs/005-field-naming-convention.md
 )
+# Domain: block, Attribute: xdata, Qualifier: apps (collection)
+EXCEL_COLUMN_BLOCK_XDATA_APPS: str = "block_xdata_apps"
 
 # Excel configuration - Block Counts sheet rotation columns
 # See app_docs/005-field-naming-convention.md for naming conventions

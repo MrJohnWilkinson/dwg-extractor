@@ -43,6 +43,8 @@ class ExtractionResult(TypedDict):
         block_scale_data: Dictionary mapping block names to sets of unique (x_scale, y_scale) tuples
                           Tracks ALL unique scale combinations across all insertions and layers per block
                           Scale values indicate transformation factors (1.0 = normal, -1.0 = mirrored, 2.0 = 200%)
+        block_xdata_apps: Dictionary mapping (block_name, layer_name) tuples to sets of XDATA application IDs
+                          Collects unique application IDs from XDATA attached to block INSERT entities
         layer_block_insertion_counts: Dictionary mapping layer names to block insertion counts on that layer
         layer_entity_counts: Dictionary mapping layer names to total entity counts on that layer
         entity_type_counts: Dictionary mapping entity type names to their total count in the drawing
@@ -54,6 +56,7 @@ class ExtractionResult(TypedDict):
         block_layer_pairs: {('DOOR', 'WALLS'): 5, ('DOOR', 'OPENINGS'): 3, ('WINDOW', 'WALLS'): 8}
         block_rotation_counts: {('DOOR', 'WALLS', '0'): 12, ('DOOR', 'WALLS', '90'): 18, ('DOOR', 'WALLS', '180'): 10}
         block_scale_data: {'DOOR': {(1.0, 1.0), (2.0, 1.0)}, 'WINDOW': {(-1.0, 1.0)}}
+        block_xdata_apps: {('DOOR', 'WALLS'): {'ACAD', 'CUSTOM_APP'}, ('WINDOW', 'WALLS'): {'BIM_TOOL'}}
         block_trimming_data: {'SHELF_4FT': {'native_width': 1200.0, 'native_height': 600.0,
                                              'vertical_segments': [50.0, 1100.0, 50.0],
                                              'horizontal_segments': [25.0, 550.0, 25.0]}}
@@ -64,6 +67,7 @@ class ExtractionResult(TypedDict):
     block_layer_pairs: dict[tuple[str, str], int]
     block_rotation_counts: dict[tuple[str, str, str], int]
     block_scale_data: dict[str, set[tuple[float, float]]]
+    block_xdata_apps: dict[tuple[str, str], set[str]]
     layer_block_insertion_counts: dict[str, int]
     layer_entity_counts: dict[str, int]
     entity_type_counts: dict[str, int]
@@ -136,6 +140,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         block_layer_pairs: dict[tuple[str, str], int] = {}
         block_rotation_counts: dict[tuple[str, str, str], int] = {}
         block_scale_data: dict[str, set[tuple[float, float]]] = {}
+        block_xdata_apps: dict[tuple[str, str], set[str]] = {}
         layer_block_insertion_counts: dict[str, int] = {}
         layer_entity_counts: dict[str, int] = {}
         entity_type_counts: dict[str, int] = {}
@@ -230,6 +235,23 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                     block_scale_data[block_name] = set()
                 block_scale_data[block_name].add((x_scale, y_scale))
 
+                # Extract XDATA application IDs
+                # Access the xdata property which is a dictionary-like object
+                try:
+                    # The xdata attribute contains a dictionary mapping appids to tag data
+                    if hasattr(entity, 'xdata') and entity.xdata is not None and len(entity.xdata) > 0:
+                        # Get all application IDs from the xdata dictionary
+                        app_ids = list(entity.xdata.data.keys()) if hasattr(entity.xdata, 'data') else []
+                        if app_ids:
+                            # Initialize set if needed
+                            if pair_key not in block_xdata_apps:
+                                block_xdata_apps[pair_key] = set()
+                            # Add all application IDs to the set
+                            block_xdata_apps[pair_key].update(app_ids)
+                except (AttributeError, TypeError):
+                    # Entity doesn't support XDATA
+                    pass
+
         # Log summary
         total_insertions = sum(block_counts.values())
         unique_blocks = len(block_counts)
@@ -247,6 +269,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         logger.info(
             f"Extracted scale data for {len(block_scale_data)} unique blocks"
         )
+        logger.info(f"Found XDATA on {len(block_xdata_apps)} block-layer pairs")
         logger.info(
             f"Found {total_entities} total entities across {unique_entity_types} entity types"
         )
@@ -259,6 +282,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             "block_layer_pairs": block_layer_pairs,
             "block_rotation_counts": block_rotation_counts,
             "block_scale_data": block_scale_data,
+            "block_xdata_apps": block_xdata_apps,
             "layer_block_insertion_counts": layer_block_insertion_counts,
             "layer_entity_counts": layer_entity_counts,
             "entity_type_counts": entity_type_counts,

@@ -83,11 +83,12 @@ def _format_block_analysis_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
-    # Set column widths (4 columns only)
+    # Set column widths (5 columns)
     ws.column_dimensions["A"].width = 30  # block_name
     ws.column_dimensions["B"].width = 25  # block_insertion_count
     ws.column_dimensions["C"].width = 25  # block_entity_count
     ws.column_dimensions["D"].width = 25  # block_layer_name
+    ws.column_dimensions["E"].width = 30  # block_xdata_apps
 
     # Enable text wrapping on header row
     alignment = Alignment(wrap_text=True, vertical="top")

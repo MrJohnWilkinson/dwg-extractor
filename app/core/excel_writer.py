@@ -35,6 +35,7 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_SCALE_X,
     EXCEL_COLUMN_BLOCK_SCALE_Y,
     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+    EXCEL_COLUMN_BLOCK_XDATA_APPS,
     EXCEL_COLUMN_ENTITY_TYPE_COUNT,
     EXCEL_COLUMN_ENTITY_TYPE_NAME,
     EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
@@ -227,6 +228,7 @@ def _create_block_analysis_sheet(
 
     block_layer_pairs = data["block_layer_pairs"]
     block_entities = data["block_entities"]
+    block_xdata_apps = data["block_xdata_apps"]
 
     if block_layer_pairs:
         # Unpack block-layer pairs into DataFrame rows (simplified - no rotations)
@@ -234,12 +236,17 @@ def _create_block_analysis_sheet(
         for (block_name, layer_name), insertion_count in block_layer_pairs.items():
             entity_count = block_entities.get(block_name, 0)
 
+            # Get XDATA apps for this block-layer pair
+            xdata_apps = block_xdata_apps.get((block_name, layer_name), set())
+            xdata_apps_str = ", ".join(sorted(xdata_apps)) if xdata_apps else "-"
+
             rows.append(
                 {
                     EXCEL_COLUMN_BLOCK_NAME: block_name,
                     EXCEL_COLUMN_BLOCK_INSERTION_COUNT: insertion_count,
                     EXCEL_COLUMN_BLOCK_ENTITY_COUNT: entity_count,
                     EXCEL_COLUMN_BLOCK_LAYER_NAME: layer_name,
+                    EXCEL_COLUMN_BLOCK_XDATA_APPS: xdata_apps_str,
                 }
             )
 
@@ -248,13 +255,14 @@ def _create_block_analysis_sheet(
             by=EXCEL_COLUMN_BLOCK_INSERTION_COUNT, ascending=False, inplace=True
         )
     else:
-        # Create empty DataFrame with headers only (4 columns)
+        # Create empty DataFrame with headers only (5 columns)
         df = pd.DataFrame(
             columns=[
                 EXCEL_COLUMN_BLOCK_NAME,
                 EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
                 EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
                 EXCEL_COLUMN_BLOCK_LAYER_NAME,
+                EXCEL_COLUMN_BLOCK_XDATA_APPS,
             ]
         )
 

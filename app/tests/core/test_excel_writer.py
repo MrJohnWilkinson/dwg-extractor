@@ -38,6 +38,7 @@ from core.constants import (
     EXCEL_COLUMN_BLOCK_SCALE_X,
     EXCEL_COLUMN_BLOCK_SCALE_Y,
     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+    EXCEL_COLUMN_BLOCK_XDATA_APPS,
     EXCEL_COLUMN_ENTITY_TYPE_COUNT,
     EXCEL_COLUMN_ENTITY_TYPE_NAME,
     EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
@@ -87,6 +88,7 @@ class TestExcelWriter:
                 "PIPE": {(1.0, -1.0)},
                 "TAG": {(-1.0, -1.0)},
             },
+            "block_xdata_apps": {},
             "layer_block_insertion_counts": {"Layer1": 15, "Layer2": 3},
             "layer_entity_counts": {"Layer1": 25, "Layer2": 10},
             "entity_type_counts": {"INSERT": 18, "LINE": 15, "CIRCLE": 8},
@@ -133,19 +135,20 @@ class TestExcelWriter:
     def test_block_analysis_sheet_simplified(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test Block Analysis sheet has correct simplified structure (4 columns, no rotations)."""
+        """Test Block Analysis sheet has correct simplified structure (5 columns, no rotations)."""
         output_path = os.path.join(temp_dir, "test_drawing.dwg")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Load Block Analysis sheet
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
 
-        # Verify headers - simplified to 4 columns only (formatted)
+        # Verify headers - simplified to 5 columns only (formatted)
         assert list(df.columns) == [
             format_header(EXCEL_COLUMN_BLOCK_NAME),
             format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT),
             format_header(EXCEL_COLUMN_BLOCK_ENTITY_COUNT),
             format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_XDATA_APPS),
         ]
 
         # Verify data rows (4 block-layer pairs)
@@ -259,12 +262,13 @@ class TestExcelWriter:
 
         wb = load_workbook(excel_path)
 
-        # Block Analysis sheet (simplified - 4 columns only)
+        # Block Analysis sheet (simplified - 5 columns)
         ws_blocks = wb[EXCEL_SHEET_BLOCK_ANALYSIS]
         assert ws_blocks.column_dimensions["A"].width == 30  # block_name
         assert ws_blocks.column_dimensions["B"].width == 25  # block_insertion_count
         assert ws_blocks.column_dimensions["C"].width == 25  # block_entity_count
         assert ws_blocks.column_dimensions["D"].width == 25  # block_layer_name
+        assert ws_blocks.column_dimensions["E"].width == 30  # block_xdata_apps
 
         # Layer Analysis sheet
         ws_layers = wb[EXCEL_SHEET_LAYER_ANALYSIS]
@@ -287,6 +291,7 @@ class TestExcelWriter:
             "block_layer_pairs": {},
             "block_rotation_counts": {},
             "block_scale_data": {},
+            "block_xdata_apps": {},
             "layer_block_insertion_counts": {},
             "layer_entity_counts": {},
             "entity_type_counts": {},
@@ -306,6 +311,7 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT),
             format_header(EXCEL_COLUMN_BLOCK_ENTITY_COUNT),
             format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_XDATA_APPS),
         ]
 
         df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
@@ -489,6 +495,7 @@ class TestExcelWriter:
             "block_layer_pairs": {},
             "block_rotation_counts": {},
             "block_scale_data": {},
+            "block_xdata_apps": {},
             "layer_block_insertion_counts": {},
             "layer_entity_counts": {},
             "entity_type_counts": {},
@@ -654,6 +661,7 @@ class TestExcelWriter:
             "block_layer_pairs": {},
             "block_rotation_counts": {},
             "block_scale_data": {},
+            "block_xdata_apps": {},
             "layer_block_insertion_counts": {},
             "layer_entity_counts": {},
             "entity_type_counts": {},
@@ -698,6 +706,7 @@ class TestExcelWriter:
             },
             "block_rotation_counts": {},
             "block_scale_data": {},
+            "block_xdata_apps": {},
             "layer_block_insertion_counts": {"Layer1": 15},
             "layer_entity_counts": {"Layer1": 25},
             "entity_type_counts": {"INSERT": 15},
@@ -761,13 +770,14 @@ class TestExcelWriter:
 
         # Load all sheets and verify column names match formatted constants
 
-        # Block Analysis sheet - 4 columns
+        # Block Analysis sheet - 5 columns
         df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
         assert list(df_blocks.columns) == [
             format_header(EXCEL_COLUMN_BLOCK_NAME),
             format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT),
             format_header(EXCEL_COLUMN_BLOCK_ENTITY_COUNT),
             format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_XDATA_APPS),
         ]
 
         # Layer Analysis sheet - 3 columns
@@ -831,8 +841,8 @@ class TestExcelWriter:
         assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_270) in df_geometry.columns
         assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_OTHER) in df_geometry.columns
 
-        # Verify Block Analysis sheet has ONLY 4 columns (no rotations)
-        assert len(df_blocks.columns) == 4
+        # Verify Block Analysis sheet has ONLY 5 columns (no rotations)
+        assert len(df_blocks.columns) == 5
         assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_0) not in df_blocks.columns
         assert format_header(EXCEL_COLUMN_BLOCK_ROTATION_90) not in df_blocks.columns
 
@@ -1031,3 +1041,75 @@ class TestExcelWriter:
                 assert cell_fill.start_color.rgb != "FFFFFF00", (
                     f"CONSISTENT block at row {row_idx} should NOT have yellow highlighting"
                 )
+
+    def test_write_excel_with_xdata_apps(self) -> None:
+        """Test Excel generation includes XDATA Apps column in Block Analysis sheet."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create mock ExtractionResult with XDATA apps
+            result: ExtractionResult = {
+                "block_counts": {"BLOCK_A": 3, "BLOCK_B": 2},
+                "block_entities": {"BLOCK_A": 5, "BLOCK_B": 3},
+                "block_layer_pairs": {("BLOCK_A", "LAYER_1"): 3, ("BLOCK_B", "LAYER_1"): 2},
+                "block_rotation_counts": {
+                    ("BLOCK_A", "LAYER_1", "0"): 3,
+                    ("BLOCK_B", "LAYER_1", "0"): 2,
+                },
+                "block_scale_data": {"BLOCK_A": {(1.0, 1.0)}, "BLOCK_B": {(1.0, 1.0)}},
+                "block_xdata_apps": {
+                    ("BLOCK_A", "LAYER_1"): {"ACAD", "CUSTOM_APP"},
+                    ("BLOCK_B", "LAYER_1"): set(),
+                },
+                "layer_block_insertion_counts": {"LAYER_1": 5},
+                "layer_entity_counts": {"LAYER_1": 10},
+                "entity_type_counts": {"INSERT": 5, "LINE": 10},
+                "block_trimming_data": {
+                    "BLOCK_A": {
+                        "native_width": 10.0,
+                        "native_height": 5.0,
+                        "vertical_segments": [10.0],
+                        "horizontal_segments": [5.0],
+                    },
+                    "BLOCK_B": {
+                        "native_width": 8.0,
+                        "native_height": 4.0,
+                        "vertical_segments": [8.0],
+                        "horizontal_segments": [4.0],
+                    },
+                },
+            }
+
+            output_path = os.path.join(temp_dir, "test_xdata.dxf")
+            excel_path = write_excel(result, output_path)
+
+            # Load Excel and verify Block Analysis sheet
+            wb = load_workbook(excel_path)
+            ws = wb[EXCEL_SHEET_BLOCK_ANALYSIS]
+
+            # Verify 5 columns exist (was 4, now 5 with XDATA Apps)
+            assert ws.max_column == 5
+
+            # Verify header is "Block Xdata Apps" (formatted via format_header)
+            header_row = [cell.value for cell in ws[1]]
+            assert "Block Xdata Apps" in header_row
+
+            # Find the Block Xdata Apps column index
+            xdata_col_idx = header_row.index("Block Xdata Apps") + 1
+
+            # Verify BLOCK_A row shows comma-separated XDATA apps
+            block_a_found = False
+            block_b_found = False
+            for row_idx in range(2, ws.max_row + 1):
+                block_name = ws.cell(row=row_idx, column=1).value
+                if block_name == "BLOCK_A":
+                    xdata_value = ws.cell(row=row_idx, column=xdata_col_idx).value
+                    # Should contain both apps in sorted order
+                    assert xdata_value in ["ACAD, CUSTOM_APP", "CUSTOM_APP, ACAD"]
+                    block_a_found = True
+                elif block_name == "BLOCK_B":
+                    xdata_value = ws.cell(row=row_idx, column=xdata_col_idx).value
+                    # Should show "-" for no XDATA
+                    assert xdata_value == "-"
+                    block_b_found = True
+
+            assert block_a_found, "BLOCK_A not found in Block Analysis sheet"
+            assert block_b_found, "BLOCK_B not found in Block Analysis sheet"

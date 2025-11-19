@@ -817,3 +817,41 @@ class TestExtractor:
         # (The old structure was per block-layer pair, new structure is just per block)
         assert "X_VARIES" in result["block_scale_data"]
         assert isinstance(result["block_scale_data"]["X_VARIES"], set)
+
+    def test_extract_xdata_apps(self) -> None:
+        """Test XDATA application ID extraction from INSERT entities."""
+        result = extract_blocks("app/tests/assets/xdata_test.dxf")
+
+        # Verify block_xdata_apps key exists in result
+        assert "block_xdata_apps" in result
+        assert isinstance(result["block_xdata_apps"], dict)
+
+        # Verify WITH_XDATA on LAYER_A has ACAD and CUSTOM_APP
+        layer_a_key = ("WITH_XDATA", "LAYER_A")
+        assert layer_a_key in result["block_xdata_apps"]
+        layer_a_apps = result["block_xdata_apps"][layer_a_key]
+        assert isinstance(layer_a_apps, set)
+        assert "ACAD" in layer_a_apps
+        assert "CUSTOM_APP" in layer_a_apps
+
+        # Verify WITH_XDATA on LAYER_B has BIM_TOOL and ACAD
+        layer_b_key = ("WITH_XDATA", "LAYER_B")
+        assert layer_b_key in result["block_xdata_apps"]
+        layer_b_apps = result["block_xdata_apps"][layer_b_key]
+        assert isinstance(layer_b_apps, set)
+        assert "BIM_TOOL" in layer_b_apps
+        assert "ACAD" in layer_b_apps
+
+        # Verify NO_XDATA on LAYER_A either doesn't exist or has empty set
+        no_xdata_key = ("NO_XDATA", "LAYER_A")
+        if no_xdata_key in result["block_xdata_apps"]:
+            assert len(result["block_xdata_apps"][no_xdata_key]) == 0
+
+    def test_extract_xdata_apps_empty_file(self) -> None:
+        """Test XDATA extraction from empty file returns empty dict."""
+        result = extract_blocks("app/tests/assets/empty_drawing.dxf")
+
+        # Verify block_xdata_apps is an empty dictionary
+        assert "block_xdata_apps" in result
+        assert isinstance(result["block_xdata_apps"], dict)
+        assert len(result["block_xdata_apps"]) == 0
