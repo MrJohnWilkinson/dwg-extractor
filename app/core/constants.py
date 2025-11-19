@@ -14,10 +14,10 @@ Usage:
 SUPPORTED_EXTENSIONS: tuple[str, str] = ('.dwg', '.dxf')
 
 # Excel configuration - Sheet names
-EXCEL_SHEET_BLOCK_COUNTS: str = 'Block Counts'
+EXCEL_SHEET_BLOCK_ANALYSIS: str = 'Block Analysis'
 EXCEL_SHEET_LAYER_ANALYSIS: str = 'Layer Analysis'
 EXCEL_SHEET_ENTITY_SUMMARY: str = 'Entity Summary'
-EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS: str = 'Block Trimming Analysis'
+EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS: str = 'Block Geometry Analysis'
 
 # Excel configuration - Block Counts sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
@@ -45,8 +45,11 @@ EXCEL_COLUMN_LAYER_ENTITY_COUNT: str = 'layer_entity_count'
 EXCEL_COLUMN_ENTITY_TYPE_NAME: str = 'entity_type_name'
 EXCEL_COLUMN_ENTITY_TYPE_COUNT: str = 'entity_type_count'
 
-# Excel configuration - Block Trimming Analysis sheet columns
+# Excel configuration - Block Geometry Analysis sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
+# Domain: block, Attribute: scale, Qualifier: x/y (transformation factors)
+EXCEL_COLUMN_BLOCK_SCALE_X: str = 'block_scale_x'
+EXCEL_COLUMN_BLOCK_SCALE_Y: str = 'block_scale_y'
 # Domain: block, Qualifier: native (at 0° rotation), Attribute: width/height
 EXCEL_COLUMN_BLOCK_NATIVE_WIDTH: str = 'block_native_width'
 EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: str = 'block_native_height'

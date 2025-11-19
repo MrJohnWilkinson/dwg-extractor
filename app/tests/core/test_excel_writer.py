@@ -24,10 +24,10 @@ from typing import Iterator
 from core.excel_writer import write_excel
 from core.extractor import ExtractionResult
 from core.constants import (
-    EXCEL_SHEET_BLOCK_COUNTS,
+    EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_LAYER_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
-    EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS,
+    EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
     EXCEL_COLUMN_BLOCK_NAME,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
@@ -37,6 +37,8 @@ from core.constants import (
     EXCEL_COLUMN_BLOCK_ROTATION_180,
     EXCEL_COLUMN_BLOCK_ROTATION_270,
     EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
+    EXCEL_COLUMN_BLOCK_SCALE_X,
+    EXCEL_COLUMN_BLOCK_SCALE_Y,
     EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
     EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
@@ -78,6 +80,12 @@ class TestExcelWriter:
                 ('PIPE', 'Layer1', '180'): 2,
                 ('TAG', 'Layer1', 'other'): 3
             },
+            'block_scale_data': {
+                ('VALVE', 'Layer1'): (1.0, 1.0),
+                ('VALVE', 'Layer2'): (-1.0, 1.0),
+                ('PIPE', 'Layer1'): (1.0, -1.0),
+                ('TAG', 'Layer1'): (-1.0, -1.0)
+            },
             'layer_block_insertion_counts': {'Layer1': 15, 'Layer2': 3},
             'layer_entity_counts': {'Layer1': 25, 'Layer2': 10},
             'entity_type_counts': {'INSERT': 18, 'LINE': 15, 'CIRCLE': 8},
@@ -113,36 +121,31 @@ class TestExcelWriter:
 
         # Load and verify sheet names
         wb = load_workbook(excel_path)
-        assert EXCEL_SHEET_BLOCK_COUNTS in wb.sheetnames
+        assert EXCEL_SHEET_BLOCK_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_LAYER_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_ENTITY_SUMMARY in wb.sheetnames
-        assert EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS in wb.sheetnames
+        assert EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS in wb.sheetnames
         assert len(wb.sheetnames) == 4
 
-    def test_block_counts_sheet_structure(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
-        """Test Block Counts sheet has correct columns and data with block-layer pairs."""
+    def test_block_analysis_sheet_simplified(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test Block Analysis sheet has correct simplified structure (4 columns, no rotations)."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
-        # Load Block Counts sheet
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
+        # Load Block Analysis sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
 
-        # Verify headers include block_layer_name and rotation columns
+        # Verify headers - simplified to 4 columns only
         assert list(df.columns) == [
             EXCEL_COLUMN_BLOCK_NAME,
             EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
             EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME,
-            EXCEL_COLUMN_BLOCK_ROTATION_0,
-            EXCEL_COLUMN_BLOCK_ROTATION_90,
-            EXCEL_COLUMN_BLOCK_ROTATION_180,
-            EXCEL_COLUMN_BLOCK_ROTATION_270,
-            EXCEL_COLUMN_BLOCK_ROTATION_OTHER
+            EXCEL_COLUMN_BLOCK_LAYER_NAME
         ]
 
         # Verify data rows (4 block-layer pairs)
         assert len(df) == 4
-        # First row should be VALVE on Layer1 with 7 insertions
+        # First row should be VALVE on Layer1 with 7 insertions (sorted by count descending)
         assert df.iloc[0][EXCEL_COLUMN_BLOCK_NAME] == 'VALVE'
         assert df.iloc[0][EXCEL_COLUMN_BLOCK_INSERTION_COUNT] == 7
         assert df.iloc[0][EXCEL_COLUMN_BLOCK_ENTITY_COUNT] == 8
@@ -191,8 +194,8 @@ class TestExcelWriter:
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
-        # Block Counts: sorted by block_insertion_count descending
-        df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
+        # Block Analysis: sorted by block_insertion_count descending
+        df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
         # First row should be VALVE/Layer1 with 7
         assert df_blocks.iloc[0][EXCEL_COLUMN_BLOCK_INSERTION_COUNT] == 7
         # Second row should be PIPE/Layer1 with 5
@@ -218,8 +221,8 @@ class TestExcelWriter:
 
         wb = load_workbook(excel_path)
 
-        # Verify auto-filter on Block Counts sheet
-        ws_blocks = wb[EXCEL_SHEET_BLOCK_COUNTS]
+        # Verify auto-filter on Block Analysis sheet
+        ws_blocks = wb[EXCEL_SHEET_BLOCK_ANALYSIS]
         assert ws_blocks.auto_filter.ref is not None
 
         # Verify auto-filter on Layer Analysis sheet
@@ -230,6 +233,10 @@ class TestExcelWriter:
         ws_entities = wb[EXCEL_SHEET_ENTITY_SUMMARY]
         assert ws_entities.auto_filter.ref is not None
 
+        # Verify auto-filter on Block Geometry Analysis sheet
+        ws_geometry = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+        assert ws_geometry.auto_filter.ref is not None
+
     def test_all_sheets_column_widths(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test that column widths are set correctly on all sheets."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
@@ -237,17 +244,12 @@ class TestExcelWriter:
 
         wb = load_workbook(excel_path)
 
-        # Block Counts sheet
-        ws_blocks = wb[EXCEL_SHEET_BLOCK_COUNTS]
+        # Block Analysis sheet (simplified - 4 columns only)
+        ws_blocks = wb[EXCEL_SHEET_BLOCK_ANALYSIS]
         assert ws_blocks.column_dimensions['A'].width == 30  # block_name
         assert ws_blocks.column_dimensions['B'].width == 25  # block_insertion_count
         assert ws_blocks.column_dimensions['C'].width == 25  # block_entity_count
         assert ws_blocks.column_dimensions['D'].width == 25  # block_layer_name
-        assert ws_blocks.column_dimensions['E'].width == 12  # block_rotation_0
-        assert ws_blocks.column_dimensions['F'].width == 12  # block_rotation_90
-        assert ws_blocks.column_dimensions['G'].width == 12  # block_rotation_180
-        assert ws_blocks.column_dimensions['H'].width == 12  # block_rotation_270
-        assert ws_blocks.column_dimensions['I'].width == 12  # block_rotation_other
 
         # Layer Analysis sheet
         ws_layers = wb[EXCEL_SHEET_LAYER_ANALYSIS]
@@ -267,6 +269,8 @@ class TestExcelWriter:
             'block_entities': {},
             'block_layer_pairs': {},
             'block_rotation_counts': {},
+            'block_scale_data': {},
+            'block_scale_data': {},
             'layer_block_insertion_counts': {},
             'layer_entity_counts': {},
             'entity_type_counts': {},
@@ -279,18 +283,13 @@ class TestExcelWriter:
         assert Path(excel_path).exists()
 
         # Load all sheets and verify headers only
-        df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
+        df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
         assert len(df_blocks) == 0
         assert list(df_blocks.columns) == [
             EXCEL_COLUMN_BLOCK_NAME,
             EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
             EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME,
-            EXCEL_COLUMN_BLOCK_ROTATION_0,
-            EXCEL_COLUMN_BLOCK_ROTATION_90,
-            EXCEL_COLUMN_BLOCK_ROTATION_180,
-            EXCEL_COLUMN_BLOCK_ROTATION_270,
-            EXCEL_COLUMN_BLOCK_ROTATION_OTHER
+            EXCEL_COLUMN_BLOCK_LAYER_NAME
         ]
 
         df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
@@ -299,41 +298,38 @@ class TestExcelWriter:
         df_entities = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
         assert len(df_entities) == 0
 
-    def test_rotation_counts_sum_to_total(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
-        """Test that rotation columns sum to block_insertion_count for each row."""
+    def test_block_geometry_analysis_has_rotations(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that Block Geometry Analysis sheet contains rotation columns."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
-        # Load Block Counts sheet
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
+        # Load Block Geometry Analysis sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
-        # Verify sum of rotation counts equals insertion count for each row
-        for _, row in df.iterrows():
-            rotation_sum = (
-                row[EXCEL_COLUMN_BLOCK_ROTATION_0] +
-                row[EXCEL_COLUMN_BLOCK_ROTATION_90] +
-                row[EXCEL_COLUMN_BLOCK_ROTATION_180] +
-                row[EXCEL_COLUMN_BLOCK_ROTATION_270] +
-                row[EXCEL_COLUMN_BLOCK_ROTATION_OTHER]
-            )
-            assert rotation_sum == row[EXCEL_COLUMN_BLOCK_INSERTION_COUNT]
+        # Verify rotation columns exist
+        assert EXCEL_COLUMN_BLOCK_ROTATION_0 in df.columns
+        assert EXCEL_COLUMN_BLOCK_ROTATION_90 in df.columns
+        assert EXCEL_COLUMN_BLOCK_ROTATION_180 in df.columns
+        assert EXCEL_COLUMN_BLOCK_ROTATION_270 in df.columns
+        assert EXCEL_COLUMN_BLOCK_ROTATION_OTHER in df.columns
 
-    def test_rotation_counts_are_integers(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
-        """Test that all rotation counts are non-negative integers."""
+    def test_block_geometry_analysis_has_scales(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that Block Geometry Analysis sheet contains scale columns."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
-        # Load Block Counts sheet
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_COUNTS)
+        # Load Block Geometry Analysis sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
-        # Verify all rotation counts are non-negative integers
-        for col in [EXCEL_COLUMN_BLOCK_ROTATION_0, EXCEL_COLUMN_BLOCK_ROTATION_90,
-                    EXCEL_COLUMN_BLOCK_ROTATION_180, EXCEL_COLUMN_BLOCK_ROTATION_270,
-                    EXCEL_COLUMN_BLOCK_ROTATION_OTHER]:
-            for value in df[col]:
-                assert isinstance(value, (int, float))  # pandas may use int64 or float64
-                assert value >= 0
-                assert value == int(value)  # No fractional parts
+        # Verify scale columns exist
+        assert EXCEL_COLUMN_BLOCK_SCALE_X in df.columns
+        assert EXCEL_COLUMN_BLOCK_SCALE_Y in df.columns
+
+        # Verify scale data is present
+        for value in df[EXCEL_COLUMN_BLOCK_SCALE_X]:
+            assert isinstance(value, (int, float))
+        for value in df[EXCEL_COLUMN_BLOCK_SCALE_Y]:
+            assert isinstance(value, (int, float))
 
     def test_filename_format_unchanged(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test that timestamped filename format is maintained."""
@@ -361,19 +357,26 @@ class TestExcelWriter:
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
-        assert EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS in wb.sheetnames
+        assert EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS in wb.sheetnames
 
-    def test_block_trimming_analysis_sheet_headers(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
-        """Test Block Trimming Analysis sheet has correct column headers."""
+    def test_block_geometry_analysis_sheet_consolidated(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test Block Geometry Analysis sheet has all 13 columns consolidated."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
         # Verify all expected columns are present in correct order
         expected_columns = [
             EXCEL_COLUMN_BLOCK_NAME,
             EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            EXCEL_COLUMN_BLOCK_ROTATION_0,
+            EXCEL_COLUMN_BLOCK_ROTATION_90,
+            EXCEL_COLUMN_BLOCK_ROTATION_180,
+            EXCEL_COLUMN_BLOCK_ROTATION_270,
+            EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
+            EXCEL_COLUMN_BLOCK_SCALE_X,
+            EXCEL_COLUMN_BLOCK_SCALE_Y,
             EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
             EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
             EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
@@ -382,15 +385,19 @@ class TestExcelWriter:
 
         assert list(df.columns) == expected_columns
 
-        # Verify exactly 6 columns
-        assert len(df.columns) == 6
+        # Verify exactly 13 columns
+        assert len(df.columns) == 13
+
+        # Verify sort by block_name alphabetical
+        block_names = df[EXCEL_COLUMN_BLOCK_NAME].tolist()
+        assert block_names == sorted(block_names)
 
     def test_block_trimming_analysis_data_types(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test Block Trimming Analysis sheet has correct data types."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
         # Width and height should be numeric
         for value in df[EXCEL_COLUMN_BLOCK_NATIVE_WIDTH]:
@@ -413,7 +420,7 @@ class TestExcelWriter:
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
         # Find first VALVE row (has multi-segment data) - there will be multiple rows for VALVE
         valve_row = df[df[EXCEL_COLUMN_BLOCK_NAME] == 'VALVE'].iloc[0]
@@ -434,7 +441,7 @@ class TestExcelWriter:
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
         # Verify blocks are sorted alphabetically
         block_names = df[EXCEL_COLUMN_BLOCK_NAME].tolist()
@@ -447,6 +454,7 @@ class TestExcelWriter:
             'block_entities': {},
             'block_layer_pairs': {},
             'block_rotation_counts': {},
+            'block_scale_data': {},
             'layer_block_insertion_counts': {},
             'layer_entity_counts': {},
             'entity_type_counts': {},
@@ -456,11 +464,11 @@ class TestExcelWriter:
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(empty_data, output_path)
 
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
         # Should have headers but no data rows
         assert len(df) == 0
-        assert len(df.columns) == 6
+        assert len(df.columns) == 13
 
     def test_block_trimming_analysis_auto_filter(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test that Block Trimming Analysis sheet has auto-filter applied."""
@@ -468,39 +476,29 @@ class TestExcelWriter:
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
-        ws = wb[EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS]
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
 
         # Verify auto-filter is applied
         assert ws.auto_filter.ref is not None
         assert ws.auto_filter.ref != ''
 
-    def test_block_trimming_analysis_has_layer_column(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
-        """Test that Block Trimming Analysis sheet has block_layer_name column in position 2."""
+    def test_block_geometry_analysis_sorted_alphabetically(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that Block Geometry Analysis sheet is sorted alphabetically by block name."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
-        # Verify block_layer_name column exists
-        assert EXCEL_COLUMN_BLOCK_LAYER_NAME in df.columns
-
-        # Verify column order: block_name, block_layer_name, geometry columns
-        expected_columns = [
-            EXCEL_COLUMN_BLOCK_NAME,
-            EXCEL_COLUMN_BLOCK_LAYER_NAME,
-            EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
-            EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
-            EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
-            EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS
-        ]
-        assert list(df.columns) == expected_columns
+        # Verify blocks are sorted alphabetically
+        block_names = df[EXCEL_COLUMN_BLOCK_NAME].tolist()
+        assert block_names == sorted(block_names), "Block Geometry Analysis should be sorted alphabetically by block_name"
 
     def test_block_trimming_analysis_block_layer_pairs(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
         """Test that Block Trimming Analysis sheet contains block-layer pairs with geometry data."""
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
         # Verify number of rows matches block-layer pairs (4 pairs in sample data)
         assert len(df) == 4
@@ -522,29 +520,75 @@ class TestExcelWriter:
         assert valve_layer1[EXCEL_COLUMN_BLOCK_NATIVE_WIDTH] == 100.0
         assert valve_layer1[EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT] == 50.0
 
-    def test_block_trimming_analysis_column_widths(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
-        """Test that Block Trimming Analysis sheet has appropriate column widths for 6 columns."""
+    def test_geometry_sheet_red_highlighting(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that mirrored blocks (negative scales) have red fill highlighting."""
+        from openpyxl.styles import PatternFill
+
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
-        ws = wb[EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS]
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
 
-        # Verify column widths for 6-column layout
+        # Check rows for red highlighting based on sample data
+        # VALVE/Layer2 has (-1.0, 1.0) - should be red (row 3 or 4 depending on sort)
+        # PIPE/Layer1 has (1.0, -1.0) - should be red
+        # TAG/Layer1 has (-1.0, -1.0) - should be red
+        # VALVE/Layer1 has (1.0, 1.0) - should NOT be red
+
+        red_rows = 0
+        non_red_rows = 0
+
+        # Iterate through data rows (skip header at row 1)
+        for row_idx in range(2, ws.max_row + 1):
+            x_scale = ws.cell(row=row_idx, column=8).value  # Column H
+            y_scale = ws.cell(row=row_idx, column=9).value  # Column I
+            cell_fill = ws.cell(row=row_idx, column=1).fill  # Check first column fill
+
+            if (isinstance(x_scale, (int, float)) and x_scale < 0) or (isinstance(y_scale, (int, float)) and y_scale < 0):
+                # Should have red fill
+                assert cell_fill.start_color.rgb == 'FFFF0000', f"Row {row_idx} with scales ({x_scale}, {y_scale}) should have red fill"
+                red_rows += 1
+            else:
+                # Should NOT have red fill (no fill or different color)
+                assert cell_fill.start_color.rgb != 'FFFF0000', f"Row {row_idx} with scales ({x_scale}, {y_scale}) should NOT have red fill"
+                non_red_rows += 1
+
+        # Verify we have both red and non-red rows
+        assert red_rows == 3, f"Expected 3 mirrored blocks, got {red_rows}"
+        assert non_red_rows == 1, f"Expected 1 non-mirrored block, got {non_red_rows}"
+
+    def test_block_geometry_analysis_column_widths(self, temp_dir: str, sample_extraction_data: ExtractionResult) -> None:
+        """Test that Block Geometry Analysis sheet has appropriate column widths for 13 columns."""
+        output_path = os.path.join(temp_dir, 'test_drawing.dwg')
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Verify column widths for 13-column layout
         assert ws.column_dimensions['A'].width == 30  # block_name
         assert ws.column_dimensions['B'].width == 25  # block_layer_name
-        assert ws.column_dimensions['C'].width == 20  # block_native_width
-        assert ws.column_dimensions['D'].width == 20  # block_native_height
-        assert ws.column_dimensions['E'].width == 40  # block_vertical_segments
-        assert ws.column_dimensions['F'].width == 40  # block_horizontal_segments
+        assert ws.column_dimensions['C'].width == 12  # block_rotation_0
+        assert ws.column_dimensions['D'].width == 12  # block_rotation_90
+        assert ws.column_dimensions['E'].width == 12  # block_rotation_180
+        assert ws.column_dimensions['F'].width == 12  # block_rotation_270
+        assert ws.column_dimensions['G'].width == 12  # block_rotation_other
+        assert ws.column_dimensions['H'].width == 15  # block_scale_x
+        assert ws.column_dimensions['I'].width == 15  # block_scale_y
+        assert ws.column_dimensions['J'].width == 20  # block_native_width
+        assert ws.column_dimensions['K'].width == 20  # block_native_height
+        assert ws.column_dimensions['L'].width == 40  # block_vertical_segments
+        assert ws.column_dimensions['M'].width == 40  # block_horizontal_segments
 
-    def test_block_trimming_analysis_empty_data_with_layer_column(self, temp_dir: str) -> None:
-        """Test that empty block_layer_pairs creates sheet with 6 column headers."""
+    def test_block_geometry_analysis_empty_data(self, temp_dir: str) -> None:
+        """Test that empty block_layer_pairs creates sheet with all 13 column headers."""
         empty_data: ExtractionResult = {
             'block_counts': {},
             'block_entities': {},
             'block_layer_pairs': {},
             'block_rotation_counts': {},
+            'block_scale_data': {},
             'layer_block_insertion_counts': {},
             'layer_entity_counts': {},
             'entity_type_counts': {},
@@ -554,15 +598,22 @@ class TestExcelWriter:
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(empty_data, output_path)
 
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
         # Should have headers but no data rows
         assert len(df) == 0
 
-        # Verify 6 column headers including block_layer_name
+        # Verify all 13 column headers
         expected_columns = [
             EXCEL_COLUMN_BLOCK_NAME,
             EXCEL_COLUMN_BLOCK_LAYER_NAME,
+            EXCEL_COLUMN_BLOCK_ROTATION_0,
+            EXCEL_COLUMN_BLOCK_ROTATION_90,
+            EXCEL_COLUMN_BLOCK_ROTATION_180,
+            EXCEL_COLUMN_BLOCK_ROTATION_270,
+            EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
+            EXCEL_COLUMN_BLOCK_SCALE_X,
+            EXCEL_COLUMN_BLOCK_SCALE_Y,
             EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
             EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
             EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
@@ -581,6 +632,7 @@ class TestExcelWriter:
                 ('ANONYMOUS', 'Layer1'): 5  # This block has no geometry data
             },
             'block_rotation_counts': {},
+            'block_scale_data': {},
             'layer_block_insertion_counts': {'Layer1': 15},
             'layer_entity_counts': {'Layer1': 25},
             'entity_type_counts': {'INSERT': 15},
@@ -598,7 +650,7 @@ class TestExcelWriter:
         output_path = os.path.join(temp_dir, 'test_drawing.dwg')
         excel_path = write_excel(data_with_missing_geometry, output_path)
 
-        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_TRIMMING_ANALYSIS)
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
         # Should only have VALVE row, ANONYMOUS should be skipped
         assert len(df) == 1
