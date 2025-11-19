@@ -53,12 +53,8 @@ dwg-extractor/
 - **Run Application:** `bash scripts/start.sh`
 
 ### Testing
-- **Run All Tests:** `uv run pytest app/tests/` - Run complete test suite (unit, integration, GUI)
-- **Run Fast Tests:** `uv run pytest -m fast` - Run only fast introspection tests (no GUI rendering)
-- **Run GUI Tests:** `xvfb-run uv run pytest -m gui` - Run GUI rendering tests under Xvfb virtual display
-- **Run with Coverage:** `uv run pytest --cov=app app/tests/` - Run tests with coverage including GUI code
-
-**Note:** WSL2 users should use `-m fast` to skip GUI rendering tests due to X server limitations
+- **Run All Tests:** `uv run pytest app/tests/` - Run complete test suite
+- **Run with Coverage:** `uv run pytest --cov=app app/tests/` - Run tests with coverage
 
 ### Code Quality
 - **Type Check:** `uv run mypy app/`
