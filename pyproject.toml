@@ -24,6 +24,7 @@ build = [
     "pyinstaller>=6.0.0",
 ]
 dev = [
+    "pytest-mock>=3.15.1",
     "ruff>=0.14.5",
 ]
 
@@ -31,6 +32,14 @@ dev = [
 # Configure pytest to run from app/ directory to support relative test paths
 testpaths = ["app/tests"]
 pythonpath = ["app"]
+markers = [
+    "fast: Fast tests that don't require GUI rendering (introspection only)",
+    "gui: GUI rendering tests that require Xvfb display server",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = [".venv/*", "build/*", "dist/*"]
 
 [tool.mypy]
 python_version = "3.11"
