@@ -306,6 +306,9 @@ secrets.yml
 # (Add your own patterns below)
 #######################################################################
 
+# PyInstaller spec files (build configuration)
+*.spec
+
 # Example: Uploaded files
 # uploads/
 # media/
