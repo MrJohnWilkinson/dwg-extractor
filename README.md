@@ -30,9 +30,11 @@ Extracts block reference counts from AutoCAD drawings and generates Excel report
 dwg-extractor/
 ├── app/                          # Application code
 │   ├── core/                     # Business logic
-│   │   ├── extractor.py          # DWG/DXF extraction
-│   │   ├── excel_writer.py       # Excel generation
 │   │   ├── constants.py          # App constants
+│   │   ├── excel_formatting.py   # Excel formatting utilities
+│   │   ├── excel_writer.py       # Excel generation
+│   │   ├── extractor.py          # DWG/DXF extraction
+│   │   ├── geometry.py           # Geometric calculations
 │   │   └── logger.py             # Stdout logging
 │   ├── tests/                    # Test suite
 │   │   ├── core/                 # Unit tests
