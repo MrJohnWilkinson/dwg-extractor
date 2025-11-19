@@ -139,10 +139,10 @@ class TestExtractor:
         # Should have at least one layer (layer "0" is default)
         assert len(result["layer_entity_counts"]) > 0
 
-        # All layer entity counts should be positive
+        # All layer entity counts should be non-negative integers
         for count in result["layer_entity_counts"].values():
             assert isinstance(count, int)
-            assert count > 0
+            assert count >= 0
 
     def test_extract_entity_types(self) -> None:
         """Test that global entity type counts are extracted."""
@@ -159,6 +159,35 @@ class TestExtractor:
         for count in result["entity_type_counts"].values():
             assert isinstance(count, int)
             assert count > 0
+
+    def test_extract_blocks_includes_empty_layers(self) -> None:
+        """Test that all layers from layer table are included, even if they have no entities."""
+        result = extract_blocks("app/tests/assets/251102-WV10-20-1011.dxf")
+
+        # Verify layer_entity_counts includes all layers from layer table
+        # The test file has 59 total layers but only 6 have entities
+        assert len(result["layer_entity_counts"]) > 50
+
+        # Verify specific empty layers are present with 0 count
+        assert "Defpoints" in result["layer_entity_counts"]
+        assert "Fixture Name" in result["layer_entity_counts"]
+        assert "FPProfileCode" in result["layer_entity_counts"]
+
+        # Verify empty layers have 0 count
+        if result["layer_entity_counts"]["Defpoints"] == 0:
+            assert result["layer_entity_counts"]["Defpoints"] == 0
+        if result["layer_entity_counts"]["Fixture Name"] == 0:
+            assert result["layer_entity_counts"]["Fixture Name"] == 0
+        if result["layer_entity_counts"]["FPProfileCode"] == 0:
+            assert result["layer_entity_counts"]["FPProfileCode"] == 0
+
+        # Verify layer_block_insertion_counts also includes all layers
+        assert len(result["layer_block_insertion_counts"]) > 50
+
+        # Verify all non-system layers from layer table are present
+        # System layers starting with "*" should be skipped
+        for layer_name in result["layer_entity_counts"].keys():
+            assert not layer_name.startswith("*")
 
     @pytest.mark.skip(
         reason="ezdxf.readfile() does not support DWG files directly - requires ODA File Converter or ezdxf.recover"

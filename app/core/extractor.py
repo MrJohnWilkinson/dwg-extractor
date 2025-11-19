@@ -141,6 +141,17 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         entity_type_counts: dict[str, int] = {}
         block_trimming_data: dict[str, dict[str, Any]] = {}
 
+        # Initialize all layers from layer table with 0 counts
+        logger.info("Initializing layers from layer table...")
+        for layer in doc.layers:
+            layer_name = layer.dxf.name
+            # Skip system layers (modelspace/paperspace internal layers)
+            if layer_name.startswith("*"):
+                continue
+            layer_entity_counts[layer_name] = 0
+            layer_block_insertion_counts[layer_name] = 0
+        logger.info(f"Initialized {len(layer_entity_counts)} layers from layer table")
+
         # Extract block definition entity counts and geometry analysis
         logger.info("Analyzing block definitions...")
         for block_def in doc.blocks:
