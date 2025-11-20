@@ -61,6 +61,14 @@ EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: str = "block_native_height"
 EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS: str = "block_vertical_segments"
 EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS: str = "block_horizontal_segments"
 
+# Excel configuration - Fill colors for scale highlighting
+# Yellow: Warning color for scale variance with all positive values
+EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE: str = "FFFFFF00"
+# Orange: Moderate alert for consistent negative scales (mirroring/flipping)
+EXCEL_FILL_COLOR_SCALE_NEGATIVE: str = "FFA500FF"
+# Red: High priority alert for scale variance with negative values (mixed positive/negative)
+EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE: str = "FFFF0000"
+
 # UI messages
 MSG_SELECT_FILE: str = "Please select a DWG or DXF file"
 MSG_PROCESSING: str = "Processing..."

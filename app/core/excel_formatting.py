@@ -17,6 +17,9 @@ from openpyxl.styles import Alignment, PatternFill
 from openpyxl.workbook.workbook import Workbook
 
 from .constants import (
+    EXCEL_FILL_COLOR_SCALE_NEGATIVE,
+    EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
+    EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
@@ -152,7 +155,7 @@ def _format_entity_summary_sheet(wb: Workbook) -> None:
 
 
 def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
-    """Apply formatting to the Block Geometry Analysis sheet with yellow highlighting for scale variance."""
+    """Apply formatting to the Block Geometry Analysis sheet with three-tier scale highlighting."""
     ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
 
     # Apply auto-filter
@@ -183,11 +186,36 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     for cell in ws[1]:
         cell.alignment = alignment
 
-    # Apply yellow highlighting to rows with "VARIES" in scale columns
-    yellow_fill = PatternFill(
-        start_color="FFFFFF00", end_color="FFFFFF00", fill_type="solid"
+    # Define three-tier highlighting fills
+    red_fill = PatternFill(
+        start_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
+        end_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
+        fill_type="solid"
     )
-    highlighted_rows = 0
+    orange_fill = PatternFill(
+        start_color=EXCEL_FILL_COLOR_SCALE_NEGATIVE,
+        end_color=EXCEL_FILL_COLOR_SCALE_NEGATIVE,
+        fill_type="solid"
+    )
+    yellow_fill = PatternFill(
+        start_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
+        end_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
+        fill_type="solid"
+    )
+
+    # Track highlighting counts by color
+    red_highlighted = 0
+    orange_highlighted = 0
+    yellow_highlighted = 0
+
+    def _is_negative_number(value: object) -> bool:
+        """Check if cell value is a negative number."""
+        if value is None:
+            return False
+        if isinstance(value, (int, float)):
+            return value < 0
+        # String values like "VARIES" or "VARIES (-)" and other types are not negative numbers
+        return False
 
     # Iterate through data rows (skip header at row 1)
     for row_idx in range(2, ws.max_row + 1):
@@ -195,15 +223,34 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
         x_scale_cell = ws.cell(row=row_idx, column=8)  # Column H
         y_scale_cell = ws.cell(row=row_idx, column=9)  # Column I
 
-        # Check if either scale contains "VARIES"
         x_scale = x_scale_cell.value
         y_scale = y_scale_cell.value
 
-        if (x_scale == "VARIES") or (y_scale == "VARIES"):
-            # Apply yellow fill to entire row (columns A-M)
+        # Determine highlight priority based on both X and Y scale values
+        # Priority 1 (Red): "VARIES (-)" - variance with negative values
+        # Priority 2 (Orange): Single negative number (e.g., -1.0)
+        # Priority 3 (Yellow): "VARIES" - variance with all positive values
+        # Priority 4 (None): No highlighting for consistent positive values
+
+        fill_to_apply = None
+
+        # Check for Priority 1: "VARIES (-)"
+        if x_scale == "VARIES (-)" or y_scale == "VARIES (-)":
+            fill_to_apply = red_fill
+            red_highlighted += 1
+        # Check for Priority 2: Negative number
+        elif _is_negative_number(x_scale) or _is_negative_number(y_scale):
+            fill_to_apply = orange_fill
+            orange_highlighted += 1
+        # Check for Priority 3: "VARIES"
+        elif x_scale == "VARIES" or y_scale == "VARIES":
+            fill_to_apply = yellow_fill
+            yellow_highlighted += 1
+
+        # Apply fill to entire row (columns A-M) if highlighting is needed
+        if fill_to_apply is not None:
             for col_idx in range(1, 14):  # Columns A through M
-                ws.cell(row=row_idx, column=col_idx).fill = yellow_fill
-            highlighted_rows += 1
+                ws.cell(row=row_idx, column=col_idx).fill = fill_to_apply
 
     # Apply right-alignment to segment columns (L and M)
     right_alignment = Alignment(horizontal="right")
@@ -216,6 +263,9 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
         m_cell = ws.cell(row=row_idx, column=13)
         m_cell.alignment = right_alignment
 
+    total_highlighted = red_highlighted + orange_highlighted + yellow_highlighted
     logger.info(
-        f"Block Geometry Analysis sheet formatted with {highlighted_rows} rows highlighted for scale variance and segment columns right-aligned"
+        f"Block Geometry Analysis sheet formatted with {total_highlighted} rows highlighted "
+        f"(red: {red_highlighted}, orange: {orange_highlighted}, yellow: {yellow_highlighted}) "
+        f"and segment columns right-aligned"
     )

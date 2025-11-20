@@ -489,7 +489,7 @@ $SKPOLY
   9
 $TDCREATE
  40
-2461000.479664352
+2461000.4704166665
   9
 $TDUCREATE
  40
@@ -497,7 +497,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2461000.479664352
+2461000.4704166665
   9
 $TDUUPDATE
  40
@@ -549,7 +549,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-5C
+56
   9
 $SURFTAB1
  70
@@ -929,11 +929,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{37169A3B-F772-4DF1-85DF-E29C147EF298}
+{4CE9059C-8113-453D-A88D-E993D0F48EC2}
   9
 $VERSIONGUID
   2
-{E19D2420-2AF9-4B9A-95C3-9B0C52FF4E1D}
+{5DF5EA5E-5107-45BB-AB7D-229E63ECDDC2}
   9
 $EXTNAMES
 290
@@ -1323,9 +1323,9 @@ ISM
   0
 CLASS
   1
-ACDBPLACEHOLDER
+LAYOUT
   2
-AcDbPlaceHolder
+AcDbLayout
   3
 ObjectDBX Classes
  90
@@ -1339,9 +1339,9 @@ ObjectDBX Classes
   0
 CLASS
   1
-LAYOUT
+ACDBPLACEHOLDER
   2
-AcDbLayout
+AcDbPlaceHolder
   3
 ObjectDBX Classes
  90
@@ -1701,7 +1701,7 @@ ACAD
   0
 APPID
   5
-59
+53
 330
 3
 100
@@ -1715,7 +1715,7 @@ HATCHBACKGROUNDCOLOR
   0
 APPID
   5
-5A
+54
 330
 3
 100
@@ -1943,7 +1943,7 @@ AcDbSymbolTableRecord
 100
 AcDbBlockTableRecord
   2
-X_VARIES
+VARY_POSITIVE
 340
 0
  70
@@ -1963,7 +1963,7 @@ AcDbSymbolTableRecord
 100
 AcDbBlockTableRecord
   2
-Y_VARIES
+MIRROR_CONSISTENT
 340
 0
  70
@@ -1983,7 +1983,7 @@ AcDbSymbolTableRecord
 100
 AcDbBlockTableRecord
   2
-BOTH_VARY
+VARY_NEGATIVE
 340
 0
  70
@@ -2003,7 +2003,7 @@ AcDbSymbolTableRecord
 100
 AcDbBlockTableRecord
   2
-CONSISTENT
+NORMAL
 340
 0
  70
@@ -2109,7 +2109,7 @@ AcDbEntity
 100
 AcDbBlockBegin
   2
-X_VARIES
+VARY_POSITIVE
  70
 0
  10
@@ -2119,7 +2119,7 @@ X_VARIES
  30
 0.0
   3
-X_VARIES
+VARY_POSITIVE
   1
 
   0
@@ -2149,11 +2149,11 @@ AcDbPolyline
  10
 10.0
  20
-5.0
+10.0
  10
 0.0
  20
-5.0
+10.0
  10
 0.0
  20
@@ -2183,7 +2183,7 @@ AcDbEntity
 100
 AcDbBlockBegin
   2
-Y_VARIES
+MIRROR_CONSISTENT
  70
 0
  10
@@ -2193,7 +2193,7 @@ Y_VARIES
  30
 0.0
   3
-Y_VARIES
+MIRROR_CONSISTENT
   1
 
   0
@@ -2217,17 +2217,17 @@ AcDbPolyline
  20
 0.0
  10
-8.0
+10.0
  20
 0.0
  10
-8.0
+10.0
  20
-4.0
+10.0
  10
 0.0
  20
-4.0
+10.0
  10
 0.0
  20
@@ -2257,7 +2257,7 @@ AcDbEntity
 100
 AcDbBlockBegin
   2
-BOTH_VARY
+VARY_NEGATIVE
  70
 0
  10
@@ -2267,7 +2267,7 @@ BOTH_VARY
  30
 0.0
   3
-BOTH_VARY
+VARY_NEGATIVE
   1
 
   0
@@ -2291,17 +2291,17 @@ AcDbPolyline
  20
 0.0
  10
-6.0
+10.0
  20
 0.0
  10
-6.0
+10.0
  20
-6.0
+10.0
  10
 0.0
  20
-6.0
+10.0
  10
 0.0
  20
@@ -2331,7 +2331,7 @@ AcDbEntity
 100
 AcDbBlockBegin
   2
-CONSISTENT
+NORMAL
  70
 0
  10
@@ -2341,7 +2341,7 @@ CONSISTENT
  30
 0.0
   3
-CONSISTENT
+NORMAL
   1
 
   0
@@ -2365,17 +2365,17 @@ AcDbPolyline
  20
 0.0
  10
-5.0
+10.0
  20
 0.0
  10
-5.0
+10.0
  20
-3.0
+10.0
  10
 0.0
  20
-3.0
+10.0
  10
 0.0
  20
@@ -2407,11 +2407,11 @@ INSERT
 100
 AcDbEntity
   8
-LAYER_A
+0
 100
 AcDbBlockReference
   2
-X_VARIES
+VARY_POSITIVE
  10
 0.0
  20
@@ -2427,11 +2427,11 @@ INSERT
 100
 AcDbEntity
   8
-LAYER_A
+0
 100
 AcDbBlockReference
   2
-X_VARIES
+VARY_POSITIVE
  10
 20.0
  20
@@ -2449,19 +2449,19 @@ INSERT
 100
 AcDbEntity
   8
-LAYER_B
+0
 100
 AcDbBlockReference
   2
-X_VARIES
+MIRROR_CONSISTENT
  10
-40.0
- 20
 0.0
+ 20
+20.0
  30
 0.0
  41
-1.5
+-1.0
   0
 INSERT
   5
@@ -2471,17 +2471,19 @@ INSERT
 100
 AcDbEntity
   8
-LAYER_A
+0
 100
 AcDbBlockReference
   2
-Y_VARIES
+MIRROR_CONSISTENT
  10
-0.0
+20.0
  20
 20.0
  30
 0.0
+ 41
+-1.0
   0
 INSERT
   5
@@ -2491,19 +2493,19 @@ INSERT
 100
 AcDbEntity
   8
-LAYER_A
+0
 100
 AcDbBlockReference
   2
-Y_VARIES
+MIRROR_CONSISTENT
  10
-20.0
+40.0
  20
 20.0
  30
 0.0
- 42
-2.0
+ 41
+-1.0
   0
 INSERT
   5
@@ -2513,19 +2515,17 @@ INSERT
 100
 AcDbEntity
   8
-LAYER_B
+0
 100
 AcDbBlockReference
   2
-Y_VARIES
+VARY_NEGATIVE
  10
-40.0
+0.0
  20
-20.0
+40.0
  30
 0.0
- 42
-0.5
   0
 INSERT
   5
@@ -2535,17 +2535,19 @@ INSERT
 100
 AcDbEntity
   8
-LAYER_A
+0
 100
 AcDbBlockReference
   2
-BOTH_VARY
+VARY_NEGATIVE
  10
-0.0
+20.0
  20
 40.0
  30
 0.0
+ 41
+-1.0
   0
 INSERT
   5
@@ -2555,21 +2557,17 @@ INSERT
 100
 AcDbEntity
   8
-LAYER_A
+0
 100
 AcDbBlockReference
   2
-BOTH_VARY
+NORMAL
  10
-20.0
+0.0
  20
-40.0
+60.0
  30
 0.0
- 41
-2.0
- 42
-2.0
   0
 INSERT
   5
@@ -2579,21 +2577,17 @@ INSERT
 100
 AcDbEntity
   8
-LAYER_B
+0
 100
 AcDbBlockReference
   2
-BOTH_VARY
+NORMAL
  10
-40.0
+20.0
  20
-40.0
+60.0
  30
 0.0
- 41
--1.0
- 42
-1.5
   0
 INSERT
   5
@@ -2603,95 +2597,17 @@ INSERT
 100
 AcDbEntity
   8
-LAYER_A
+0
 100
 AcDbBlockReference
   2
-CONSISTENT
- 10
-0.0
- 20
-60.0
- 30
-0.0
- 41
-1.5
- 42
-1.5
-  0
-INSERT
-  5
-53
-330
-17
-100
-AcDbEntity
-  8
-LAYER_A
-100
-AcDbBlockReference
-  2
-CONSISTENT
- 10
-20.0
- 20
-60.0
- 30
-0.0
- 41
-1.5
- 42
-1.5
-  0
-INSERT
-  5
-55
-330
-17
-100
-AcDbEntity
-  8
-LAYER_B
-100
-AcDbBlockReference
-  2
-CONSISTENT
+NORMAL
  10
 40.0
  20
 60.0
  30
 0.0
- 41
-1.5
- 42
-1.5
-  0
-INSERT
-  5
-57
-330
-17
-100
-AcDbEntity
-  8
-LAYER_B
-100
-AcDbBlockReference
-  2
-CONSISTENT
- 10
-60.0
- 20
-60.0
- 30
-0.0
- 41
-1.5
- 42
-1.5
- 50
-90.0
   0
 ENDSEC
   0
@@ -3683,7 +3599,7 @@ CREATED_BY_EZDXF
   3
 WRITTEN_BY_EZDXF
 350
-5B
+55
   0
 DICTIONARYVAR
   5
@@ -3695,11 +3611,11 @@ DictionaryVariables
 280
 0
   1
-1.4.3 @ 2025-11-20T01:30:43.070136+00:00
+1.4.3 @ 2025-11-20T01:17:24.393194+00:00
   0
 DICTIONARYVAR
   5
-5B
+55
 330
 2D
 100
@@ -3707,7 +3623,7 @@ DictionaryVariables
 280
 0
   1
-1.4.3 @ 2025-11-20T01:30:43.072559+00:00
+1.4.3 @ 2025-11-20T01:17:24.395298+00:00
   0
 ENDSEC
   0
