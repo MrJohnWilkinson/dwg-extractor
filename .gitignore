@@ -309,6 +309,9 @@ secrets.yml
 # PyInstaller spec files (build configuration)
 *.spec
 
+# Sensitive/proprietary CAD sample files directory
+app/tests/assets/samples/
+
 # Example: Uploaded files
 # uploads/
 # media/
