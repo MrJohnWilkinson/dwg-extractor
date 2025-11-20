@@ -309,7 +309,7 @@ secrets.yml
 # PyInstaller spec files (build configuration)
 *.spec
 
-# Potentially sensitive/proprietary CAD sample files directory
+# Sensitive/proprietary CAD sample files directory
 app/tests/assets/samples/
 
 # Proprietary/client CAD files

@@ -162,10 +162,10 @@ class TestExtractor:
 
     def test_extract_blocks_includes_empty_layers(self) -> None:
         """Test that all layers from layer table are included, even if they have no entities."""
-        result = extract_blocks("app/tests/assets/251102-WV10-20-1011.dxf")
+        result = extract_blocks("app/tests/assets/empty_layers_test.dxf")
 
         # Verify layer_entity_counts includes all layers from layer table
-        # The test file has 59 total layers but only 6 have entities
+        # The test file has 61 total layers but only 6 have entities
         assert len(result["layer_entity_counts"]) > 50
 
         # Verify specific empty layers are present with 0 count
