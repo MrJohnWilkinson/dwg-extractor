@@ -29,8 +29,7 @@ def create_comprehensive_scale_test_compact() -> None:
     block = doc.blocks.new(name="TEST_RECT_1000x2000")
     # Rectangle from (0,0) top-left to (1000,-2000) bottom-right
     block.add_lwpolyline(
-        [(0, 0), (1000, 0), (1000, -2000), (0, -2000), (0, 0)],
-        close=True
+        [(0, 0), (1000, 0), (1000, -2000), (0, -2000), (0, 0)], close=True
     )
 
     # Grid layout configuration
@@ -68,7 +67,9 @@ def create_comprehensive_scale_test_compact() -> None:
     # margin + grid + spacing + legend + margin
     legend_spacing = 1500  # Space between grid and legend
     estimated_legend_width = 24000  # Estimated width for text at 700 height
-    foundation_width = margin + grid_width + legend_spacing + estimated_legend_width + margin
+    foundation_width = (
+        margin + grid_width + legend_spacing + estimated_legend_width + margin
+    )
     foundation_height = margin + grid_height + margin
 
     # Draw foundation rectangle starting at (0,0) on "walls" layer
@@ -78,10 +79,10 @@ def create_comprehensive_scale_test_compact() -> None:
             (foundation_width, 0),
             (foundation_width, foundation_height),
             (0, foundation_height),
-            (0, 0)
+            (0, 0),
         ],
         close=True,
-        dxfattribs={"layer": "walls"}
+        dxfattribs={"layer": "walls"},
     )
 
     # Draw grid cell borders on "walls" layer (with margin offset)
@@ -96,32 +97,32 @@ def create_comprehensive_scale_test_compact() -> None:
                     (cell_x + x_spacing, cell_y),
                     (cell_x + x_spacing, cell_y + y_spacing),
                     (cell_x, cell_y + y_spacing),
-                    (cell_x, cell_y)
+                    (cell_x, cell_y),
                 ],
                 close=True,
-                dxfattribs={"layer": "walls"}
+                dxfattribs={"layer": "walls"},
             )
 
     # Draw horizontal grid lines on "walls" layer - using lwpolyline (with margin offset)
     for row in range(num_rows + 1):
         y = margin + row * y_spacing
         msp.add_lwpolyline(
-            [(margin, y), (margin + grid_width, y)],
-            dxfattribs={"layer": "walls"}
+            [(margin, y), (margin + grid_width, y)], dxfattribs={"layer": "walls"}
         )
 
     # Draw vertical grid lines on "walls" layer - using lwpolyline (with margin offset)
     for col in range(num_columns + 1):
         x = margin + col * x_spacing
         msp.add_lwpolyline(
-            [(x, margin), (x, margin + grid_height)],
-            dxfattribs={"layer": "walls"}
+            [(x, margin), (x, margin + grid_height)], dxfattribs={"layer": "walls"}
         )
 
     # Insert block instances with different scales and collect descriptions by row
     col = 0
     row = 0
-    row_descriptions: dict[int, dict[str, str]] = {}  # Store descriptions by row: {row: {"left": desc, "right": desc}}
+    row_descriptions: dict[
+        int, dict[str, str]
+    ] = {}  # Store descriptions by row: {row: {"left": desc, "right": desc}}
 
     for description, x_scale, y_scale, z_scale in test_cases:
         # Calculate cell's top-left corner (with margin offset)
@@ -141,7 +142,7 @@ def create_comprehensive_scale_test_compact() -> None:
                 "xscale": x_scale,
                 "yscale": y_scale,
                 "zscale": z_scale,
-            }
+            },
         )
 
         # Store description for legend
@@ -156,7 +157,9 @@ def create_comprehensive_scale_test_compact() -> None:
             row += 1
 
     # Add legend text to the right of the grid
-    legend_x = margin + grid_width + legend_spacing  # Positioned with margin and spacing
+    legend_x = (
+        margin + grid_width + legend_spacing
+    )  # Positioned with margin and spacing
     text_height = 700  # Reduced from 1000
     line_spacing = 1000  # Reduced from 1500, spacing between Left and Right labels
 
@@ -172,7 +175,7 @@ def create_comprehensive_scale_test_compact() -> None:
                 dxfattribs={
                     "insert": (legend_x, row_y),
                     "height": text_height,
-                }
+                },
             )
 
         # Add "Right:" label below Left
@@ -182,7 +185,7 @@ def create_comprehensive_scale_test_compact() -> None:
                 dxfattribs={
                     "insert": (legend_x, row_y - line_spacing),
                     "height": text_height,
-                }
+                },
             )
 
     # Save the DXF file

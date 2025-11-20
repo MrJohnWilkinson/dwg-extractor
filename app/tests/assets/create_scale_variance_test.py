@@ -34,25 +34,77 @@ block_consistent = doc.blocks.new(name="CONSISTENT")
 block_consistent.add_lwpolyline([(0, 0), (5, 0), (5, 3), (0, 3), (0, 0)])
 
 # Insert X_VARIES block with varying X scales (Y consistent at 1.0)
-msp.add_blockref("X_VARIES", (0, 0), dxfattribs={"layer": "LAYER_A", "xscale": 1.0, "yscale": 1.0, "rotation": 0})
-msp.add_blockref("X_VARIES", (20, 0), dxfattribs={"layer": "LAYER_A", "xscale": 2.0, "yscale": 1.0, "rotation": 0})
-msp.add_blockref("X_VARIES", (40, 0), dxfattribs={"layer": "LAYER_B", "xscale": 1.5, "yscale": 1.0, "rotation": 0})
+msp.add_blockref(
+    "X_VARIES",
+    (0, 0),
+    dxfattribs={"layer": "LAYER_A", "xscale": 1.0, "yscale": 1.0, "rotation": 0},
+)
+msp.add_blockref(
+    "X_VARIES",
+    (20, 0),
+    dxfattribs={"layer": "LAYER_A", "xscale": 2.0, "yscale": 1.0, "rotation": 0},
+)
+msp.add_blockref(
+    "X_VARIES",
+    (40, 0),
+    dxfattribs={"layer": "LAYER_B", "xscale": 1.5, "yscale": 1.0, "rotation": 0},
+)
 
 # Insert Y_VARIES block with varying Y scales (X consistent at 1.0)
-msp.add_blockref("Y_VARIES", (0, 20), dxfattribs={"layer": "LAYER_A", "xscale": 1.0, "yscale": 1.0, "rotation": 0})
-msp.add_blockref("Y_VARIES", (20, 20), dxfattribs={"layer": "LAYER_A", "xscale": 1.0, "yscale": 2.0, "rotation": 0})
-msp.add_blockref("Y_VARIES", (40, 20), dxfattribs={"layer": "LAYER_B", "xscale": 1.0, "yscale": 0.5, "rotation": 0})
+msp.add_blockref(
+    "Y_VARIES",
+    (0, 20),
+    dxfattribs={"layer": "LAYER_A", "xscale": 1.0, "yscale": 1.0, "rotation": 0},
+)
+msp.add_blockref(
+    "Y_VARIES",
+    (20, 20),
+    dxfattribs={"layer": "LAYER_A", "xscale": 1.0, "yscale": 2.0, "rotation": 0},
+)
+msp.add_blockref(
+    "Y_VARIES",
+    (40, 20),
+    dxfattribs={"layer": "LAYER_B", "xscale": 1.0, "yscale": 0.5, "rotation": 0},
+)
 
 # Insert BOTH_VARY block with varying X and Y scales
-msp.add_blockref("BOTH_VARY", (0, 40), dxfattribs={"layer": "LAYER_A", "xscale": 1.0, "yscale": 1.0, "rotation": 0})
-msp.add_blockref("BOTH_VARY", (20, 40), dxfattribs={"layer": "LAYER_A", "xscale": 2.0, "yscale": 2.0, "rotation": 0})
-msp.add_blockref("BOTH_VARY", (40, 40), dxfattribs={"layer": "LAYER_B", "xscale": -1.0, "yscale": 1.5, "rotation": 0})
+msp.add_blockref(
+    "BOTH_VARY",
+    (0, 40),
+    dxfattribs={"layer": "LAYER_A", "xscale": 1.0, "yscale": 1.0, "rotation": 0},
+)
+msp.add_blockref(
+    "BOTH_VARY",
+    (20, 40),
+    dxfattribs={"layer": "LAYER_A", "xscale": 2.0, "yscale": 2.0, "rotation": 0},
+)
+msp.add_blockref(
+    "BOTH_VARY",
+    (40, 40),
+    dxfattribs={"layer": "LAYER_B", "xscale": -1.0, "yscale": 1.5, "rotation": 0},
+)
 
 # Insert CONSISTENT block with consistent scales across multiple insertions
-msp.add_blockref("CONSISTENT", (0, 60), dxfattribs={"layer": "LAYER_A", "xscale": 1.5, "yscale": 1.5, "rotation": 0})
-msp.add_blockref("CONSISTENT", (20, 60), dxfattribs={"layer": "LAYER_A", "xscale": 1.5, "yscale": 1.5, "rotation": 0})
-msp.add_blockref("CONSISTENT", (40, 60), dxfattribs={"layer": "LAYER_B", "xscale": 1.5, "yscale": 1.5, "rotation": 0})
-msp.add_blockref("CONSISTENT", (60, 60), dxfattribs={"layer": "LAYER_B", "xscale": 1.5, "yscale": 1.5, "rotation": 90})
+msp.add_blockref(
+    "CONSISTENT",
+    (0, 60),
+    dxfattribs={"layer": "LAYER_A", "xscale": 1.5, "yscale": 1.5, "rotation": 0},
+)
+msp.add_blockref(
+    "CONSISTENT",
+    (20, 60),
+    dxfattribs={"layer": "LAYER_A", "xscale": 1.5, "yscale": 1.5, "rotation": 0},
+)
+msp.add_blockref(
+    "CONSISTENT",
+    (40, 60),
+    dxfattribs={"layer": "LAYER_B", "xscale": 1.5, "yscale": 1.5, "rotation": 0},
+)
+msp.add_blockref(
+    "CONSISTENT",
+    (60, 60),
+    dxfattribs={"layer": "LAYER_B", "xscale": 1.5, "yscale": 1.5, "rotation": 90},
+)
 
 # Save DXF file
 doc.saveas("scale_variance_test.dxf")

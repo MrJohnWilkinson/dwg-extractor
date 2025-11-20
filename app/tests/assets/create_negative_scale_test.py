@@ -25,44 +25,48 @@ def create_negative_scale_test_dxf() -> None:
     # Create block definitions (simple rectangles)
     # Block 1: VARY_POSITIVE - will be inserted with varying positive scales
     block_vary_positive = doc.blocks.new(name="VARY_POSITIVE")
-    block_vary_positive.add_lwpolyline(
-        [(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)]
-    )
+    block_vary_positive.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)])
 
     # Block 2: MIRROR_CONSISTENT - will be inserted with consistent negative scale
     block_mirror = doc.blocks.new(name="MIRROR_CONSISTENT")
-    block_mirror.add_lwpolyline(
-        [(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)]
-    )
+    block_mirror.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)])
 
     # Block 3: VARY_NEGATIVE - will be inserted with mixed positive/negative scales
     block_vary_negative = doc.blocks.new(name="VARY_NEGATIVE")
-    block_vary_negative.add_lwpolyline(
-        [(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)]
-    )
+    block_vary_negative.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)])
 
     # Block 4: NORMAL - will be inserted with consistent positive scale
     block_normal = doc.blocks.new(name="NORMAL")
-    block_normal.add_lwpolyline(
-        [(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)]
-    )
+    block_normal.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10), (0, 0)])
 
     # Insert blocks with different scale scenarios
     # Scenario 1: VARY_POSITIVE - Yellow highlighting, "VARIES" text
     # Insert at (1.0, 1.0) and (2.0, 1.0) to create X-scale variance
     msp.add_blockref("VARY_POSITIVE", (0, 0), dxfattribs={"xscale": 1.0, "yscale": 1.0})
-    msp.add_blockref("VARY_POSITIVE", (20, 0), dxfattribs={"xscale": 2.0, "yscale": 1.0})
+    msp.add_blockref(
+        "VARY_POSITIVE", (20, 0), dxfattribs={"xscale": 2.0, "yscale": 1.0}
+    )
 
     # Scenario 2: MIRROR_CONSISTENT - Orange highlighting, -1.0 numeric
     # Insert at (-1.0, 1.0) three times consistently
-    msp.add_blockref("MIRROR_CONSISTENT", (0, 20), dxfattribs={"xscale": -1.0, "yscale": 1.0})
-    msp.add_blockref("MIRROR_CONSISTENT", (20, 20), dxfattribs={"xscale": -1.0, "yscale": 1.0})
-    msp.add_blockref("MIRROR_CONSISTENT", (40, 20), dxfattribs={"xscale": -1.0, "yscale": 1.0})
+    msp.add_blockref(
+        "MIRROR_CONSISTENT", (0, 20), dxfattribs={"xscale": -1.0, "yscale": 1.0}
+    )
+    msp.add_blockref(
+        "MIRROR_CONSISTENT", (20, 20), dxfattribs={"xscale": -1.0, "yscale": 1.0}
+    )
+    msp.add_blockref(
+        "MIRROR_CONSISTENT", (40, 20), dxfattribs={"xscale": -1.0, "yscale": 1.0}
+    )
 
     # Scenario 3: VARY_NEGATIVE - Red highlighting, "VARIES (-)" text
     # Insert at (1.0, 1.0) and (-1.0, 1.0) to create variance with negatives
-    msp.add_blockref("VARY_NEGATIVE", (0, 40), dxfattribs={"xscale": 1.0, "yscale": 1.0})
-    msp.add_blockref("VARY_NEGATIVE", (20, 40), dxfattribs={"xscale": -1.0, "yscale": 1.0})
+    msp.add_blockref(
+        "VARY_NEGATIVE", (0, 40), dxfattribs={"xscale": 1.0, "yscale": 1.0}
+    )
+    msp.add_blockref(
+        "VARY_NEGATIVE", (20, 40), dxfattribs={"xscale": -1.0, "yscale": 1.0}
+    )
 
     # Scenario 4: NORMAL - No highlighting, 1.0 numeric
     # Insert at (1.0, 1.0) three times consistently

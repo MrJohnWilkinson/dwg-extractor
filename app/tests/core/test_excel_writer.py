@@ -99,6 +99,7 @@ class TestExcelWriter:
             "layer_annotation_counts": {"Layer1": 5, "Layer2": 2},
             "annotation_data": {},
             "entity_type_counts": {"INSERT": 18, "LINE": 15, "CIRCLE": 8},
+            "color_analysis_data": [],
             "block_trimming_data": {
                 "VALVE": {
                     "native_width": 100.0,
@@ -124,7 +125,9 @@ class TestExcelWriter:
     def test_write_excel_four_sheets(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that five sheets are created with correct names."""
+        """Test that six sheets are created with correct names."""
+        from core.constants import EXCEL_SHEET_COLOR_ANALYSIS
+
         output_path = os.path.join(temp_dir, "test_drawing.dwg")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -138,7 +141,8 @@ class TestExcelWriter:
         assert EXCEL_SHEET_ENTITY_SUMMARY in wb.sheetnames
         assert EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_ANNOTATIONS_ANALYSIS in wb.sheetnames
-        assert len(wb.sheetnames) == 5
+        assert EXCEL_SHEET_COLOR_ANALYSIS in wb.sheetnames
+        assert len(wb.sheetnames) == 6
 
     def test_block_analysis_sheet_simplified(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -230,14 +234,24 @@ class TestExcelWriter:
 
         # Layer Analysis: sorted by layer_entity_count descending
         df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
-        assert df_layers.iloc[0][format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT)] == 25  # Layer1
-        assert df_layers.iloc[1][format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT)] == 10  # Layer2
+        assert (
+            df_layers.iloc[0][format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT)] == 25
+        )  # Layer1
+        assert (
+            df_layers.iloc[1][format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT)] == 10
+        )  # Layer2
 
         # Entity Summary: sorted by entity_type_count descending
         df_entities = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ENTITY_SUMMARY)
-        assert df_entities.iloc[0][format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT)] == 18  # INSERT
-        assert df_entities.iloc[1][format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT)] == 15  # LINE
-        assert df_entities.iloc[2][format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT)] == 8  # CIRCLE
+        assert (
+            df_entities.iloc[0][format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT)] == 18
+        )  # INSERT
+        assert (
+            df_entities.iloc[1][format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT)] == 15
+        )  # LINE
+        assert (
+            df_entities.iloc[2][format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT)] == 8
+        )  # CIRCLE
 
     def test_all_sheets_autofilter(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -309,6 +323,7 @@ class TestExcelWriter:
             "layer_annotation_counts": {},
             "annotation_data": {},
             "entity_type_counts": {},
+            "color_analysis_data": [],
             "block_trimming_data": {},
         }
         output_path = os.path.join(temp_dir, "test_drawing.dwg")
@@ -478,12 +493,16 @@ class TestExcelWriter:
         valve_row = df[df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "VALVE"].iloc[0]
 
         # Verify segments are comma-separated strings
-        vertical_segments = valve_row[format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS)]
+        vertical_segments = valve_row[
+            format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS)
+        ]
         assert isinstance(vertical_segments, str)
         assert "," in vertical_segments
         assert "10, 80, 10" == vertical_segments
 
-        horizontal_segments = valve_row[format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS)]
+        horizontal_segments = valve_row[
+            format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS)
+        ]
         assert isinstance(horizontal_segments, str)
         assert "," in horizontal_segments
         assert "5, 40, 5" == horizontal_segments
@@ -516,6 +535,7 @@ class TestExcelWriter:
             "layer_annotation_counts": {},
             "annotation_data": {},
             "entity_type_counts": {},
+            "color_analysis_data": [],
             "block_trimming_data": {},
         }
 
@@ -634,11 +654,16 @@ class TestExcelWriter:
 
             if x_scale == "VARIES (-)" or y_scale == "VARIES (-)":
                 # Should have red fill
-                assert cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE, (
+                assert (
+                    cell_fill.start_color.rgb
+                    == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE
+                ), (
                     f"Row {row_idx} with scales ({x_scale}, {y_scale}) should have red fill for 'VARIES (-)'"
                 )
                 red_rows += 1
-            elif (isinstance(x_scale, (int, float)) and x_scale < 0) or (isinstance(y_scale, (int, float)) and y_scale < 0):
+            elif (isinstance(x_scale, (int, float)) and x_scale < 0) or (
+                isinstance(y_scale, (int, float)) and y_scale < 0
+            ):
                 # Should have orange fill for negative numbers
                 assert cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_NEGATIVE, (
                     f"Row {row_idx} with scales ({x_scale}, {y_scale}) should have orange fill for negative number"
@@ -647,9 +672,13 @@ class TestExcelWriter:
 
         # Verify we have the expected highlighting
         # VALVE appears on 2 layers with variance including negatives - both rows should be red
-        assert red_rows == 2, f"Expected 2 rows with 'VARIES (-)' (VALVE on both layers), got {red_rows}"
+        assert red_rows == 2, (
+            f"Expected 2 rows with 'VARIES (-)' (VALVE on both layers), got {red_rows}"
+        )
         # PIPE and TAG have consistent negative scales - both should be orange
-        assert orange_rows == 2, f"Expected 2 rows with negative numbers (PIPE, TAG), got {orange_rows}"
+        assert orange_rows == 2, (
+            f"Expected 2 rows with negative numbers (PIPE, TAG), got {orange_rows}"
+        )
 
     def test_block_geometry_analysis_column_widths(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -691,6 +720,7 @@ class TestExcelWriter:
             "layer_annotation_counts": {},
             "annotation_data": {},
             "entity_type_counts": {},
+            "color_analysis_data": [],
             "block_trimming_data": {},
         }
 
@@ -739,6 +769,7 @@ class TestExcelWriter:
             "layer_annotation_counts": {"Layer1": 0},
             "annotation_data": {},
             "entity_type_counts": {"INSERT": 15},
+            "color_analysis_data": [],
             "block_trimming_data": {
                 "VALVE": {
                     "native_width": 100.0,
@@ -898,9 +929,14 @@ class TestExcelWriter:
             cell_fill = ws.cell(row=row_idx, column=1).fill
 
             if x_scale == "VARIES (-)" or y_scale == "VARIES (-)":
-                if cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE:
+                if (
+                    cell_fill.start_color.rgb
+                    == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE
+                ):
                     has_red_highlight = True
-            elif (isinstance(x_scale, (int, float)) and x_scale < 0) or (isinstance(y_scale, (int, float)) and y_scale < 0):
+            elif (isinstance(x_scale, (int, float)) and x_scale < 0) or (
+                isinstance(y_scale, (int, float)) and y_scale < 0
+            ):
                 if cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_NEGATIVE:
                     has_orange_highlight = True
 
@@ -1028,7 +1064,9 @@ class TestExcelWriter:
             assert row[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)] == "VARIES (-)"
             assert row[format_header(EXCEL_COLUMN_BLOCK_SCALE_Y)] == "VARIES"
 
-    def test_scale_variance_display_numeric_when_consistent(self, temp_dir: str) -> None:
+    def test_scale_variance_display_numeric_when_consistent(
+        self, temp_dir: str
+    ) -> None:
         """Test that numeric values are displayed when scales are consistent."""
         from core.extractor import extract_blocks
 
@@ -1067,7 +1105,9 @@ class TestExcelWriter:
 
         # Should have yellow highlighting for X_VARIES, Y_VARIES, and BOTH_VARY rows
         # Each appears on 2-3 layers, but we expect at least 3 rows highlighted
-        assert yellow_rows >= 3, f"Expected at least 3 rows with yellow highlighting, got {yellow_rows}"
+        assert yellow_rows >= 3, (
+            f"Expected at least 3 rows with yellow highlighting, got {yellow_rows}"
+        )
 
     def test_no_variance_no_highlighting(self, temp_dir: str) -> None:
         """Test that rows without VARIES have no yellow highlighting."""
@@ -1085,7 +1125,10 @@ class TestExcelWriter:
             block_name = ws.cell(row=row_idx, column=1).value
             if block_name == "CONSISTENT":
                 cell_fill = ws.cell(row=row_idx, column=1).fill
-                assert cell_fill.start_color.rgb != EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE, (
+                assert (
+                    cell_fill.start_color.rgb
+                    != EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
+                ), (
                     f"CONSISTENT block at row {row_idx} should NOT have yellow highlighting"
                 )
 
@@ -1096,7 +1139,10 @@ class TestExcelWriter:
             result: ExtractionResult = {
                 "block_counts": {"BLOCK_A": 3, "BLOCK_B": 2},
                 "block_entities": {"BLOCK_A": 5, "BLOCK_B": 3},
-                "block_layer_pairs": {("BLOCK_A", "LAYER_1"): 3, ("BLOCK_B", "LAYER_1"): 2},
+                "block_layer_pairs": {
+                    ("BLOCK_A", "LAYER_1"): 3,
+                    ("BLOCK_B", "LAYER_1"): 2,
+                },
                 "block_rotation_counts": {
                     ("BLOCK_A", "LAYER_1", "0"): 3,
                     ("BLOCK_B", "LAYER_1", "0"): 2,
@@ -1110,8 +1156,9 @@ class TestExcelWriter:
                 "layer_entity_counts": {"LAYER_1": 10},
                 "layer_unique_color_counts": {"LAYER_1": 0},
                 "layer_annotation_counts": {"LAYER_1": 0},
-            "annotation_data": {},
-            "entity_type_counts": {"INSERT": 5, "LINE": 10},
+                "annotation_data": {},
+                "entity_type_counts": {"INSERT": 5, "LINE": 10},
+                "color_analysis_data": [],
                 "block_trimming_data": {
                     "BLOCK_A": {
                         "native_width": 10.0,
@@ -1208,6 +1255,7 @@ class TestExcelWriter:
             "layer_annotation_counts": {},
             "annotation_data": {},
             "entity_type_counts": {},
+            "color_analysis_data": [],
             "block_trimming_data": {},
         }
         output_path = os.path.join(temp_dir, "test_drawing.dwg")
@@ -1252,43 +1300,43 @@ class TestNegativeScaleDetection:
         from core.excel_writer import _has_negative_scale_in_set
 
         scale_set = {(1.0, 1.0), (-1.0, 1.0)}
-        assert _has_negative_scale_in_set(scale_set, 'x') is True
+        assert _has_negative_scale_in_set(scale_set, "x") is True
 
     def test_has_negative_scale_x_without_negatives(self) -> None:
         """Test returns False for all positive X scales."""
         from core.excel_writer import _has_negative_scale_in_set
 
         scale_set = {(1.0, 1.0), (2.0, 1.0)}
-        assert _has_negative_scale_in_set(scale_set, 'x') is False
+        assert _has_negative_scale_in_set(scale_set, "x") is False
 
     def test_has_negative_scale_y_with_negatives(self) -> None:
         """Test detection of negative Y scales."""
         from core.excel_writer import _has_negative_scale_in_set
 
         scale_set = {(1.0, -1.0), (1.0, -2.0)}
-        assert _has_negative_scale_in_set(scale_set, 'y') is True
+        assert _has_negative_scale_in_set(scale_set, "y") is True
 
     def test_has_negative_scale_y_without_negatives(self) -> None:
         """Test returns False for all positive Y scales."""
         from core.excel_writer import _has_negative_scale_in_set
 
         scale_set = {(1.0, 1.0), (1.0, 2.0)}
-        assert _has_negative_scale_in_set(scale_set, 'y') is False
+        assert _has_negative_scale_in_set(scale_set, "y") is False
 
     def test_has_negative_scale_mixed_values(self) -> None:
         """Test set with both positive and negative values."""
         from core.excel_writer import _has_negative_scale_in_set
 
         scale_set = {(1.0, 1.0), (-1.0, 1.0), (2.0, -2.0)}
-        assert _has_negative_scale_in_set(scale_set, 'x') is True
-        assert _has_negative_scale_in_set(scale_set, 'y') is True
+        assert _has_negative_scale_in_set(scale_set, "x") is True
+        assert _has_negative_scale_in_set(scale_set, "y") is True
 
     def test_has_negative_scale_empty_set(self) -> None:
         """Test edge case with empty set raises ValueError."""
         from core.excel_writer import _has_negative_scale_in_set
 
         with pytest.raises(ValueError, match="scale_set cannot be empty"):
-            _has_negative_scale_in_set(set(), 'x')
+            _has_negative_scale_in_set(set(), "x")
 
     def test_has_negative_scale_invalid_axis(self) -> None:
         """Test error handling for invalid axis parameter."""
@@ -1296,7 +1344,7 @@ class TestNegativeScaleDetection:
 
         scale_set = {(1.0, 1.0)}
         with pytest.raises(ValueError, match="axis must be 'x' or 'y'"):
-            _has_negative_scale_in_set(scale_set, 'z')
+            _has_negative_scale_in_set(scale_set, "z")
 
 
 class TestNegativeScaleTextGeneration:
@@ -1315,7 +1363,9 @@ class TestNegativeScaleTextGeneration:
             "block_entities": {"TEST": 10},
             "block_layer_pairs": {("TEST", "0"): 2},
             "block_rotation_counts": {},
-            "block_scale_data": {"TEST": {(1.0, 1.0), (-1.0, 1.0)}},  # X varies with negative
+            "block_scale_data": {
+                "TEST": {(1.0, 1.0), (-1.0, 1.0)}
+            },  # X varies with negative
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
@@ -1323,6 +1373,7 @@ class TestNegativeScaleTextGeneration:
             "layer_annotation_counts": {"0": 0},
             "annotation_data": {},
             "entity_type_counts": {},
+            "color_analysis_data": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1346,7 +1397,9 @@ class TestNegativeScaleTextGeneration:
             "block_entities": {"TEST": 10},
             "block_layer_pairs": {("TEST", "0"): 2},
             "block_rotation_counts": {},
-            "block_scale_data": {"TEST": {(1.0, 1.0), (2.0, 1.0)}},  # X varies, all positive
+            "block_scale_data": {
+                "TEST": {(1.0, 1.0), (2.0, 1.0)}
+            },  # X varies, all positive
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
@@ -1354,6 +1407,7 @@ class TestNegativeScaleTextGeneration:
             "layer_annotation_counts": {"0": 0},
             "annotation_data": {},
             "entity_type_counts": {},
+            "color_analysis_data": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1385,6 +1439,7 @@ class TestNegativeScaleTextGeneration:
             "layer_annotation_counts": {"0": 0},
             "annotation_data": {},
             "entity_type_counts": {},
+            "color_analysis_data": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1416,6 +1471,7 @@ class TestNegativeScaleTextGeneration:
             "layer_annotation_counts": {"0": 0},
             "annotation_data": {},
             "entity_type_counts": {},
+            "color_analysis_data": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1439,7 +1495,9 @@ class TestNegativeScaleTextGeneration:
             "block_entities": {"TEST": 10},
             "block_layer_pairs": {("TEST", "0"): 2},
             "block_rotation_counts": {},
-            "block_scale_data": {"TEST": {(1.0, 2.0), (-1.0, 2.0)}},  # X varies with negatives, Y consistent
+            "block_scale_data": {
+                "TEST": {(1.0, 2.0), (-1.0, 2.0)}
+            },  # X varies with negatives, Y consistent
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
@@ -1447,6 +1505,7 @@ class TestNegativeScaleTextGeneration:
             "layer_annotation_counts": {"0": 0},
             "annotation_data": {},
             "entity_type_counts": {},
+            "color_analysis_data": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1471,7 +1530,9 @@ class TestNegativeScaleTextGeneration:
             "block_entities": {"TEST": 10},
             "block_layer_pairs": {("TEST", "0"): 2},
             "block_rotation_counts": {},
-            "block_scale_data": {"TEST": {(1.0, 1.0), (-1.0, 2.0)}},  # Both vary, X has negative
+            "block_scale_data": {
+                "TEST": {(1.0, 1.0), (-1.0, 2.0)}
+            },  # Both vary, X has negative
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
@@ -1479,6 +1540,7 @@ class TestNegativeScaleTextGeneration:
             "layer_annotation_counts": {"0": 0},
             "annotation_data": {},
             "entity_type_counts": {},
+            "color_analysis_data": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1516,7 +1578,9 @@ class TestNegativeScaleIntegration:
         from core.extractor import extract_blocks
 
         # Path to test asset
-        test_dxf_path = Path(__file__).parent.parent / "assets" / "negative_scale_test.dxf"
+        test_dxf_path = (
+            Path(__file__).parent.parent / "assets" / "negative_scale_test.dxf"
+        )
 
         # Extract data from test DXF
         result = extract_blocks(str(test_dxf_path))
@@ -1550,15 +1614,23 @@ class TestNegativeScaleIntegration:
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
 
         # Find rows by block name
-        vary_positive_row = df[df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "VARY_POSITIVE"].iloc[0]
-        mirror_row = df[df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "MIRROR_CONSISTENT"].iloc[0]
-        vary_negative_row = df[df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "VARY_NEGATIVE"].iloc[0]
+        vary_positive_row = df[
+            df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "VARY_POSITIVE"
+        ].iloc[0]
+        mirror_row = df[
+            df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "MIRROR_CONSISTENT"
+        ].iloc[0]
+        vary_negative_row = df[
+            df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "VARY_NEGATIVE"
+        ].iloc[0]
         normal_row = df[df[format_header(EXCEL_COLUMN_BLOCK_NAME)] == "NORMAL"].iloc[0]
 
         # Verify scale text values
         assert vary_positive_row[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)] == "VARIES"
         assert mirror_row[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)] == -1.0
-        assert vary_negative_row[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)] == "VARIES (-)"
+        assert (
+            vary_negative_row[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)] == "VARIES (-)"
+        )
         assert normal_row[format_header(EXCEL_COLUMN_BLOCK_SCALE_X)] == 1.0
 
         # Load workbook to verify highlighting
@@ -1576,9 +1648,10 @@ class TestNegativeScaleIntegration:
         # VARY_POSITIVE should have yellow fill
         vary_positive_row_idx = row_mapping["VARY_POSITIVE"]
         vary_positive_fill = ws.cell(row=vary_positive_row_idx, column=1).fill
-        assert vary_positive_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE, (
-            "VARY_POSITIVE should have yellow fill"
-        )
+        assert (
+            vary_positive_fill.start_color.rgb
+            == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
+        ), "VARY_POSITIVE should have yellow fill"
 
         # MIRROR_CONSISTENT should have orange fill
         mirror_row_idx = row_mapping["MIRROR_CONSISTENT"]
@@ -1590,16 +1663,17 @@ class TestNegativeScaleIntegration:
         # VARY_NEGATIVE should have red fill
         vary_negative_row_idx = row_mapping["VARY_NEGATIVE"]
         vary_negative_fill = ws.cell(row=vary_negative_row_idx, column=1).fill
-        assert vary_negative_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE, (
-            "VARY_NEGATIVE should have red fill"
-        )
+        assert (
+            vary_negative_fill.start_color.rgb
+            == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE
+        ), "VARY_NEGATIVE should have red fill"
 
         # NORMAL should have no fill (default)
         normal_row_idx = row_mapping["NORMAL"]
         normal_fill = ws.cell(row=normal_row_idx, column=1).fill
-        assert normal_fill.fill_type is None or normal_fill.start_color.rgb == "00000000", (
-            "NORMAL should not have highlighting"
-        )
+        assert (
+            normal_fill.fill_type is None or normal_fill.start_color.rgb == "00000000"
+        ), "NORMAL should not have highlighting"
 
 
 class TestAnnotationsAnalysisSheet:
@@ -1631,6 +1705,7 @@ class TestAnnotationsAnalysisSheet:
                 ("Third Text", "TEXT", "Layer1", 0, 0, 255): 1,
             },
             "entity_type_counts": {"INSERT": 5, "LINE": 20},
+            "color_analysis_data": [],
             "block_trimming_data": {
                 "VALVE": {
                     "native_width": 10.0,
@@ -1708,7 +1783,9 @@ class TestAnnotationsAnalysisSheet:
 
         # First row should be "Sample Text" with count=3 (highest count)
         first_row = df.iloc[0]
-        assert first_row[format_header(EXCEL_COLUMN_ANNOTATION_CONTENTS)] == "Sample Text"
+        assert (
+            first_row[format_header(EXCEL_COLUMN_ANNOTATION_CONTENTS)] == "Sample Text"
+        )
         assert first_row[format_header(EXCEL_COLUMN_ANNOTATION_TYPE)] == "TEXT"
         assert first_row[format_header(EXCEL_COLUMN_ANNOTATION_COUNT)] == 3
         assert first_row[format_header(EXCEL_COLUMN_ANNOTATION_COLOR_R)] == 255
@@ -1744,6 +1821,7 @@ class TestAnnotationsAnalysisSheet:
             "layer_annotation_counts": {},
             "annotation_data": {},  # Empty annotations
             "entity_type_counts": {},
+            "color_analysis_data": [],
             "block_trimming_data": {},
         }
 
@@ -1802,14 +1880,16 @@ class TestAnnotationsAnalysisSheet:
     def test_five_sheets_created(
         self, temp_dir: str, annotation_extraction_data: ExtractionResult
     ) -> None:
-        """Test that exactly 5 sheets are created including Annotations Analysis."""
+        """Test that exactly 6 sheets are created including Color Analysis."""
+        from core.constants import EXCEL_SHEET_COLOR_ANALYSIS
+
         output_path = os.path.join(temp_dir, "test_drawing.dwg")
         excel_path = write_excel(annotation_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
 
-        # Verify exactly 5 sheets
-        assert len(wb.sheetnames) == 5
+        # Verify exactly 6 sheets
+        assert len(wb.sheetnames) == 6
 
         # Verify all expected sheet names
         assert EXCEL_SHEET_BLOCK_ANALYSIS in wb.sheetnames
@@ -1817,3 +1897,4 @@ class TestAnnotationsAnalysisSheet:
         assert EXCEL_SHEET_ENTITY_SUMMARY in wb.sheetnames
         assert EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_ANNOTATIONS_ANALYSIS in wb.sheetnames
+        assert EXCEL_SHEET_COLOR_ANALYSIS in wb.sheetnames

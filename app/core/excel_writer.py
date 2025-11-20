@@ -44,6 +44,14 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_SCALE_Y,
     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_XDATA_APPS,
+    EXCEL_COLUMN_COLOR_ANNOTATION_CONTENTS,
+    EXCEL_COLUMN_COLOR_BLUE,
+    EXCEL_COLUMN_COLOR_ENTITY_COUNT,
+    EXCEL_COLUMN_COLOR_ENTITY_TYPE,
+    EXCEL_COLUMN_COLOR_GREEN,
+    EXCEL_COLUMN_COLOR_LAYER_NAME,
+    EXCEL_COLUMN_COLOR_RED,
+    EXCEL_COLUMN_COLOR_SAMPLE,
     EXCEL_COLUMN_ENTITY_TYPE_COUNT,
     EXCEL_COLUMN_ENTITY_TYPE_NAME,
     EXCEL_COLUMN_LAYER_ANNOTATION_COUNT,
@@ -54,6 +62,7 @@ from .constants import (
     EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
+    EXCEL_SHEET_COLOR_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
     EXCEL_SHEET_LAYER_ANALYSIS,
 )
@@ -61,6 +70,7 @@ from .excel_formatting import (
     _format_annotations_analysis_sheet,
     _format_block_analysis_sheet,
     _format_block_geometry_analysis_sheet,
+    _format_color_analysis_sheet,
     _format_entity_summary_sheet,
     _format_layer_analysis_sheet,
     format_header,
@@ -139,10 +149,10 @@ def _get_single_scale_value(scale_set: set[tuple[float, float]], axis: str) -> f
     if not scale_set:
         raise ValueError("scale_set cannot be empty")
 
-    if axis == 'x':
+    if axis == "x":
         x_scales = {x for x, _ in scale_set}
         return next(iter(x_scales))
-    elif axis == 'y':
+    elif axis == "y":
         y_scales = {y for _, y in scale_set}
         return next(iter(y_scales))
     else:
@@ -174,10 +184,10 @@ def _has_negative_scale_in_set(scale_set: set[tuple[float, float]], axis: str) -
     if not scale_set:
         raise ValueError("scale_set cannot be empty")
 
-    if axis == 'x':
+    if axis == "x":
         x_scales = {x for x, _ in scale_set}
         return any(x < 0 for x in x_scales)
-    elif axis == 'y':
+    elif axis == "y":
         y_scales = {y for _, y in scale_set}
         return any(y < 0 for y in y_scales)
     else:
@@ -246,6 +256,9 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
             # Sheet 5: Annotations Analysis
             _create_annotations_analysis_sheet(extraction_data, writer)
 
+            # Sheet 6: Color Analysis
+            _create_color_analysis_sheet(extraction_data, writer)
+
         # Load workbook for post-processing (formatting)
         wb = load_workbook(full_path)
 
@@ -255,6 +268,7 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         _format_entity_summary_sheet(wb)
         _format_block_geometry_analysis_sheet(wb)
         _format_annotations_analysis_sheet(wb)
+        _format_color_analysis_sheet(wb)
 
         # Save workbook with formatting
         wb.save(full_path)
@@ -438,20 +452,20 @@ def _create_block_geometry_analysis_sheet(
             scale_set = block_scale_data.get(block_name, {(1.0, 1.0)})
 
             if _has_x_scale_variance(scale_set):
-                if _has_negative_scale_in_set(scale_set, 'x'):
+                if _has_negative_scale_in_set(scale_set, "x"):
                     x_scale: str | float = "VARIES (-)"
                 else:
                     x_scale = "VARIES"
             else:
-                x_scale = _get_single_scale_value(scale_set, 'x')
+                x_scale = _get_single_scale_value(scale_set, "x")
 
             if _has_y_scale_variance(scale_set):
-                if _has_negative_scale_in_set(scale_set, 'y'):
+                if _has_negative_scale_in_set(scale_set, "y"):
                     y_scale: str | float = "VARIES (-)"
                 else:
                     y_scale = "VARIES"
             else:
-                y_scale = _get_single_scale_value(scale_set, 'y')
+                y_scale = _get_single_scale_value(scale_set, "y")
 
             # Extract dimension data
             native_width = geometry_data["native_width"]
@@ -557,9 +571,7 @@ def _create_annotations_analysis_sheet(
 
         df = pd.DataFrame(rows)
         # Sort by count descending
-        df.sort_values(
-            by=EXCEL_COLUMN_ANNOTATION_COUNT, ascending=False, inplace=True
-        )
+        df.sort_values(by=EXCEL_COLUMN_ANNOTATION_COUNT, ascending=False, inplace=True)
     else:
         # Create empty DataFrame with headers only
         df = pd.DataFrame(
@@ -580,3 +592,54 @@ def _create_annotations_analysis_sheet(
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_ANNOTATIONS_ANALYSIS, index=False)
     logger.info(f"Annotations Analysis sheet created with {len(df)} rows")
+
+
+def _create_color_analysis_sheet(
+    data: ExtractionResult, writer: pd.ExcelWriter
+) -> None:
+    """Create the Color Analysis sheet with entity color analysis data."""
+    logger.info("Creating Color Analysis sheet...")
+
+    color_analysis_data = data["color_analysis_data"]
+
+    if color_analysis_data:
+        # Build DataFrame directly from color analysis data
+        rows = []
+        for record in color_analysis_data:
+            rows.append(
+                {
+                    EXCEL_COLUMN_COLOR_ANNOTATION_CONTENTS: record[
+                        "annotation_contents"
+                    ],
+                    EXCEL_COLUMN_COLOR_LAYER_NAME: record["layer_name"],
+                    EXCEL_COLUMN_COLOR_RED: record["color_r"],
+                    EXCEL_COLUMN_COLOR_GREEN: record["color_g"],
+                    EXCEL_COLUMN_COLOR_BLUE: record["color_b"],
+                    EXCEL_COLUMN_COLOR_SAMPLE: "",  # Placeholder for color fill
+                    EXCEL_COLUMN_COLOR_ENTITY_TYPE: record["entity_type"],
+                    EXCEL_COLUMN_COLOR_ENTITY_COUNT: record["entity_count"],
+                }
+            )
+
+        df = pd.DataFrame(rows)
+        # Data is already sorted from extract_color_analysis()
+    else:
+        # Create empty DataFrame with headers only
+        df = pd.DataFrame(
+            columns=[
+                EXCEL_COLUMN_COLOR_ANNOTATION_CONTENTS,
+                EXCEL_COLUMN_COLOR_LAYER_NAME,
+                EXCEL_COLUMN_COLOR_RED,
+                EXCEL_COLUMN_COLOR_GREEN,
+                EXCEL_COLUMN_COLOR_BLUE,
+                EXCEL_COLUMN_COLOR_SAMPLE,
+                EXCEL_COLUMN_COLOR_ENTITY_TYPE,
+                EXCEL_COLUMN_COLOR_ENTITY_COUNT,
+            ]
+        )
+
+    # Format column headers for Excel display
+    df.columns = [format_header(col) for col in df.columns]
+
+    df.to_excel(writer, sheet_name=EXCEL_SHEET_COLOR_ANALYSIS, index=False)
+    logger.info(f"Color Analysis sheet created with {len(df)} rows")

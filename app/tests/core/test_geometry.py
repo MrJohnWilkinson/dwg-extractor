@@ -389,7 +389,9 @@ class TestCategorizeRotation:
         assert _categorize_rotation(-90.0) == "270"
         assert _categorize_rotation(-180.0) == "180"
         assert _categorize_rotation(-270.0) == "90"
-        assert _categorize_rotation(-1.0) == "0"  # -1° normalizes to 359°, within tolerance of 0°
+        assert (
+            _categorize_rotation(-1.0) == "0"
+        )  # -1° normalizes to 359°, within tolerance of 0°
 
     def test_categorize_rotation_angles_over_360(self) -> None:
         """Test rotation normalization for angles > 360°."""

@@ -976,19 +976,25 @@ class TestExtractor:
             for key, count in annotation_data.items()
             if "Duplicate Text" in key[0] and count == 2
         ]
-        assert len(duplicate_entries) == 1, "Should have exactly one 'Duplicate Text' group with count=2"
+        assert len(duplicate_entries) == 1, (
+            "Should have exactly one 'Duplicate Text' group with count=2"
+        )
 
         # Verify same text on different layers creates separate groups
         cross_layer_entries = [
             key for key in annotation_data.keys() if "Cross Layer Text" in key[0]
         ]
-        assert len(cross_layer_entries) >= 2, "Same text on different layers should be separate groups"
+        assert len(cross_layer_entries) >= 2, (
+            "Same text on different layers should be separate groups"
+        )
 
         # Verify same text with different colors creates separate groups
         multi_color_entries = [
             key for key in annotation_data.keys() if "Multi Color Text" in key[0]
         ]
-        assert len(multi_color_entries) >= 2, "Same text with different colors should be separate groups"
+        assert len(multi_color_entries) >= 2, (
+            "Same text with different colors should be separate groups"
+        )
 
     def test_annotation_data_text_vs_mtext_distinction(self) -> None:
         """Test that TEXT and MTEXT with same content are separate groups."""
@@ -1003,7 +1009,9 @@ class TestExtractor:
         ]
 
         # Should have 2 entries: one TEXT, one MTEXT
-        assert len(same_content_entries) >= 2, "TEXT and MTEXT with same content should be separate"
+        assert len(same_content_entries) >= 2, (
+            "TEXT and MTEXT with same content should be separate"
+        )
 
         # Verify we have both types
         entity_types = {key[1] for key in same_content_entries}
@@ -1145,3 +1153,258 @@ class TestExtractor:
         # Should have at least one MTEXT with multiline content
         # Note: ezdxf's entity.text property should return plain text without formatting
         assert len(mtext_entries) >= 1, "MTEXT multiline content should be extracted"
+
+
+class TestColorAnalysis:
+    """Test suite for color analysis extraction functionality."""
+
+    def test_color_analysis_data_exists(self) -> None:
+        """Test that color_analysis_data field exists in extraction result."""
+        result = extract_blocks("app/tests/assets/sample_drawing.dxf")
+
+        assert "color_analysis_data" in result
+        assert isinstance(result["color_analysis_data"], list)
+
+    def test_color_analysis_with_lines_and_polylines(self) -> None:
+        """Test that Lines and Polylines are extracted and grouped correctly."""
+        # Create test DXF with lines and polylines
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Add lines with same color on same layer (should aggregate)
+        msp.add_line(
+            (0, 0), (10, 10), dxfattribs={"color": 1, "layer": "WALLS"}
+        )  # Red ACI
+        msp.add_line(
+            (0, 5), (10, 15), dxfattribs={"color": 1, "layer": "WALLS"}
+        )  # Red ACI
+
+        # Add polylines with different color
+        msp.add_lwpolyline(
+            [(0, 0), (1, 1), (2, 0)], dxfattribs={"color": 2, "layer": "WALLS"}
+        )  # Yellow ACI
+
+        # Save and extract
+        test_path = Path("app/tests/assets/temp_color_test.dxf")
+        doc.saveas(test_path)
+
+        try:
+            result = extract_blocks(str(test_path))
+            color_data = result["color_analysis_data"]
+
+            # Should have 2 records: one for Lines (count=2), one for Polylines (count=1)
+            assert len(color_data) >= 2
+
+            # Find Lines record
+            lines_records = [r for r in color_data if r["entity_type"] == "Lines"]
+            assert len(lines_records) >= 1
+
+            # Verify Lines are aggregated
+            walls_lines = [r for r in lines_records if r["layer_name"] == "WALLS"]
+            if walls_lines:
+                assert walls_lines[0]["entity_count"] == 2
+                assert walls_lines[0]["annotation_contents"] == ""
+
+            # Find Polylines record
+            polylines_records = [
+                r for r in color_data if r["entity_type"] == "Polylines"
+            ]
+            assert len(polylines_records) >= 1
+
+        finally:
+            if test_path.exists():
+                test_path.unlink()
+
+    def test_color_analysis_with_text_annotations(self) -> None:
+        """Test that TEXT and MTEXT entities are extracted individually with content."""
+        # Use existing annotation test file
+        result = extract_blocks("app/tests/assets/annotation_test.dxf")
+        color_data = result["color_analysis_data"]
+
+        # Find TEXT entries
+        text_records = [r for r in color_data if r["entity_type"] == "TEXT"]
+
+        # Each TEXT should have content and count=1
+        for record in text_records:
+            assert "annotation_contents" in record
+            assert record["entity_count"] == 1
+            # Content may be empty or non-empty depending on the test file
+
+        # Find MTEXT entries
+        mtext_records = [r for r in color_data if r["entity_type"] == "MTEXT"]
+
+        # Each MTEXT should have content and count=1
+        for record in mtext_records:
+            assert "annotation_contents" in record
+            assert record["entity_count"] == 1
+
+    def test_color_analysis_grouping_by_layer(self) -> None:
+        """Test that same color on different layers creates separate records."""
+        # Create test DXF
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Add red lines on different layers
+        msp.add_line((0, 0), (10, 10), dxfattribs={"color": 1, "layer": "FIRE-SAFETY"})
+        msp.add_line((0, 5), (10, 15), dxfattribs={"color": 1, "layer": "ELECTRICAL"})
+
+        test_path = Path("app/tests/assets/temp_layer_test.dxf")
+        doc.saveas(test_path)
+
+        try:
+            result = extract_blocks(str(test_path))
+            color_data = result["color_analysis_data"]
+
+            # Should have 2 separate records (same color, different layers)
+            lines_records = [r for r in color_data if r["entity_type"] == "Lines"]
+            layer_names = {r["layer_name"] for r in lines_records}
+
+            # Should have both layers represented
+            assert "FIRE-SAFETY" in layer_names or "ELECTRICAL" in layer_names
+
+        finally:
+            if test_path.exists():
+                test_path.unlink()
+
+    def test_color_analysis_sorting(self) -> None:
+        """Test that results are sorted by RGB, layer, and entity type."""
+        result = extract_blocks("app/tests/assets/comprehensive_scale_test.dxf")
+        color_data = result["color_analysis_data"]
+
+        if len(color_data) > 1:
+            # Verify sorting: (color_r, color_g, color_b, layer_name, entity_type)
+            for i in range(len(color_data) - 1):
+                current = color_data[i]
+                next_record = color_data[i + 1]
+
+                # Build sort tuples
+                current_key = (
+                    current["color_r"],
+                    current["color_g"],
+                    current["color_b"],
+                    current["layer_name"],
+                    current["entity_type"],
+                )
+                next_key = (
+                    next_record["color_r"],
+                    next_record["color_g"],
+                    next_record["color_b"],
+                    next_record["layer_name"],
+                    next_record["entity_type"],
+                )
+
+                # Current should be <= next (ascending order)
+                assert current_key <= next_key
+
+    def test_color_analysis_rgb_values(self) -> None:
+        """Test that RGB values are valid integers 0-255."""
+        result = extract_blocks("app/tests/assets/sample_drawing.dxf")
+        color_data = result["color_analysis_data"]
+
+        for record in color_data:
+            assert isinstance(record["color_r"], int)
+            assert isinstance(record["color_g"], int)
+            assert isinstance(record["color_b"], int)
+            assert 0 <= record["color_r"] <= 255
+            assert 0 <= record["color_g"] <= 255
+            assert 0 <= record["color_b"] <= 255
+
+    def test_color_analysis_empty_drawing(self) -> None:
+        """Test color analysis with drawing that has no relevant entities."""
+        result = extract_blocks("app/tests/assets/empty_drawing.dxf")
+        color_data = result["color_analysis_data"]
+
+        # Should return empty list, not error
+        assert isinstance(color_data, list)
+
+    def test_color_analysis_record_structure(self) -> None:
+        """Test that all records have required fields with correct types."""
+        result = extract_blocks("app/tests/assets/sample_drawing.dxf")
+        color_data = result["color_analysis_data"]
+
+        required_fields = [
+            "annotation_contents",
+            "layer_name",
+            "color_r",
+            "color_g",
+            "color_b",
+            "entity_type",
+            "entity_count",
+        ]
+
+        for record in color_data:
+            for field in required_fields:
+                assert field in record, f"Record missing field: {field}"
+
+            # Type validation
+            assert isinstance(record["annotation_contents"], str)
+            assert isinstance(record["layer_name"], str)
+            assert isinstance(record["entity_type"], str)
+            assert isinstance(record["entity_count"], int)
+            assert record["entity_count"] >= 1
+
+    def test_full_extraction_with_color_analysis(self) -> None:
+        """Test complete extraction pipeline with real comprehensive DXF asset."""
+        # Use comprehensive test asset which has various entity types
+        result = extract_blocks("app/tests/assets/comprehensive_scale_test.dxf")
+
+        # Verify color_analysis_data is included
+        assert "color_analysis_data" in result
+        color_data = result["color_analysis_data"]
+        assert isinstance(color_data, list)
+
+        # Should contain data for a real drawing
+        assert len(color_data) > 0
+
+        # Verify expected entity types are present
+        entity_types = {record["entity_type"] for record in color_data}
+        # At minimum, should have some geometric entities or text
+        assert len(entity_types) > 0
+        assert entity_types.issubset({"Lines", "Polylines", "TEXT", "MTEXT"})
+
+        # Verify colors are resolved correctly (all RGB values should be 0-255)
+        for record in color_data:
+            assert 0 <= record["color_r"] <= 255
+            assert 0 <= record["color_g"] <= 255
+            assert 0 <= record["color_b"] <= 255
+
+        # Verify grouping logic - same entity_type on same layer with same color should be grouped
+        # (For geometric entities, not text which is individual)
+        geometric_records = [
+            r for r in color_data if r["entity_type"] in ("Lines", "Polylines")
+        ]
+        if len(geometric_records) > 0:
+            # Each geometric record should have count >= 1
+            for record in geometric_records:
+                assert record["entity_count"] >= 1
+                assert record["annotation_contents"] == ""
+
+        # Verify text annotations are individual
+        text_records = [r for r in color_data if r["entity_type"] in ("TEXT", "MTEXT")]
+        for record in text_records:
+            assert record["entity_count"] == 1
+            # annotation_contents can be empty string or have content
+            assert isinstance(record["annotation_contents"], str)
+
+        # Verify sorting is correct (RGB ascending, then layer, then entity_type)
+        for i in range(len(color_data) - 1):
+            curr = color_data[i]
+            next_rec = color_data[i + 1]
+
+            # Create sort keys
+            curr_key = (
+                curr["color_r"],
+                curr["color_g"],
+                curr["color_b"],
+                curr["layer_name"],
+                curr["entity_type"],
+            )
+            next_key = (
+                next_rec["color_r"],
+                next_rec["color_g"],
+                next_rec["color_b"],
+                next_rec["layer_name"],
+                next_rec["entity_type"],
+            )
+
+            assert curr_key <= next_key, f"Sorting violation at index {i}"

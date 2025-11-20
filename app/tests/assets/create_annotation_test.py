@@ -171,7 +171,7 @@ text11 = msp.add_text(
 )
 
 mtext4 = msp.add_mtext(
-    "Unicode: \u00B0\u00B1\u00B2\u00B3 \u03B1\u03B2\u03B3",
+    "Unicode: \u00b0\u00b1\u00b2\u00b3 \u03b1\u03b2\u03b3",
     dxfattribs={
         "layer": "LAYER_WHITE",
         "insert": (50, 100),

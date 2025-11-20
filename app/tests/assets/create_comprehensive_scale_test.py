@@ -23,8 +23,7 @@ def create_comprehensive_scale_test() -> None:
     block = doc.blocks.new(name="TEST_RECT_1000x2000")
     # Rectangle from (0,0) to (1000,2000)
     block.add_lwpolyline(
-        [(0, 0), (1000, 0), (1000, 2000), (0, 2000), (0, 0)],
-        close=True
+        [(0, 0), (1000, 0), (1000, 2000), (0, 2000), (0, 0)], close=True
     )
 
     # Position offset for layout (spacing between instances)
@@ -63,7 +62,7 @@ def create_comprehensive_scale_test() -> None:
                 "xscale": x_scale,
                 "yscale": y_scale,
                 "zscale": z_scale,
-            }
+            },
         )
 
         # Add text label below the block
@@ -72,7 +71,7 @@ def create_comprehensive_scale_test() -> None:
             dxfattribs={
                 "insert": (insert_x, insert_y - 500),
                 "height": 100,
-            }
+            },
         )
 
         # Layout in grid (3 columns)

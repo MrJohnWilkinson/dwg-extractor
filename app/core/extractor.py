@@ -107,6 +107,153 @@ def _resolve_entity_color_to_rgb(
         return None
 
 
+def extract_color_analysis(doc: Drawing) -> list[dict[str, Any]]:
+    """
+    Extract color analysis data from all Line, Polyline, TEXT, and MTEXT entities.
+
+    This function analyzes drawing entities grouped by their RGB color, layer name, and entity type.
+    Geometric entities (Lines/Polylines) are aggregated by unique combinations with counts.
+    Text entities (TEXT/MTEXT) are extracted individually with full content.
+
+    Args:
+        doc: The ezdxf Drawing object to extract color analysis from
+
+    Returns:
+        List of color analysis records sorted by (color_r, color_g, color_b, layer_name, entity_type).
+        Each record contains:
+            - annotation_contents (str): Text content for TEXT/MTEXT, empty string for geometric entities
+            - layer_name (str): Layer name of the entity
+            - color_r (int): Red component 0-255
+            - color_g (int): Green component 0-255
+            - color_b (int): Blue component 0-255
+            - entity_type (str): 'Lines', 'Polylines', 'TEXT', or 'MTEXT'
+            - entity_count (int): Count of entities (1 for text, aggregate for geometric)
+
+    Examples:
+        >>> doc = ezdxf.readfile('drawing.dxf')
+        >>> results = extract_color_analysis(doc)
+        >>> results[0]
+        {'annotation_contents': '', 'layer_name': 'WALLS', 'color_r': 255, 'color_g': 0, 'color_b': 0,
+         'entity_type': 'Lines', 'entity_count': 45}
+        >>> results[5]
+        {'annotation_contents': 'DOOR', 'layer_name': 'NOTES', 'color_r': 0, 'color_g': 255, 'color_b': 0,
+         'entity_type': 'TEXT', 'entity_count': 1}
+    """
+    try:
+        logger.info("Starting color analysis extraction...")
+
+        # Dictionary for grouping geometric entities: (R, G, B, layer_name, entity_type) -> count
+        geometric_entities: dict[tuple[int, int, int, str, str], int] = {}
+
+        # List for text annotations (each is individual)
+        text_annotations: list[dict[str, Any]] = []
+
+        msp = doc.modelspace()
+        entity_count = 0
+
+        for entity in msp:
+            entity_type = entity.dxftype()
+
+            # Filter for relevant entity types
+            if entity_type not in ("LINE", "LWPOLYLINE", "POLYLINE", "TEXT", "MTEXT"):
+                continue
+
+            # Resolve entity color to RGB
+            rgb = _resolve_entity_color_to_rgb(entity, doc)
+            if rgb is None:
+                continue
+
+            # Get layer name
+            layer_name = entity.dxf.layer if hasattr(entity.dxf, "layer") else "0"
+
+            color_r, color_g, color_b = rgb
+            entity_count += 1
+
+            # Handle geometric entities (Lines and Polylines)
+            if entity_type == "LINE":
+                key = (color_r, color_g, color_b, layer_name, "Lines")
+                geometric_entities[key] = geometric_entities.get(key, 0) + 1
+
+            elif entity_type in ("LWPOLYLINE", "POLYLINE"):
+                key = (color_r, color_g, color_b, layer_name, "Polylines")
+                geometric_entities[key] = geometric_entities.get(key, 0) + 1
+
+            # Handle text entities (TEXT and MTEXT)
+            elif entity_type == "TEXT":
+                text_content = entity.dxf.text if hasattr(entity.dxf, "text") else ""
+                text_annotations.append(
+                    {
+                        "annotation_contents": text_content,
+                        "layer_name": layer_name,
+                        "color_r": color_r,
+                        "color_g": color_g,
+                        "color_b": color_b,
+                        "entity_type": "TEXT",
+                        "entity_count": 1,
+                    }
+                )
+
+            elif entity_type == "MTEXT":
+                text_content = entity.text if hasattr(entity, "text") else ""
+                text_annotations.append(
+                    {
+                        "annotation_contents": text_content,
+                        "layer_name": layer_name,
+                        "color_r": color_r,
+                        "color_g": color_g,
+                        "color_b": color_b,
+                        "entity_type": "MTEXT",
+                        "entity_count": 1,
+                    }
+                )
+
+        logger.info(f"Processed {entity_count} entities for color analysis")
+
+        # Convert geometric entities dict to list of records
+        geometric_records = [
+            {
+                "annotation_contents": "",
+                "layer_name": layer_name,
+                "color_r": color_r,
+                "color_g": color_g,
+                "color_b": color_b,
+                "entity_type": entity_type,
+                "entity_count": count,
+            }
+            for (
+                color_r,
+                color_g,
+                color_b,
+                layer_name,
+                entity_type,
+            ), count in geometric_entities.items()
+        ]
+
+        # Combine geometric and text records
+        all_records = geometric_records + text_annotations
+
+        # Sort by (color_r, color_g, color_b, layer_name, entity_type) - all ascending
+        sorted_records = sorted(
+            all_records,
+            key=lambda x: (
+                x["color_r"],
+                x["color_g"],
+                x["color_b"],
+                x["layer_name"],
+                x["entity_type"],
+            ),
+        )
+
+        logger.info(
+            f"Color analysis extraction complete: {len(sorted_records)} total records"
+        )
+        return sorted_records
+
+    except Exception as e:
+        logger.error(f"Error during color analysis extraction: {e}")
+        return []
+
+
 class ExtractionResult(TypedDict):
     """
     Comprehensive extraction result containing all CAD analysis data.
@@ -137,6 +284,11 @@ class ExtractionResult(TypedDict):
         block_trimming_data: Dictionary mapping block names to their geometry analysis data.
                              Each block entry contains: native_width (float), native_height (float),
                              vertical_segments (list[float] - left-to-right), horizontal_segments (list[float] - bottom-to-top)
+        color_analysis_data: List of color analysis records. Each record contains: annotation_contents (str, blank for Lines/Polylines),
+                            layer_name (str), color_r (int 0-255), color_g (int 0-255), color_b (int 0-255),
+                            entity_type (str: 'Lines', 'Polylines', 'TEXT', 'MTEXT'), entity_count (int)
+                            Example: [{'annotation_contents': '', 'layer_name': 'WALLS', 'color_r': 255, 'color_g': 0, 'color_b': 0,
+                                      'entity_type': 'Lines', 'entity_count': 45}, ...]
 
     Examples:
         block_layer_pairs: {('DOOR', 'WALLS'): 5, ('DOOR', 'OPENINGS'): 3, ('WINDOW', 'WALLS'): 8}
@@ -162,6 +314,7 @@ class ExtractionResult(TypedDict):
     annotation_data: dict[tuple[str, str, str, int, int, int], int]
     entity_type_counts: dict[str, int]
     block_trimming_data: dict[str, dict[str, Any]]
+    color_analysis_data: list[dict[str, Any]]
 
 
 def extract_blocks(file_path: str) -> ExtractionResult:
@@ -306,7 +459,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 try:
                     # Get text contents
                     if entity_type == "TEXT":
-                        contents = entity.dxf.text if hasattr(entity.dxf, "text") else ""
+                        contents = (
+                            entity.dxf.text if hasattr(entity.dxf, "text") else ""
+                        )
                     else:  # MTEXT
                         contents = entity.text if hasattr(entity, "text") else ""
 
@@ -382,9 +537,17 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 # Access the xdata property which is a dictionary-like object
                 try:
                     # The xdata attribute contains a dictionary mapping appids to tag data
-                    if hasattr(entity, 'xdata') and entity.xdata is not None and len(entity.xdata) > 0:
+                    if (
+                        hasattr(entity, "xdata")
+                        and entity.xdata is not None
+                        and len(entity.xdata) > 0
+                    ):
                         # Get all application IDs from the xdata dictionary
-                        app_ids = list(entity.xdata.data.keys()) if hasattr(entity.xdata, 'data') else []
+                        app_ids = (
+                            list(entity.xdata.data.keys())
+                            if hasattr(entity.xdata, "data")
+                            else []
+                        )
                         if app_ids:
                             # Initialize set if needed
                             if pair_key not in block_xdata_apps:
@@ -418,25 +581,23 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         logger.info(
             f"Tracked rotations for {len(block_rotation_counts)} block-layer-rotation combinations"
         )
-        logger.info(
-            f"Extracted scale data for {len(block_scale_data)} unique blocks"
-        )
+        logger.info(f"Extracted scale data for {len(block_scale_data)} unique blocks")
         logger.info(f"Found XDATA on {len(block_xdata_apps)} block-layer pairs")
         logger.info(
             f"Found {total_entities} total entities across {unique_entity_types} entity types"
         )
         logger.info(f"Found {total_layers} layers in drawing")
-        logger.info(
-            f"Extracted color data for {len(layer_unique_color_counts)} layers"
-        )
+        logger.info(f"Extracted color data for {len(layer_unique_color_counts)} layers")
         total_annotation_entities = sum(layer_annotation_counts.values())
         unique_annotation_groups = len(annotation_data)
         logger.info(
             f"Found {total_annotation_entities} annotation entities across {len(layer_annotation_counts)} layers"
         )
-        logger.info(
-            f"Extracted {unique_annotation_groups} unique annotation groups"
-        )
+        logger.info(f"Extracted {unique_annotation_groups} unique annotation groups")
+
+        # Extract color analysis data
+        color_analysis_data = extract_color_analysis(doc)
+        logger.info(f"Extracted {len(color_analysis_data)} color analysis records")
 
         # Return comprehensive result
         result: ExtractionResult = {
@@ -453,6 +614,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             "annotation_data": annotation_data,
             "entity_type_counts": entity_type_counts,
             "block_trimming_data": block_trimming_data,
+            "color_analysis_data": color_analysis_data,
         }
 
         return result

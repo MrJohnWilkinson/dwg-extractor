@@ -23,6 +23,7 @@ from .constants import (
     EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
+    EXCEL_SHEET_COLOR_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
     EXCEL_SHEET_LAYER_ANALYSIS,
 )
@@ -133,12 +134,20 @@ def _format_layer_analysis_sheet(wb: Workbook) -> None:
     # Apply right-alignment to numeric columns (columns B, C, D, E - all data rows)
     right_alignment = Alignment(horizontal="right")
     for row_idx in range(2, ws.max_row + 1):
-        ws.cell(row=row_idx, column=2).alignment = right_alignment  # layer_block_insertion_count
+        ws.cell(
+            row=row_idx, column=2
+        ).alignment = right_alignment  # layer_block_insertion_count
         ws.cell(row=row_idx, column=3).alignment = right_alignment  # layer_entity_count
-        ws.cell(row=row_idx, column=4).alignment = right_alignment  # layer_unique_color_count
-        ws.cell(row=row_idx, column=5).alignment = right_alignment  # layer_text_mtext_count
+        ws.cell(
+            row=row_idx, column=4
+        ).alignment = right_alignment  # layer_unique_color_count
+        ws.cell(
+            row=row_idx, column=5
+        ).alignment = right_alignment  # layer_text_mtext_count
 
-    logger.info("Layer Analysis sheet formatted with color and text/mtext count columns")
+    logger.info(
+        "Layer Analysis sheet formatted with color and text/mtext count columns"
+    )
 
 
 def _format_entity_summary_sheet(wb: Workbook) -> None:
@@ -201,17 +210,17 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     red_fill = PatternFill(
         start_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
         end_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
-        fill_type="solid"
+        fill_type="solid",
     )
     orange_fill = PatternFill(
         start_color=EXCEL_FILL_COLOR_SCALE_NEGATIVE,
         end_color=EXCEL_FILL_COLOR_SCALE_NEGATIVE,
-        fill_type="solid"
+        fill_type="solid",
     )
     yellow_fill = PatternFill(
         start_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
         end_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
-        fill_type="solid"
+        fill_type="solid",
     )
 
     # Track highlighting counts by color
@@ -343,4 +352,76 @@ def _format_annotations_analysis_sheet(wb: Workbook) -> None:
 
     logger.info(
         f"Annotations Analysis sheet formatted with {color_fills_applied} color sample cells filled"
+    )
+
+
+def _format_color_analysis_sheet(wb: Workbook) -> None:
+    """Apply formatting to the Color Analysis sheet with RGB color fills."""
+    ws = wb[EXCEL_SHEET_COLOR_ANALYSIS]
+
+    # Apply auto-filter
+    if ws.dimensions:
+        ws.auto_filter.ref = ws.dimensions
+
+    # Freeze header row
+    ws.freeze_panes = "A2"
+    logger.info("Frozen panes applied to Color Analysis sheet")
+
+    # Set column widths (8 columns: A-H)
+    ws.column_dimensions["A"].width = 50  # color_annotation_contents
+    ws.column_dimensions["B"].width = 20  # color_layer_name
+    ws.column_dimensions["C"].width = 10  # color_red
+    ws.column_dimensions["D"].width = 10  # color_green
+    ws.column_dimensions["E"].width = 10  # color_blue
+    ws.column_dimensions["F"].width = 12  # color_sample
+    ws.column_dimensions["G"].width = 20  # color_entity_type
+    ws.column_dimensions["H"].width = 15  # color_entity_count
+
+    # Enable text wrapping on header row
+    header_alignment = Alignment(wrap_text=True, vertical="top")
+    for cell in ws[1]:
+        cell.alignment = header_alignment
+
+    # Enable text wrapping on annotation_contents column (column A) for all data rows
+    content_alignment = Alignment(wrap_text=True, vertical="top")
+    for row_idx in range(2, ws.max_row + 1):
+        ws.cell(row=row_idx, column=1).alignment = content_alignment
+
+    # Apply right-alignment to numeric columns (C, D, E, H)
+    right_alignment = Alignment(horizontal="right")
+    for row_idx in range(2, ws.max_row + 1):
+        ws.cell(row=row_idx, column=3).alignment = right_alignment  # color_red
+        ws.cell(row=row_idx, column=4).alignment = right_alignment  # color_green
+        ws.cell(row=row_idx, column=5).alignment = right_alignment  # color_blue
+        ws.cell(row=row_idx, column=8).alignment = right_alignment  # color_entity_count
+
+    # Apply RGB color fills to color_sample column (column F)
+    color_fills_applied = 0
+    for row_idx in range(2, ws.max_row + 1):
+        # Read RGB values from columns C, D, E
+        r_value = ws.cell(row=row_idx, column=3).value
+        g_value = ws.cell(row=row_idx, column=4).value
+        b_value = ws.cell(row=row_idx, column=5).value
+
+        # Validate RGB values
+        if (
+            isinstance(r_value, int)
+            and isinstance(g_value, int)
+            and isinstance(b_value, int)
+            and 0 <= r_value <= 255
+            and 0 <= g_value <= 255
+            and 0 <= b_value <= 255
+        ):
+            # Convert RGB to hex format (RRGGBB)
+            hex_color = f"{r_value:02X}{g_value:02X}{b_value:02X}"
+
+            # Create and apply fill to column F (color_sample)
+            color_fill = PatternFill(
+                start_color=hex_color, end_color=hex_color, fill_type="solid"
+            )
+            ws.cell(row=row_idx, column=6).fill = color_fill
+            color_fills_applied += 1
+
+    logger.info(
+        f"Color Analysis sheet formatted with {color_fills_applied} color sample cells filled"
     )

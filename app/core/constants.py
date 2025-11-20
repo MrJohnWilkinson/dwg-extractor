@@ -19,6 +19,7 @@ EXCEL_SHEET_LAYER_ANALYSIS: str = "Layer Analysis"
 EXCEL_SHEET_ENTITY_SUMMARY: str = "Entity Summary"
 EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS: str = "Block Geometry Analysis"
 EXCEL_SHEET_ANNOTATIONS_ANALYSIS: str = "Annotations Analysis"
+EXCEL_SHEET_COLOR_ANALYSIS: str = "Color Analysis"
 
 # Excel configuration - Block Counts sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
@@ -77,6 +78,18 @@ EXCEL_COLUMN_ANNOTATION_COLOR_G: str = "annotation_color_g"
 EXCEL_COLUMN_ANNOTATION_COLOR_B: str = "annotation_color_b"
 EXCEL_COLUMN_ANNOTATION_COLOR_SAMPLE: str = "annotation_color_sample"
 EXCEL_COLUMN_ANNOTATION_COUNT: str = "annotation_count"
+
+# Excel configuration - Color Analysis sheet columns
+# See app_docs/005-field-naming-convention.md for naming conventions
+# Domain: color (color-based entity analysis)
+EXCEL_COLUMN_COLOR_ANNOTATION_CONTENTS: str = "color_annotation_contents"
+EXCEL_COLUMN_COLOR_LAYER_NAME: str = "color_layer_name"
+EXCEL_COLUMN_COLOR_RED: str = "color_red"
+EXCEL_COLUMN_COLOR_GREEN: str = "color_green"
+EXCEL_COLUMN_COLOR_BLUE: str = "color_blue"
+EXCEL_COLUMN_COLOR_SAMPLE: str = "color_sample"
+EXCEL_COLUMN_COLOR_ENTITY_TYPE: str = "color_entity_type"
+EXCEL_COLUMN_COLOR_ENTITY_COUNT: str = "color_entity_count"
 
 # Excel configuration - Fill colors for scale highlighting
 # Yellow: Warning color for scale variance with all positive values

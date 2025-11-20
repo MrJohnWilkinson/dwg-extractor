@@ -302,9 +302,7 @@ class DWGExtractorApp(ctk.CTk):
                 # Open Finder with file selected
                 subprocess.run(["open", "-R", file_path], check=False)
             else:
-                self.logger.warning(
-                    f"Unknown platform: {system}, cannot open folder"
-                )
+                self.logger.warning(f"Unknown platform: {system}, cannot open folder")
 
         except Exception as e:
             # Don't show error to user - this is a convenience feature

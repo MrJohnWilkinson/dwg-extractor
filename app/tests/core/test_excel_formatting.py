@@ -106,7 +106,14 @@ class TestBlockAnalysisFormatting:
         ws.title = EXCEL_SHEET_BLOCK_ANALYSIS
 
         # Add headers and sample data
-        ws.append(["block_name", "block_insertion_count", "block_entity_count", "block_layer_name"])
+        ws.append(
+            [
+                "block_name",
+                "block_insertion_count",
+                "block_entity_count",
+                "block_layer_name",
+            ]
+        )
         ws.append(["VALVE", 10, 8, "Layer1"])
 
         # Apply formatting
@@ -122,7 +129,14 @@ class TestBlockAnalysisFormatting:
         wb = Workbook()
         ws = cast(Worksheet, wb.active)
         ws.title = EXCEL_SHEET_BLOCK_ANALYSIS
-        ws.append(["block_name", "block_insertion_count", "block_entity_count", "block_layer_name"])
+        ws.append(
+            [
+                "block_name",
+                "block_insertion_count",
+                "block_entity_count",
+                "block_layer_name",
+            ]
+        )
 
         # Apply formatting
         _format_block_analysis_sheet(wb)
@@ -165,7 +179,15 @@ class TestLayerAnalysisFormatting:
         ws.title = EXCEL_SHEET_LAYER_ANALYSIS
 
         # Add headers and sample data (5 columns now)
-        ws.append(["layer_name", "layer_block_insertion_count", "layer_entity_count", "layer_unique_color_count", "layer_text_mtext_count"])
+        ws.append(
+            [
+                "layer_name",
+                "layer_block_insertion_count",
+                "layer_entity_count",
+                "layer_unique_color_count",
+                "layer_text_mtext_count",
+            ]
+        )
         ws.append(["Layer1", 15, 25, 3, 5])
 
         # Apply formatting
@@ -181,7 +203,15 @@ class TestLayerAnalysisFormatting:
         wb = Workbook()
         ws = cast(Worksheet, wb.active)
         ws.title = EXCEL_SHEET_LAYER_ANALYSIS
-        ws.append(["layer_name", "layer_block_insertion_count", "layer_entity_count", "layer_unique_color_count", "layer_text_mtext_count"])
+        ws.append(
+            [
+                "layer_name",
+                "layer_block_insertion_count",
+                "layer_entity_count",
+                "layer_unique_color_count",
+                "layer_text_mtext_count",
+            ]
+        )
         ws.append(["Layer1", 10, 20, 3, 5])
         ws.append(["Layer2", 5, 15, 2, 2])
 
@@ -289,13 +319,40 @@ class TestBlockGeometryAnalysisFormatting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers and sample data (13 columns)
-        ws.append([
-            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
-            "block_rotation_180", "block_rotation_270", "block_rotation_other",
-            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
-            "block_vertical_segments", "block_horizontal_segments"
-        ])
-        ws.append(["VALVE", "Layer1", 5, 2, 0, 0, 0, 1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
+        ws.append(
+            [
+                "block_name",
+                "block_layer_name",
+                "block_rotation_0",
+                "block_rotation_90",
+                "block_rotation_180",
+                "block_rotation_270",
+                "block_rotation_other",
+                "block_scale_x",
+                "block_scale_y",
+                "block_native_width",
+                "block_native_height",
+                "block_vertical_segments",
+                "block_horizontal_segments",
+            ]
+        )
+        ws.append(
+            [
+                "VALVE",
+                "Layer1",
+                5,
+                2,
+                0,
+                0,
+                0,
+                1.0,
+                1.0,
+                100.0,
+                50.0,
+                "10, 80, 10",
+                "5, 40, 5",
+            ]
+        )
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
@@ -310,12 +367,23 @@ class TestBlockGeometryAnalysisFormatting:
         wb = Workbook()
         ws = cast(Worksheet, wb.active)
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
-        ws.append([
-            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
-            "block_rotation_180", "block_rotation_270", "block_rotation_other",
-            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
-            "block_vertical_segments", "block_horizontal_segments"
-        ])
+        ws.append(
+            [
+                "block_name",
+                "block_layer_name",
+                "block_rotation_0",
+                "block_rotation_90",
+                "block_rotation_180",
+                "block_rotation_270",
+                "block_rotation_other",
+                "block_scale_x",
+                "block_scale_y",
+                "block_native_width",
+                "block_native_height",
+                "block_vertical_segments",
+                "block_horizontal_segments",
+            ]
+        )
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
@@ -335,7 +403,9 @@ class TestBlockGeometryAnalysisFormatting:
         assert ws.column_dimensions["L"].width == 40  # block_vertical_segments
         assert ws.column_dimensions["M"].width == 40  # block_horizontal_segments
 
-    def test_format_geometry_analysis_yellow_highlighting_varies_x_scale(self, temp_dir: str) -> None:
+    def test_format_geometry_analysis_yellow_highlighting_varies_x_scale(
+        self, temp_dir: str
+    ) -> None:
         """Test that rows with VARIES in X scale are highlighted in yellow."""
         # Create test workbook
         wb = Workbook()
@@ -343,15 +413,42 @@ class TestBlockGeometryAnalysisFormatting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        ws.append([
-            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
-            "block_rotation_180", "block_rotation_270", "block_rotation_other",
-            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
-            "block_vertical_segments", "block_horizontal_segments"
-        ])
+        ws.append(
+            [
+                "block_name",
+                "block_layer_name",
+                "block_rotation_0",
+                "block_rotation_90",
+                "block_rotation_180",
+                "block_rotation_270",
+                "block_rotation_other",
+                "block_scale_x",
+                "block_scale_y",
+                "block_native_width",
+                "block_native_height",
+                "block_vertical_segments",
+                "block_horizontal_segments",
+            ]
+        )
 
         # Add data row with VARIES in X scale
-        ws.append(["VALVE", "Layer1", 5, 0, 0, 0, 0, "VARIES", 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
+        ws.append(
+            [
+                "VALVE",
+                "Layer1",
+                5,
+                0,
+                0,
+                0,
+                0,
+                "VARIES",
+                1.0,
+                100.0,
+                50.0,
+                "10, 80, 10",
+                "5, 40, 5",
+            ]
+        )
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
@@ -362,7 +459,9 @@ class TestBlockGeometryAnalysisFormatting:
             assert cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
             assert cell_fill.fill_type == "solid"
 
-    def test_format_geometry_analysis_yellow_highlighting_varies_y_scale(self, temp_dir: str) -> None:
+    def test_format_geometry_analysis_yellow_highlighting_varies_y_scale(
+        self, temp_dir: str
+    ) -> None:
         """Test that rows with VARIES in Y scale are highlighted in yellow."""
         # Create test workbook
         wb = Workbook()
@@ -370,15 +469,42 @@ class TestBlockGeometryAnalysisFormatting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        ws.append([
-            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
-            "block_rotation_180", "block_rotation_270", "block_rotation_other",
-            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
-            "block_vertical_segments", "block_horizontal_segments"
-        ])
+        ws.append(
+            [
+                "block_name",
+                "block_layer_name",
+                "block_rotation_0",
+                "block_rotation_90",
+                "block_rotation_180",
+                "block_rotation_270",
+                "block_rotation_other",
+                "block_scale_x",
+                "block_scale_y",
+                "block_native_width",
+                "block_native_height",
+                "block_vertical_segments",
+                "block_horizontal_segments",
+            ]
+        )
 
         # Add data row with VARIES in Y scale
-        ws.append(["PIPE", "Layer1", 3, 2, 0, 0, 0, 1.0, "VARIES", 200.0, 100.0, "20, 160, 20", "10, 80, 10"])
+        ws.append(
+            [
+                "PIPE",
+                "Layer1",
+                3,
+                2,
+                0,
+                0,
+                0,
+                1.0,
+                "VARIES",
+                200.0,
+                100.0,
+                "20, 160, 20",
+                "10, 80, 10",
+            ]
+        )
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
@@ -388,7 +514,9 @@ class TestBlockGeometryAnalysisFormatting:
             cell_fill = ws.cell(row=2, column=col_idx).fill
             assert cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
 
-    def test_format_geometry_analysis_yellow_highlighting_both_vary(self, temp_dir: str) -> None:
+    def test_format_geometry_analysis_yellow_highlighting_both_vary(
+        self, temp_dir: str
+    ) -> None:
         """Test that rows with VARIES in both scales are highlighted in yellow."""
         # Create test workbook
         wb = Workbook()
@@ -396,15 +524,28 @@ class TestBlockGeometryAnalysisFormatting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        ws.append([
-            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
-            "block_rotation_180", "block_rotation_270", "block_rotation_other",
-            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
-            "block_vertical_segments", "block_horizontal_segments"
-        ])
+        ws.append(
+            [
+                "block_name",
+                "block_layer_name",
+                "block_rotation_0",
+                "block_rotation_90",
+                "block_rotation_180",
+                "block_rotation_270",
+                "block_rotation_other",
+                "block_scale_x",
+                "block_scale_y",
+                "block_native_width",
+                "block_native_height",
+                "block_vertical_segments",
+                "block_horizontal_segments",
+            ]
+        )
 
         # Add data row with VARIES in both scales
-        ws.append(["TAG", "Layer1", 0, 0, 0, 0, 3, "VARIES", "VARIES", 50.0, 25.0, "50", "25"])
+        ws.append(
+            ["TAG", "Layer1", 0, 0, 0, 0, 3, "VARIES", "VARIES", 50.0, 25.0, "50", "25"]
+        )
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
@@ -414,7 +555,9 @@ class TestBlockGeometryAnalysisFormatting:
             cell_fill = ws.cell(row=2, column=col_idx).fill
             assert cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
 
-    def test_format_geometry_analysis_no_highlighting_numeric_scales(self, temp_dir: str) -> None:
+    def test_format_geometry_analysis_no_highlighting_numeric_scales(
+        self, temp_dir: str
+    ) -> None:
         """Test that rows with numeric scales (no VARIES) are NOT highlighted."""
         # Create test workbook
         wb = Workbook()
@@ -422,15 +565,42 @@ class TestBlockGeometryAnalysisFormatting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        ws.append([
-            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
-            "block_rotation_180", "block_rotation_270", "block_rotation_other",
-            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
-            "block_vertical_segments", "block_horizontal_segments"
-        ])
+        ws.append(
+            [
+                "block_name",
+                "block_layer_name",
+                "block_rotation_0",
+                "block_rotation_90",
+                "block_rotation_180",
+                "block_rotation_270",
+                "block_rotation_other",
+                "block_scale_x",
+                "block_scale_y",
+                "block_native_width",
+                "block_native_height",
+                "block_vertical_segments",
+                "block_horizontal_segments",
+            ]
+        )
 
         # Add data row with numeric scales (no variance)
-        ws.append(["VALVE", "Layer1", 5, 0, 0, 0, 0, 1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
+        ws.append(
+            [
+                "VALVE",
+                "Layer1",
+                5,
+                0,
+                0,
+                0,
+                0,
+                1.0,
+                1.0,
+                100.0,
+                50.0,
+                "10, 80, 10",
+                "5, 40, 5",
+            ]
+        )
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
@@ -441,7 +611,10 @@ class TestBlockGeometryAnalysisFormatting:
             cell_fill = ws.cell(row=2, column=col_idx).fill
             # Check that it's not the yellow fill
             if cell_fill.fill_type == "solid":
-                assert cell_fill.start_color.rgb != EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
+                assert (
+                    cell_fill.start_color.rgb
+                    != EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
+                )
 
     def test_format_geometry_analysis_highlighting_count(self, temp_dir: str) -> None:
         """Test that highlighting count is correct for multiple rows."""
@@ -451,18 +624,79 @@ class TestBlockGeometryAnalysisFormatting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        ws.append([
-            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
-            "block_rotation_180", "block_rotation_270", "block_rotation_other",
-            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
-            "block_vertical_segments", "block_horizontal_segments"
-        ])
+        ws.append(
+            [
+                "block_name",
+                "block_layer_name",
+                "block_rotation_0",
+                "block_rotation_90",
+                "block_rotation_180",
+                "block_rotation_270",
+                "block_rotation_other",
+                "block_scale_x",
+                "block_scale_y",
+                "block_native_width",
+                "block_native_height",
+                "block_vertical_segments",
+                "block_horizontal_segments",
+            ]
+        )
 
         # Add multiple data rows
-        ws.append(["VALVE", "Layer1", 5, 0, 0, 0, 0, 1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])  # No highlight
-        ws.append(["PIPE", "Layer1", 3, 2, 0, 0, 0, "VARIES", 1.0, 200.0, 100.0, "20, 160, 20", "10, 80, 10"])  # Highlight
-        ws.append(["TAG", "Layer2", 0, 0, 0, 0, 2, 1.0, "VARIES", 50.0, 25.0, "50", "25"])  # Highlight
-        ws.append(["DOOR", "Layer1", 10, 0, 0, 0, 0, 2.0, 2.0, 120.0, 60.0, "15, 90, 15", "10, 40, 10"])  # No highlight
+        ws.append(
+            [
+                "VALVE",
+                "Layer1",
+                5,
+                0,
+                0,
+                0,
+                0,
+                1.0,
+                1.0,
+                100.0,
+                50.0,
+                "10, 80, 10",
+                "5, 40, 5",
+            ]
+        )  # No highlight
+        ws.append(
+            [
+                "PIPE",
+                "Layer1",
+                3,
+                2,
+                0,
+                0,
+                0,
+                "VARIES",
+                1.0,
+                200.0,
+                100.0,
+                "20, 160, 20",
+                "10, 80, 10",
+            ]
+        )  # Highlight
+        ws.append(
+            ["TAG", "Layer2", 0, 0, 0, 0, 2, 1.0, "VARIES", 50.0, 25.0, "50", "25"]
+        )  # Highlight
+        ws.append(
+            [
+                "DOOR",
+                "Layer1",
+                10,
+                0,
+                0,
+                0,
+                0,
+                2.0,
+                2.0,
+                120.0,
+                60.0,
+                "15, 90, 15",
+                "10, 40, 10",
+            ]
+        )  # No highlight
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
@@ -471,7 +705,11 @@ class TestBlockGeometryAnalysisFormatting:
         highlighted_rows = 0
         for row_idx in range(2, 6):  # Rows 2-5 (data rows)
             cell_fill = ws.cell(row=row_idx, column=1).fill
-            if cell_fill.fill_type == "solid" and cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE:
+            if (
+                cell_fill.fill_type == "solid"
+                and cell_fill.start_color.rgb
+                == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
+            ):
                 highlighted_rows += 1
 
         # Should have 2 highlighted rows
@@ -501,15 +739,74 @@ class TestBlockGeometryAnalysisFormatting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers and sample data rows (13 columns)
-        ws.append([
-            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
-            "block_rotation_180", "block_rotation_270", "block_rotation_other",
-            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
-            "block_vertical_segments", "block_horizontal_segments"
-        ])
-        ws.append(["VALVE", "Layer1", 5, 2, 0, 0, 0, 1.0, 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
-        ws.append(["PUMP", "Layer2", 10, 0, 0, 0, 0, 1.0, 1.0, 200.0, 100.0, "20, 160, 20", "10, 80, 10"])
-        ws.append(["TANK", "Layer3", 3, 1, 0, 0, 0, 1.0, 1.0, 150.0, 75.0, "15, 120, 15", "7, 60, 7"])
+        ws.append(
+            [
+                "block_name",
+                "block_layer_name",
+                "block_rotation_0",
+                "block_rotation_90",
+                "block_rotation_180",
+                "block_rotation_270",
+                "block_rotation_other",
+                "block_scale_x",
+                "block_scale_y",
+                "block_native_width",
+                "block_native_height",
+                "block_vertical_segments",
+                "block_horizontal_segments",
+            ]
+        )
+        ws.append(
+            [
+                "VALVE",
+                "Layer1",
+                5,
+                2,
+                0,
+                0,
+                0,
+                1.0,
+                1.0,
+                100.0,
+                50.0,
+                "10, 80, 10",
+                "5, 40, 5",
+            ]
+        )
+        ws.append(
+            [
+                "PUMP",
+                "Layer2",
+                10,
+                0,
+                0,
+                0,
+                0,
+                1.0,
+                1.0,
+                200.0,
+                100.0,
+                "20, 160, 20",
+                "10, 80, 10",
+            ]
+        )
+        ws.append(
+            [
+                "TANK",
+                "Layer3",
+                3,
+                1,
+                0,
+                0,
+                0,
+                1.0,
+                1.0,
+                150.0,
+                75.0,
+                "15, 120, 15",
+                "7, 60, 7",
+            ]
+        )
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
@@ -553,14 +850,57 @@ class TestBlockGeometryAnalysisFormatting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers and sample data with VARIES in scale columns
-        ws.append([
-            "block_name", "block_layer_name", "block_rotation_0", "block_rotation_90",
-            "block_rotation_180", "block_rotation_270", "block_rotation_other",
-            "block_scale_x", "block_scale_y", "block_native_width", "block_native_height",
-            "block_vertical_segments", "block_horizontal_segments"
-        ])
-        ws.append(["VALVE", "Layer1", 5, 2, 0, 0, 0, "VARIES", 1.0, 100.0, 50.0, "10, 80, 10", "5, 40, 5"])
-        ws.append(["PUMP", "Layer2", 10, 0, 0, 0, 0, 1.0, "VARIES", 200.0, 100.0, "20, 160, 20", "10, 80, 10"])
+        ws.append(
+            [
+                "block_name",
+                "block_layer_name",
+                "block_rotation_0",
+                "block_rotation_90",
+                "block_rotation_180",
+                "block_rotation_270",
+                "block_rotation_other",
+                "block_scale_x",
+                "block_scale_y",
+                "block_native_width",
+                "block_native_height",
+                "block_vertical_segments",
+                "block_horizontal_segments",
+            ]
+        )
+        ws.append(
+            [
+                "VALVE",
+                "Layer1",
+                5,
+                2,
+                0,
+                0,
+                0,
+                "VARIES",
+                1.0,
+                100.0,
+                50.0,
+                "10, 80, 10",
+                "5, 40, 5",
+            ]
+        )
+        ws.append(
+            [
+                "PUMP",
+                "Layer2",
+                10,
+                0,
+                0,
+                0,
+                0,
+                1.0,
+                "VARIES",
+                200.0,
+                100.0,
+                "20, 160, 20",
+                "10, 80, 10",
+            ]
+        )
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
@@ -572,9 +912,13 @@ class TestBlockGeometryAnalysisFormatting:
 
             # Verify yellow fill is applied
             assert l_cell.fill is not None
-            assert l_cell.fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
+            assert (
+                l_cell.fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
+            )
             assert m_cell.fill is not None
-            assert m_cell.fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
+            assert (
+                m_cell.fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
+            )
 
             # Verify right-alignment is also applied
             assert l_cell.alignment is not None
@@ -601,8 +945,21 @@ class TestNegativeScaleHighlighting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        headers = ["Block Name", "Layer", "R0", "R90", "R180", "R270", "R Other",
-                   "Scale X", "Scale Y", "Width", "Height", "V Segs", "H Segs"]
+        headers = [
+            "Block Name",
+            "Layer",
+            "R0",
+            "R90",
+            "R180",
+            "R270",
+            "R Other",
+            "Scale X",
+            "Scale Y",
+            "Width",
+            "Height",
+            "V Segs",
+            "H Segs",
+        ]
         for col_idx, header in enumerate(headers, start=1):
             ws.cell(row=1, column=col_idx, value=header)
 
@@ -616,9 +973,9 @@ class TestNegativeScaleHighlighting:
         # Verify red fill on all columns
         for col_idx in range(1, 14):
             cell_fill = ws.cell(row=2, column=col_idx).fill
-            assert cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE, (
-                f"Column {col_idx} should have red fill for 'VARIES (-)'"
-            )
+            assert (
+                cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE
+            ), f"Column {col_idx} should have red fill for 'VARIES (-)'"
 
     def test_orange_highlighting_consistent_negative(self) -> None:
         """Test that -1.0 gets orange fill."""
@@ -629,8 +986,21 @@ class TestNegativeScaleHighlighting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        headers = ["Block Name", "Layer", "R0", "R90", "R180", "R270", "R Other",
-                   "Scale X", "Scale Y", "Width", "Height", "V Segs", "H Segs"]
+        headers = [
+            "Block Name",
+            "Layer",
+            "R0",
+            "R90",
+            "R180",
+            "R270",
+            "R Other",
+            "Scale X",
+            "Scale Y",
+            "Width",
+            "Height",
+            "V Segs",
+            "H Segs",
+        ]
         for col_idx, header in enumerate(headers, start=1):
             ws.cell(row=1, column=col_idx, value=header)
 
@@ -657,8 +1027,21 @@ class TestNegativeScaleHighlighting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        headers = ["Block Name", "Layer", "R0", "R90", "R180", "R270", "R Other",
-                   "Scale X", "Scale Y", "Width", "Height", "V Segs", "H Segs"]
+        headers = [
+            "Block Name",
+            "Layer",
+            "R0",
+            "R90",
+            "R180",
+            "R270",
+            "R Other",
+            "Scale X",
+            "Scale Y",
+            "Width",
+            "Height",
+            "V Segs",
+            "H Segs",
+        ]
         for col_idx, header in enumerate(headers, start=1):
             ws.cell(row=1, column=col_idx, value=header)
 
@@ -672,9 +1055,9 @@ class TestNegativeScaleHighlighting:
         # Verify yellow fill on all columns
         for col_idx in range(1, 14):
             cell_fill = ws.cell(row=2, column=col_idx).fill
-            assert cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE, (
-                f"Column {col_idx} should have yellow fill for 'VARIES'"
-            )
+            assert (
+                cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE
+            ), f"Column {col_idx} should have yellow fill for 'VARIES'"
 
     def test_no_highlighting_consistent_positive(self) -> None:
         """Test that 1.0 gets no fill."""
@@ -683,8 +1066,21 @@ class TestNegativeScaleHighlighting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        headers = ["Block Name", "Layer", "R0", "R90", "R180", "R270", "R Other",
-                   "Scale X", "Scale Y", "Width", "Height", "V Segs", "H Segs"]
+        headers = [
+            "Block Name",
+            "Layer",
+            "R0",
+            "R90",
+            "R180",
+            "R270",
+            "R Other",
+            "Scale X",
+            "Scale Y",
+            "Width",
+            "Height",
+            "V Segs",
+            "H Segs",
+        ]
         for col_idx, header in enumerate(headers, start=1):
             ws.cell(row=1, column=col_idx, value=header)
 
@@ -711,14 +1107,29 @@ class TestNegativeScaleHighlighting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        headers = ["Block Name", "Layer", "R0", "R90", "R180", "R270", "R Other",
-                   "Scale X", "Scale Y", "Width", "Height", "V Segs", "H Segs"]
+        headers = [
+            "Block Name",
+            "Layer",
+            "R0",
+            "R90",
+            "R180",
+            "R270",
+            "R Other",
+            "Scale X",
+            "Scale Y",
+            "Width",
+            "Height",
+            "V Segs",
+            "H Segs",
+        ]
         for col_idx, header in enumerate(headers, start=1):
             ws.cell(row=1, column=col_idx, value=header)
 
         # Add data row with both "VARIES (-)" and -1.0
         ws.cell(row=2, column=1, value="TEST_BLOCK")
-        ws.cell(row=2, column=8, value="VARIES (-)")  # Column H - X scale (red condition)
+        ws.cell(
+            row=2, column=8, value="VARIES (-)"
+        )  # Column H - X scale (red condition)
         ws.cell(row=2, column=9, value=-1.0)  # Column I - Y scale (orange condition)
 
         _format_block_geometry_analysis_sheet(wb)
@@ -738,15 +1149,32 @@ class TestNegativeScaleHighlighting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        headers = ["Block Name", "Layer", "R0", "R90", "R180", "R270", "R Other",
-                   "Scale X", "Scale Y", "Width", "Height", "V Segs", "H Segs"]
+        headers = [
+            "Block Name",
+            "Layer",
+            "R0",
+            "R90",
+            "R180",
+            "R270",
+            "R Other",
+            "Scale X",
+            "Scale Y",
+            "Width",
+            "Height",
+            "V Segs",
+            "H Segs",
+        ]
         for col_idx, header in enumerate(headers, start=1):
             ws.cell(row=1, column=col_idx, value=header)
 
         # Add data row with both "VARIES (-)" and "VARIES"
         ws.cell(row=2, column=1, value="TEST_BLOCK")
-        ws.cell(row=2, column=8, value="VARIES (-)")  # Column H - X scale (red condition)
-        ws.cell(row=2, column=9, value="VARIES")  # Column I - Y scale (yellow condition)
+        ws.cell(
+            row=2, column=8, value="VARIES (-)"
+        )  # Column H - X scale (red condition)
+        ws.cell(
+            row=2, column=9, value="VARIES"
+        )  # Column I - Y scale (yellow condition)
 
         _format_block_geometry_analysis_sheet(wb)
 
@@ -765,15 +1193,30 @@ class TestNegativeScaleHighlighting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        headers = ["Block Name", "Layer", "R0", "R90", "R180", "R270", "R Other",
-                   "Scale X", "Scale Y", "Width", "Height", "V Segs", "H Segs"]
+        headers = [
+            "Block Name",
+            "Layer",
+            "R0",
+            "R90",
+            "R180",
+            "R270",
+            "R Other",
+            "Scale X",
+            "Scale Y",
+            "Width",
+            "Height",
+            "V Segs",
+            "H Segs",
+        ]
         for col_idx, header in enumerate(headers, start=1):
             ws.cell(row=1, column=col_idx, value=header)
 
         # Add data row with both -1.0 and "VARIES"
         ws.cell(row=2, column=1, value="TEST_BLOCK")
         ws.cell(row=2, column=8, value=-1.0)  # Column H - X scale (orange condition)
-        ws.cell(row=2, column=9, value="VARIES")  # Column I - Y scale (yellow condition)
+        ws.cell(
+            row=2, column=9, value="VARIES"
+        )  # Column I - Y scale (yellow condition)
 
         _format_block_geometry_analysis_sheet(wb)
 
@@ -792,8 +1235,21 @@ class TestNegativeScaleHighlighting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        headers = ["Block Name", "Layer", "R0", "R90", "R180", "R270", "R Other",
-                   "Scale X", "Scale Y", "Width", "Height", "V Segs", "H Segs"]
+        headers = [
+            "Block Name",
+            "Layer",
+            "R0",
+            "R90",
+            "R180",
+            "R270",
+            "R Other",
+            "Scale X",
+            "Scale Y",
+            "Width",
+            "Height",
+            "V Segs",
+            "H Segs",
+        ]
         for col_idx, header in enumerate(headers, start=1):
             ws.cell(row=1, column=col_idx, value=header)
 
@@ -807,9 +1263,9 @@ class TestNegativeScaleHighlighting:
         # Verify all 13 columns have red fill
         for col_idx in range(1, 14):
             cell_fill = ws.cell(row=2, column=col_idx).fill
-            assert cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE, (
-                f"All 13 columns should have red fill, but column {col_idx} doesn't"
-            )
+            assert (
+                cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE
+            ), f"All 13 columns should have red fill, but column {col_idx} doesn't"
 
     def test_x_scale_triggers_highlight(self) -> None:
         """Test that only X scale having condition triggers row highlighting."""
@@ -820,8 +1276,21 @@ class TestNegativeScaleHighlighting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        headers = ["Block Name", "Layer", "R0", "R90", "R180", "R270", "R Other",
-                   "Scale X", "Scale Y", "Width", "Height", "V Segs", "H Segs"]
+        headers = [
+            "Block Name",
+            "Layer",
+            "R0",
+            "R90",
+            "R180",
+            "R270",
+            "R Other",
+            "Scale X",
+            "Scale Y",
+            "Width",
+            "Height",
+            "V Segs",
+            "H Segs",
+        ]
         for col_idx, header in enumerate(headers, start=1):
             ws.cell(row=1, column=col_idx, value=header)
 
@@ -847,15 +1316,30 @@ class TestNegativeScaleHighlighting:
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
         # Add headers
-        headers = ["Block Name", "Layer", "R0", "R90", "R180", "R270", "R Other",
-                   "Scale X", "Scale Y", "Width", "Height", "V Segs", "H Segs"]
+        headers = [
+            "Block Name",
+            "Layer",
+            "R0",
+            "R90",
+            "R180",
+            "R270",
+            "R Other",
+            "Scale X",
+            "Scale Y",
+            "Width",
+            "Height",
+            "V Segs",
+            "H Segs",
+        ]
         for col_idx, header in enumerate(headers, start=1):
             ws.cell(row=1, column=col_idx, value=header)
 
         # Add data row where only Y has variance
         ws.cell(row=2, column=1, value="TEST_BLOCK")
         ws.cell(row=2, column=8, value=1.0)  # Column H - X scale (no condition)
-        ws.cell(row=2, column=9, value="VARIES")  # Column I - Y scale (yellow condition)
+        ws.cell(
+            row=2, column=9, value="VARIES"
+        )  # Column I - Y scale (yellow condition)
 
         _format_block_geometry_analysis_sheet(wb)
 
@@ -1033,19 +1517,19 @@ class TestAnnotationsAnalysisFormatting:
         ws.cell(row=2, column=2, value="TEXT")
         ws.cell(row=2, column=3, value="Layer1")
         ws.cell(row=2, column=4, value=255)  # R
-        ws.cell(row=2, column=5, value=0)    # G
-        ws.cell(row=2, column=6, value=0)    # B
-        ws.cell(row=2, column=7, value="")   # color_sample
+        ws.cell(row=2, column=5, value=0)  # G
+        ws.cell(row=2, column=6, value=0)  # B
+        ws.cell(row=2, column=7, value="")  # color_sample
         ws.cell(row=2, column=8, value=1)
 
         # Add another row with different color
         ws.cell(row=3, column=1, value="Green Text")
         ws.cell(row=3, column=2, value="MTEXT")
         ws.cell(row=3, column=3, value="Layer2")
-        ws.cell(row=3, column=4, value=0)    # R
+        ws.cell(row=3, column=4, value=0)  # R
         ws.cell(row=3, column=5, value=255)  # G
-        ws.cell(row=3, column=6, value=0)    # B
-        ws.cell(row=3, column=7, value="")   # color_sample
+        ws.cell(row=3, column=6, value=0)  # B
+        ws.cell(row=3, column=7, value="")  # color_sample
         ws.cell(row=3, column=8, value=2)
 
         _format_annotations_analysis_sheet(wb)
