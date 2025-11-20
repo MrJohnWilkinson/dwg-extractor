@@ -41,6 +41,7 @@ from .constants import (
     EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
     EXCEL_COLUMN_LAYER_NAME,
+    EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
@@ -316,17 +317,20 @@ def _create_layer_analysis_sheet(
 
     layer_block_insertion_counts = data["layer_block_insertion_counts"]
     layer_entity_counts = data["layer_entity_counts"]
+    layer_unique_color_counts = data["layer_unique_color_counts"]
 
     if layer_entity_counts:
         # Merge layer data into single DataFrame
         rows = []
         for layer_name, entity_count in layer_entity_counts.items():
             insertion_count = layer_block_insertion_counts.get(layer_name, 0)
+            color_count = layer_unique_color_counts.get(layer_name, 0)
             rows.append(
                 {
                     EXCEL_COLUMN_LAYER_NAME: layer_name,
                     EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT: insertion_count,
                     EXCEL_COLUMN_LAYER_ENTITY_COUNT: entity_count,
+                    EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT: color_count,
                 }
             )
 
@@ -341,6 +345,7 @@ def _create_layer_analysis_sheet(
                 EXCEL_COLUMN_LAYER_NAME,
                 EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
                 EXCEL_COLUMN_LAYER_ENTITY_COUNT,
+                EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT,
             ]
         )
 

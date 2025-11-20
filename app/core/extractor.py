@@ -47,6 +47,8 @@ class ExtractionResult(TypedDict):
                           Collects unique application IDs from XDATA attached to block INSERT entities
         layer_block_insertion_counts: Dictionary mapping layer names to block insertion counts on that layer
         layer_entity_counts: Dictionary mapping layer names to total entity counts on that layer
+        layer_unique_color_counts: Dictionary mapping layer names to count of unique RGB color values on that layer
+                                   Tracks distinct colors across all entities on each layer
         entity_type_counts: Dictionary mapping entity type names to their total count in the drawing
         block_trimming_data: Dictionary mapping block names to their geometry analysis data.
                              Each block entry contains: native_width (float), native_height (float),
@@ -57,6 +59,7 @@ class ExtractionResult(TypedDict):
         block_rotation_counts: {('DOOR', 'WALLS', '0'): 12, ('DOOR', 'WALLS', '90'): 18, ('DOOR', 'WALLS', '180'): 10}
         block_scale_data: {'DOOR': {(1.0, 1.0), (2.0, 1.0)}, 'WINDOW': {(-1.0, 1.0)}}
         block_xdata_apps: {('DOOR', 'WALLS'): {'ACAD', 'CUSTOM_APP'}, ('WINDOW', 'WALLS'): {'BIM_TOOL'}}
+        layer_unique_color_counts: {'WALLS': 3, 'DOORS': 1, 'WINDOWS': 2}
         block_trimming_data: {'SHELF_4FT': {'native_width': 1200.0, 'native_height': 600.0,
                                              'vertical_segments': [50.0, 1100.0, 50.0],
                                              'horizontal_segments': [25.0, 550.0, 25.0]}}
@@ -70,6 +73,7 @@ class ExtractionResult(TypedDict):
     block_xdata_apps: dict[tuple[str, str], set[str]]
     layer_block_insertion_counts: dict[str, int]
     layer_entity_counts: dict[str, int]
+    layer_unique_color_counts: dict[str, int]
     entity_type_counts: dict[str, int]
     block_trimming_data: dict[str, dict[str, Any]]
 
@@ -143,6 +147,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         block_xdata_apps: dict[tuple[str, str], set[str]] = {}
         layer_block_insertion_counts: dict[str, int] = {}
         layer_entity_counts: dict[str, int] = {}
+        layer_unique_colors: dict[str, set[tuple[int, int, int]]] = {}
         entity_type_counts: dict[str, int] = {}
         block_trimming_data: dict[str, dict[str, Any]] = {}
 
@@ -201,6 +206,20 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             # Count entities per layer
             layer_entity_counts[layer_name] = layer_entity_counts.get(layer_name, 0) + 1
 
+            # Extract entity color for layer color analysis
+            try:
+                # Try to get RGB color directly
+                rgb_color = entity.rgb
+                if rgb_color is not None:
+                    # Initialize set if needed
+                    if layer_name not in layer_unique_colors:
+                        layer_unique_colors[layer_name] = set()
+                    # Add RGB tuple to the set (ensures uniqueness)
+                    layer_unique_colors[layer_name].add(rgb_color)
+            except (AttributeError, TypeError):
+                # Entity doesn't have rgb property or it's not accessible
+                pass
+
             # Count INSERT entities (block insertions)
             if entity_type == "INSERT":
                 block_name = entity.dxf.name
@@ -252,6 +271,15 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                     # Entity doesn't support XDATA
                     pass
 
+        # Convert color sets to counts
+        layer_unique_color_counts: dict[str, int] = {
+            layer: len(colors) for layer, colors in layer_unique_colors.items()
+        }
+        # Ensure all layers have a color count (0 for layers with no entities)
+        for layer_name in layer_entity_counts.keys():
+            if layer_name not in layer_unique_color_counts:
+                layer_unique_color_counts[layer_name] = 0
+
         # Log summary
         total_insertions = sum(block_counts.values())
         unique_blocks = len(block_counts)
@@ -274,6 +302,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             f"Found {total_entities} total entities across {unique_entity_types} entity types"
         )
         logger.info(f"Found {total_layers} layers in drawing")
+        logger.info(
+            f"Extracted color data for {len(layer_unique_color_counts)} layers"
+        )
 
         # Return comprehensive result
         result: ExtractionResult = {
@@ -285,6 +316,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             "block_xdata_apps": block_xdata_apps,
             "layer_block_insertion_counts": layer_block_insertion_counts,
             "layer_entity_counts": layer_entity_counts,
+            "layer_unique_color_counts": layer_unique_color_counts,
             "entity_type_counts": entity_type_counts,
             "block_trimming_data": block_trimming_data,
         }

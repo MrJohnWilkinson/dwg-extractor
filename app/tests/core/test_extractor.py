@@ -855,3 +855,45 @@ class TestExtractor:
         assert "block_xdata_apps" in result
         assert isinstance(result["block_xdata_apps"], dict)
         assert len(result["block_xdata_apps"]) == 0
+
+    def test_extract_layer_color_counts(self) -> None:
+        """Test that layer color counts are extracted correctly."""
+        result = extract_blocks("app/tests/assets/sample_drawing.dxf")
+
+        # Verify layer_unique_color_counts exists in result
+        assert "layer_unique_color_counts" in result
+        assert isinstance(result["layer_unique_color_counts"], dict)
+
+        # Verify all values are non-negative integers
+        for layer_name, color_count in result["layer_unique_color_counts"].items():
+            assert isinstance(layer_name, str)
+            assert isinstance(color_count, int)
+            assert color_count >= 0
+
+        # Verify all layers have color count entries
+        for layer_name in result["layer_entity_counts"].keys():
+            assert layer_name in result["layer_unique_color_counts"]
+
+    def test_extract_layer_color_counts_empty_file(self) -> None:
+        """Test color count extraction from empty file."""
+        result = extract_blocks("app/tests/assets/empty_drawing.dxf")
+
+        # Verify layer_unique_color_counts exists
+        assert "layer_unique_color_counts" in result
+        assert isinstance(result["layer_unique_color_counts"], dict)
+
+        # Empty file may have default layer "0" with 0 color count
+        for layer_name, color_count in result["layer_unique_color_counts"].items():
+            assert isinstance(color_count, int)
+            assert color_count >= 0
+
+    def test_extract_layer_color_counts_types(self) -> None:
+        """Test that color count return types are correct."""
+        result = extract_blocks("app/tests/assets/sample_drawing.dxf")
+
+        # Verify layer_unique_color_counts is a dict with str keys and int values
+        assert isinstance(result["layer_unique_color_counts"], dict)
+
+        for layer_name, color_count in result["layer_unique_color_counts"].items():
+            assert isinstance(layer_name, str)
+            assert isinstance(color_count, int)

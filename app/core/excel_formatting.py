@@ -121,13 +121,21 @@ def _format_layer_analysis_sheet(wb: Workbook) -> None:
     ws.column_dimensions["A"].width = 30  # layer_name
     ws.column_dimensions["B"].width = 25  # layer_block_insertion_count
     ws.column_dimensions["C"].width = 25  # layer_entity_count
+    ws.column_dimensions["D"].width = 25  # layer_unique_color_count
 
     # Enable text wrapping on header row
     alignment = Alignment(wrap_text=True, vertical="top")
     for cell in ws[1]:
         cell.alignment = alignment
 
-    logger.info("Layer Analysis sheet formatted")
+    # Apply right-alignment to numeric columns (columns B, C, D - all data rows)
+    right_alignment = Alignment(horizontal="right")
+    for row_idx in range(2, ws.max_row + 1):
+        ws.cell(row=row_idx, column=2).alignment = right_alignment  # layer_block_insertion_count
+        ws.cell(row=row_idx, column=3).alignment = right_alignment  # layer_entity_count
+        ws.cell(row=row_idx, column=4).alignment = right_alignment  # layer_unique_color_count
+
+    logger.info("Layer Analysis sheet formatted with color count column")
 
 
 def _format_entity_summary_sheet(wb: Workbook) -> None:

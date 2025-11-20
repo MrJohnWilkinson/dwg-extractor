@@ -164,16 +164,16 @@ class TestLayerAnalysisFormatting:
         ws = cast(Worksheet, wb.active)
         ws.title = EXCEL_SHEET_LAYER_ANALYSIS
 
-        # Add headers and sample data
-        ws.append(["layer_name", "layer_block_insertion_count", "layer_entity_count"])
-        ws.append(["Layer1", 15, 25])
+        # Add headers and sample data (4 columns now)
+        ws.append(["layer_name", "layer_block_insertion_count", "layer_entity_count", "layer_unique_color_count"])
+        ws.append(["Layer1", 15, 25, 3])
 
         # Apply formatting
         _format_layer_analysis_sheet(wb)
 
-        # Verify auto-filter is applied
+        # Verify auto-filter is applied (now includes 4 columns)
         assert ws.auto_filter.ref is not None
-        assert ws.auto_filter.ref == "A1:C2"
+        assert ws.auto_filter.ref == "A1:D2"
 
     def test_format_layer_analysis_column_widths(self, temp_dir: str) -> None:
         """Test that column widths are set correctly on Layer Analysis sheet."""
@@ -181,15 +181,23 @@ class TestLayerAnalysisFormatting:
         wb = Workbook()
         ws = cast(Worksheet, wb.active)
         ws.title = EXCEL_SHEET_LAYER_ANALYSIS
-        ws.append(["layer_name", "layer_block_insertion_count", "layer_entity_count"])
+        ws.append(["layer_name", "layer_block_insertion_count", "layer_entity_count", "layer_unique_color_count"])
+        ws.append(["Layer1", 10, 20, 3])
+        ws.append(["Layer2", 5, 15, 2])
 
         # Apply formatting
         _format_layer_analysis_sheet(wb)
 
-        # Verify column widths (3 columns)
+        # Verify column widths (4 columns)
         assert ws.column_dimensions["A"].width == 30  # layer_name
         assert ws.column_dimensions["B"].width == 25  # layer_block_insertion_count
         assert ws.column_dimensions["C"].width == 25  # layer_entity_count
+        assert ws.column_dimensions["D"].width == 25  # layer_unique_color_count
+
+        # Verify right-alignment on numeric columns (columns B, C, D data rows)
+        assert ws.cell(row=2, column=2).alignment.horizontal == "right"
+        assert ws.cell(row=2, column=3).alignment.horizontal == "right"
+        assert ws.cell(row=2, column=4).alignment.horizontal == "right"
 
     def test_format_layer_analysis_empty_sheet(self, temp_dir: str) -> None:
         """Test that empty Layer Analysis sheet is handled gracefully."""

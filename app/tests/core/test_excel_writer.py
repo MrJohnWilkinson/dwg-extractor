@@ -44,6 +44,7 @@ from core.constants import (
     EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
     EXCEL_COLUMN_LAYER_NAME,
+    EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT,
     EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
@@ -92,6 +93,7 @@ class TestExcelWriter:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"Layer1": 15, "Layer2": 3},
             "layer_entity_counts": {"Layer1": 25, "Layer2": 10},
+            "layer_unique_color_counts": {"Layer1": 3, "Layer2": 1},
             "entity_type_counts": {"INSERT": 18, "LINE": 15, "CIRCLE": 8},
             "block_trimming_data": {
                 "VALVE": {
@@ -170,11 +172,12 @@ class TestExcelWriter:
         # Load Layer Analysis sheet
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
 
-        # Verify headers (formatted)
+        # Verify headers (formatted) - now includes color count column
         assert list(df.columns) == [
             format_header(EXCEL_COLUMN_LAYER_NAME),
             format_header(EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT),
             format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT),
+            format_header(EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT),
         ]
 
         # Verify data rows
@@ -182,6 +185,7 @@ class TestExcelWriter:
         # Sorted by layer_entity_count descending
         assert df.iloc[0][format_header(EXCEL_COLUMN_LAYER_NAME)] == "Layer1"
         assert df.iloc[0][format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT)] == 25
+        assert df.iloc[0][format_header(EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT)] == 3
 
     def test_entity_summary_sheet_structure(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -295,6 +299,8 @@ class TestExcelWriter:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {},
             "layer_entity_counts": {},
+            "layer_unique_color_counts": {},
+            "layer_unique_color_counts": {},
             "entity_type_counts": {},
             "block_trimming_data": {},
         }
@@ -499,6 +505,7 @@ class TestExcelWriter:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {},
             "layer_entity_counts": {},
+            "layer_unique_color_counts": {},
             "entity_type_counts": {},
             "block_trimming_data": {},
         }
@@ -671,6 +678,7 @@ class TestExcelWriter:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {},
             "layer_entity_counts": {},
+            "layer_unique_color_counts": {},
             "entity_type_counts": {},
             "block_trimming_data": {},
         }
@@ -716,6 +724,7 @@ class TestExcelWriter:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"Layer1": 15},
             "layer_entity_counts": {"Layer1": 25},
+            "layer_unique_color_counts": {"Layer1": 0},
             "entity_type_counts": {"INSERT": 15},
             "block_trimming_data": {
                 "VALVE": {
@@ -787,12 +796,13 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_XDATA_APPS),
         ]
 
-        # Layer Analysis sheet - 3 columns
+        # Layer Analysis sheet - 4 columns (now includes color count)
         df_layers = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
         assert list(df_layers.columns) == [
             format_header(EXCEL_COLUMN_LAYER_NAME),
             format_header(EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT),
             format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT),
+            format_header(EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT),
         ]
 
         # Entity Summary sheet - 2 columns
@@ -1084,6 +1094,7 @@ class TestExcelWriter:
                 },
                 "layer_block_insertion_counts": {"LAYER_1": 5},
                 "layer_entity_counts": {"LAYER_1": 10},
+                "layer_unique_color_counts": {"LAYER_1": 0},
                 "entity_type_counts": {"INSERT": 5, "LINE": 10},
                 "block_trimming_data": {
                     "BLOCK_A": {
@@ -1177,6 +1188,7 @@ class TestExcelWriter:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {},
             "layer_entity_counts": {},
+            "layer_unique_color_counts": {},
             "entity_type_counts": {},
             "block_trimming_data": {},
         }
@@ -1289,6 +1301,7 @@ class TestNegativeScaleTextGeneration:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
+            "layer_unique_color_counts": {"0": 0},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
@@ -1317,6 +1330,7 @@ class TestNegativeScaleTextGeneration:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
+            "layer_unique_color_counts": {"0": 0},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
@@ -1345,6 +1359,7 @@ class TestNegativeScaleTextGeneration:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
+            "layer_unique_color_counts": {"0": 0},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
@@ -1373,6 +1388,7 @@ class TestNegativeScaleTextGeneration:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
+            "layer_unique_color_counts": {"0": 0},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
@@ -1401,6 +1417,7 @@ class TestNegativeScaleTextGeneration:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
+            "layer_unique_color_counts": {"0": 0},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
@@ -1430,6 +1447,7 @@ class TestNegativeScaleTextGeneration:
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
+            "layer_unique_color_counts": {"0": 0},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
