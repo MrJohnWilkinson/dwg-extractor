@@ -312,6 +312,12 @@ secrets.yml
 # Sensitive/proprietary CAD sample files directory
 app/tests/assets/samples/
 
+# Proprietary/client CAD files
+app/tests/assets/251102-WV10-20-1011*
+app/tests/assets/AS-1922_XXXX-SSL-XXX-XX-DR-U-0200*
+app/tests/assets/Supermarket-2020*
+app/tests/assets/floorplan supermarket*
+
 # Example: Uploaded files
 # uploads/
 # media/
