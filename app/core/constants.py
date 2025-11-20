@@ -45,6 +45,8 @@ EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT: str = "layer_block_insertion_count"
 EXCEL_COLUMN_LAYER_ENTITY_COUNT: str = "layer_entity_count"
 # Domain: layer, Attribute: unique, Qualifier: color, Suffix: count
 EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT: str = "layer_unique_color_count"
+# Domain: layer, Attribute: text_mtext (combined TEXT + MTEXT entities), Suffix: count
+EXCEL_COLUMN_LAYER_TEXT_MTEXT_COUNT: str = "layer_text_mtext_count"
 
 # Excel configuration - Entity Summary sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions

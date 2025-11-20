@@ -8,8 +8,9 @@ This test file includes:
 - 10x scale instances (X-axis, Y-axis, both axes)
 """
 
-import ezdxf
 from pathlib import Path
+
+import ezdxf
 
 
 def create_comprehensive_scale_test() -> None:

@@ -10,8 +10,9 @@ This compact version features:
 - Axis reference lines at X=0 and Y=0
 """
 
-import ezdxf
 from pathlib import Path
+
+import ezdxf
 
 
 def create_comprehensive_scale_test_compact() -> None:

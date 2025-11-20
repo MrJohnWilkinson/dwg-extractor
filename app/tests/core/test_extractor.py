@@ -897,3 +897,38 @@ class TestExtractor:
         for layer_name, color_count in result["layer_unique_color_counts"].items():
             assert isinstance(layer_name, str)
             assert isinstance(color_count, int)
+
+    def test_extract_layer_text_mtext_counts(self) -> None:
+        """Test extraction of TEXT and MTEXT entity counts per layer."""
+        result = extract_blocks("app/tests/assets/sample_drawing.dxf")
+
+        # Verify key exists
+        assert "layer_text_mtext_counts" in result
+
+        # Verify all values are integers
+        for count in result["layer_text_mtext_counts"].values():
+            assert isinstance(count, int)
+            assert count >= 0
+
+        # Verify all layers have entries (even if 0)
+        for layer_name in result["layer_entity_counts"].keys():
+            assert layer_name in result["layer_text_mtext_counts"]
+
+    def test_extract_layer_text_mtext_counts_empty_file(self) -> None:
+        """Test text/mtext counts for empty drawing."""
+        result = extract_blocks("app/tests/assets/empty_drawing.dxf")
+
+        assert "layer_text_mtext_counts" in result
+        assert isinstance(result["layer_text_mtext_counts"], dict)
+
+    def test_extract_layer_text_mtext_counts_types(self) -> None:
+        """Test that text/mtext count return types are correct."""
+        result = extract_blocks("app/tests/assets/sample_drawing.dxf")
+
+        # Verify layer_text_mtext_counts is a dict with str keys and int values
+        assert isinstance(result["layer_text_mtext_counts"], dict)
+
+        for layer_name, count in result["layer_text_mtext_counts"].items():
+            assert isinstance(layer_name, str)
+            assert isinstance(count, int)
+            assert count >= 0

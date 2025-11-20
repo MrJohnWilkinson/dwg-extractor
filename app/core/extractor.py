@@ -49,6 +49,9 @@ class ExtractionResult(TypedDict):
         layer_entity_counts: Dictionary mapping layer names to total entity counts on that layer
         layer_unique_color_counts: Dictionary mapping layer names to count of unique RGB color values on that layer
                                    Tracks distinct colors across all entities on each layer
+        layer_text_mtext_counts: Dictionary mapping layer names to combined TEXT and MTEXT entity counts
+                                Counts both TEXT (single-line) and MTEXT (multi-line) entities on each layer
+                                Example: {'NOTES': 25, 'TITLE_BLOCK': 8, 'DIMENSIONS': 0}
         entity_type_counts: Dictionary mapping entity type names to their total count in the drawing
         block_trimming_data: Dictionary mapping block names to their geometry analysis data.
                              Each block entry contains: native_width (float), native_height (float),
@@ -74,6 +77,7 @@ class ExtractionResult(TypedDict):
     layer_block_insertion_counts: dict[str, int]
     layer_entity_counts: dict[str, int]
     layer_unique_color_counts: dict[str, int]
+    layer_text_mtext_counts: dict[str, int]
     entity_type_counts: dict[str, int]
     block_trimming_data: dict[str, dict[str, Any]]
 
@@ -148,6 +152,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         layer_block_insertion_counts: dict[str, int] = {}
         layer_entity_counts: dict[str, int] = {}
         layer_unique_colors: dict[str, set[tuple[int, int, int]]] = {}
+        layer_text_mtext_counts: dict[str, int] = {}
         entity_type_counts: dict[str, int] = {}
         block_trimming_data: dict[str, dict[str, Any]] = {}
 
@@ -160,6 +165,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 continue
             layer_entity_counts[layer_name] = 0
             layer_block_insertion_counts[layer_name] = 0
+            layer_text_mtext_counts[layer_name] = 0
         logger.info(f"Initialized {len(layer_entity_counts)} layers from layer table")
 
         # Extract block definition entity counts and geometry analysis
@@ -205,6 +211,12 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
             # Count entities per layer
             layer_entity_counts[layer_name] = layer_entity_counts.get(layer_name, 0) + 1
+
+            # Count TEXT and MTEXT entities per layer
+            if entity_type in ("TEXT", "MTEXT"):
+                layer_text_mtext_counts[layer_name] = (
+                    layer_text_mtext_counts.get(layer_name, 0) + 1
+                )
 
             # Extract entity color for layer color analysis
             try:
@@ -305,6 +317,10 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         logger.info(
             f"Extracted color data for {len(layer_unique_color_counts)} layers"
         )
+        total_text_entities = sum(layer_text_mtext_counts.values())
+        logger.info(
+            f"Found {total_text_entities} TEXT/MTEXT entities across {len(layer_text_mtext_counts)} layers"
+        )
 
         # Return comprehensive result
         result: ExtractionResult = {
@@ -317,6 +333,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             "layer_block_insertion_counts": layer_block_insertion_counts,
             "layer_entity_counts": layer_entity_counts,
             "layer_unique_color_counts": layer_unique_color_counts,
+            "layer_text_mtext_counts": layer_text_mtext_counts,
             "entity_type_counts": entity_type_counts,
             "block_trimming_data": block_trimming_data,
         }
