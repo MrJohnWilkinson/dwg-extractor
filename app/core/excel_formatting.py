@@ -20,6 +20,7 @@ from .constants import (
     EXCEL_FILL_COLOR_SCALE_NEGATIVE,
     EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
     EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
+    EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
@@ -278,4 +279,68 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
         f"Block Geometry Analysis sheet formatted with {total_highlighted} rows highlighted "
         f"(red: {red_highlighted}, orange: {orange_highlighted}, yellow: {yellow_highlighted}) "
         f"and segment columns right-aligned"
+    )
+
+
+def _format_annotations_analysis_sheet(wb: Workbook) -> None:
+    """Apply formatting to the Annotations Analysis sheet with RGB color fills."""
+    ws = wb[EXCEL_SHEET_ANNOTATIONS_ANALYSIS]
+
+    # Apply auto-filter
+    if ws.dimensions:
+        ws.auto_filter.ref = ws.dimensions
+
+    # Freeze header row
+    ws.freeze_panes = "A2"
+    logger.info("Frozen panes applied to Annotations Analysis sheet")
+
+    # Set column widths (8 columns: A-H)
+    ws.column_dimensions["A"].width = 60  # annotation_contents
+    ws.column_dimensions["B"].width = 15  # annotation_type
+    ws.column_dimensions["C"].width = 25  # annotation_layer_name
+    ws.column_dimensions["D"].width = 12  # annotation_color_r
+    ws.column_dimensions["E"].width = 12  # annotation_color_g
+    ws.column_dimensions["F"].width = 12  # annotation_color_b
+    ws.column_dimensions["G"].width = 12  # annotation_color_sample
+    ws.column_dimensions["H"].width = 20  # annotation_count
+
+    # Enable text wrapping on header row
+    header_alignment = Alignment(wrap_text=True, vertical="top")
+    for cell in ws[1]:
+        cell.alignment = header_alignment
+
+    # Enable text wrapping on annotation_contents column (column A) for all data rows
+    content_alignment = Alignment(wrap_text=True, vertical="top")
+    for row_idx in range(2, ws.max_row + 1):
+        ws.cell(row=row_idx, column=1).alignment = content_alignment
+
+    # Apply RGB color fills to annotation_color_sample column (column G)
+    color_fills_applied = 0
+    for row_idx in range(2, ws.max_row + 1):
+        # Read RGB values from columns D, E, F
+        r_value = ws.cell(row=row_idx, column=4).value
+        g_value = ws.cell(row=row_idx, column=5).value
+        b_value = ws.cell(row=row_idx, column=6).value
+
+        # Validate RGB values
+        if (
+            isinstance(r_value, int)
+            and isinstance(g_value, int)
+            and isinstance(b_value, int)
+            and 0 <= r_value <= 255
+            and 0 <= g_value <= 255
+            and 0 <= b_value <= 255
+        ):
+            # Convert RGB to hex format (RRGGBB)
+            hex_color = f"{r_value:02X}{g_value:02X}{b_value:02X}"
+
+            # Create and apply fill to column G (annotation_color_sample)
+            color_fill = PatternFill(
+                start_color=hex_color, end_color=hex_color, fill_type="solid"
+            )
+            ws.cell(row=row_idx, column=7).fill = color_fill
+            color_fills_applied += 1
+
+    logger.info(
+        f"Annotations Analysis sheet formatted with {color_fills_applied} color sample cells filled"
     )

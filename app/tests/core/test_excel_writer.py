@@ -41,12 +41,13 @@ from core.constants import (
     EXCEL_COLUMN_BLOCK_XDATA_APPS,
     EXCEL_COLUMN_ENTITY_TYPE_COUNT,
     EXCEL_COLUMN_ENTITY_TYPE_NAME,
+    EXCEL_COLUMN_LAYER_ANNOTATION_COUNT,
     EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
     EXCEL_COLUMN_LAYER_NAME,
-    EXCEL_COLUMN_LAYER_TEXT_MTEXT_COUNT,
     EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT,
     EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
+    EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
@@ -95,7 +96,8 @@ class TestExcelWriter:
             "layer_block_insertion_counts": {"Layer1": 15, "Layer2": 3},
             "layer_entity_counts": {"Layer1": 25, "Layer2": 10},
             "layer_unique_color_counts": {"Layer1": 3, "Layer2": 1},
-            "layer_text_mtext_counts": {"Layer1": 5, "Layer2": 2},
+            "layer_annotation_counts": {"Layer1": 5, "Layer2": 2},
+            "annotation_data": {},
             "entity_type_counts": {"INSERT": 18, "LINE": 15, "CIRCLE": 8},
             "block_trimming_data": {
                 "VALVE": {
@@ -122,7 +124,7 @@ class TestExcelWriter:
     def test_write_excel_four_sheets(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that four sheets are created with correct names."""
+        """Test that five sheets are created with correct names."""
         output_path = os.path.join(temp_dir, "test_drawing.dwg")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -135,7 +137,8 @@ class TestExcelWriter:
         assert EXCEL_SHEET_LAYER_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_ENTITY_SUMMARY in wb.sheetnames
         assert EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS in wb.sheetnames
-        assert len(wb.sheetnames) == 4
+        assert EXCEL_SHEET_ANNOTATIONS_ANALYSIS in wb.sheetnames
+        assert len(wb.sheetnames) == 5
 
     def test_block_analysis_sheet_simplified(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -180,7 +183,7 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT),
             format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT),
             format_header(EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT),
-            format_header(EXCEL_COLUMN_LAYER_TEXT_MTEXT_COUNT),
+            format_header(EXCEL_COLUMN_LAYER_ANNOTATION_COUNT),
         ]
 
         # Verify data rows
@@ -303,7 +306,8 @@ class TestExcelWriter:
             "layer_block_insertion_counts": {},
             "layer_entity_counts": {},
             "layer_unique_color_counts": {},
-            "layer_text_mtext_counts": {},
+            "layer_annotation_counts": {},
+            "annotation_data": {},
             "entity_type_counts": {},
             "block_trimming_data": {},
         }
@@ -509,7 +513,8 @@ class TestExcelWriter:
             "layer_block_insertion_counts": {},
             "layer_entity_counts": {},
             "layer_unique_color_counts": {},
-            "layer_text_mtext_counts": {},
+            "layer_annotation_counts": {},
+            "annotation_data": {},
             "entity_type_counts": {},
             "block_trimming_data": {},
         }
@@ -683,7 +688,8 @@ class TestExcelWriter:
             "layer_block_insertion_counts": {},
             "layer_entity_counts": {},
             "layer_unique_color_counts": {},
-            "layer_text_mtext_counts": {},
+            "layer_annotation_counts": {},
+            "annotation_data": {},
             "entity_type_counts": {},
             "block_trimming_data": {},
         }
@@ -730,7 +736,8 @@ class TestExcelWriter:
             "layer_block_insertion_counts": {"Layer1": 15},
             "layer_entity_counts": {"Layer1": 25},
             "layer_unique_color_counts": {"Layer1": 0},
-            "layer_text_mtext_counts": {"Layer1": 0},
+            "layer_annotation_counts": {"Layer1": 0},
+            "annotation_data": {},
             "entity_type_counts": {"INSERT": 15},
             "block_trimming_data": {
                 "VALVE": {
@@ -809,7 +816,7 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT),
             format_header(EXCEL_COLUMN_LAYER_ENTITY_COUNT),
             format_header(EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT),
-            format_header(EXCEL_COLUMN_LAYER_TEXT_MTEXT_COUNT),
+            format_header(EXCEL_COLUMN_LAYER_ANNOTATION_COUNT),
         ]
 
         # Entity Summary sheet - 2 columns
@@ -1102,8 +1109,9 @@ class TestExcelWriter:
                 "layer_block_insertion_counts": {"LAYER_1": 5},
                 "layer_entity_counts": {"LAYER_1": 10},
                 "layer_unique_color_counts": {"LAYER_1": 0},
-                "layer_text_mtext_counts": {"LAYER_1": 0},
-                "entity_type_counts": {"INSERT": 5, "LINE": 10},
+                "layer_annotation_counts": {"LAYER_1": 0},
+            "annotation_data": {},
+            "entity_type_counts": {"INSERT": 5, "LINE": 10},
                 "block_trimming_data": {
                     "BLOCK_A": {
                         "native_width": 10.0,
@@ -1197,7 +1205,8 @@ class TestExcelWriter:
             "layer_block_insertion_counts": {},
             "layer_entity_counts": {},
             "layer_unique_color_counts": {},
-            "layer_text_mtext_counts": {},
+            "layer_annotation_counts": {},
+            "annotation_data": {},
             "entity_type_counts": {},
             "block_trimming_data": {},
         }
@@ -1311,7 +1320,8 @@ class TestNegativeScaleTextGeneration:
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
             "layer_unique_color_counts": {"0": 0},
-            "layer_text_mtext_counts": {"0": 0},
+            "layer_annotation_counts": {"0": 0},
+            "annotation_data": {},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
@@ -1341,7 +1351,8 @@ class TestNegativeScaleTextGeneration:
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
             "layer_unique_color_counts": {"0": 0},
-            "layer_text_mtext_counts": {"0": 0},
+            "layer_annotation_counts": {"0": 0},
+            "annotation_data": {},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
@@ -1371,7 +1382,8 @@ class TestNegativeScaleTextGeneration:
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
             "layer_unique_color_counts": {"0": 0},
-            "layer_text_mtext_counts": {"0": 0},
+            "layer_annotation_counts": {"0": 0},
+            "annotation_data": {},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
@@ -1401,7 +1413,8 @@ class TestNegativeScaleTextGeneration:
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
             "layer_unique_color_counts": {"0": 0},
-            "layer_text_mtext_counts": {"0": 0},
+            "layer_annotation_counts": {"0": 0},
+            "annotation_data": {},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
@@ -1431,7 +1444,8 @@ class TestNegativeScaleTextGeneration:
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
             "layer_unique_color_counts": {"0": 0},
-            "layer_text_mtext_counts": {"0": 0},
+            "layer_annotation_counts": {"0": 0},
+            "annotation_data": {},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
@@ -1462,7 +1476,8 @@ class TestNegativeScaleTextGeneration:
             "layer_block_insertion_counts": {"0": 2},
             "layer_entity_counts": {"0": 20},
             "layer_unique_color_counts": {"0": 0},
-            "layer_text_mtext_counts": {"0": 0},
+            "layer_annotation_counts": {"0": 0},
+            "annotation_data": {},
             "entity_type_counts": {},
             "block_trimming_data": {
                 "TEST": {
@@ -1585,3 +1600,220 @@ class TestNegativeScaleIntegration:
         assert normal_fill.fill_type is None or normal_fill.start_color.rgb == "00000000", (
             "NORMAL should not have highlighting"
         )
+
+
+class TestAnnotationsAnalysisSheet:
+    """Test suite for Annotations Analysis sheet generation."""
+
+    @pytest.fixture
+    def temp_dir(self) -> Iterator[str]:
+        """Create a temporary directory for test outputs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield tmpdir
+
+    @pytest.fixture
+    def annotation_extraction_data(self) -> ExtractionResult:
+        """Provide sample extraction data with annotations."""
+        return {
+            "block_counts": {"VALVE": 5},
+            "block_entities": {"VALVE": 8},
+            "block_layer_pairs": {("VALVE", "Layer1"): 5},
+            "block_rotation_counts": {("VALVE", "Layer1", "0"): 5},
+            "block_scale_data": {"VALVE": {(1.0, 1.0)}},
+            "block_xdata_apps": {},
+            "layer_block_insertion_counts": {"Layer1": 5},
+            "layer_entity_counts": {"Layer1": 25},
+            "layer_unique_color_counts": {"Layer1": 2},
+            "layer_annotation_counts": {"Layer1": 10},
+            "annotation_data": {
+                ("Sample Text", "TEXT", "Layer1", 255, 0, 0): 3,
+                ("Another Text", "MTEXT", "Layer2", 0, 255, 0): 2,
+                ("Third Text", "TEXT", "Layer1", 0, 0, 255): 1,
+            },
+            "entity_type_counts": {"INSERT": 5, "LINE": 20},
+            "block_trimming_data": {
+                "VALVE": {
+                    "native_width": 10.0,
+                    "native_height": 5.0,
+                    "vertical_segments": [10.0],
+                    "horizontal_segments": [5.0],
+                }
+            },
+        }
+
+    def test_annotations_analysis_sheet_exists(
+        self, temp_dir: str, annotation_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that Annotations Analysis sheet is created."""
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(annotation_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        assert EXCEL_SHEET_ANNOTATIONS_ANALYSIS in wb.sheetnames
+
+    def test_annotations_analysis_sheet_columns(
+        self, temp_dir: str, annotation_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that Annotations Analysis sheet has correct column structure."""
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(annotation_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ANNOTATIONS_ANALYSIS)
+
+        # Verify 8 columns in correct order
+        from core.constants import (
+            EXCEL_COLUMN_ANNOTATION_COLOR_B,
+            EXCEL_COLUMN_ANNOTATION_COLOR_G,
+            EXCEL_COLUMN_ANNOTATION_COLOR_R,
+            EXCEL_COLUMN_ANNOTATION_COLOR_SAMPLE,
+            EXCEL_COLUMN_ANNOTATION_CONTENTS,
+            EXCEL_COLUMN_ANNOTATION_COUNT,
+            EXCEL_COLUMN_ANNOTATION_LAYER_NAME,
+            EXCEL_COLUMN_ANNOTATION_TYPE,
+        )
+
+        expected_columns = [
+            format_header(EXCEL_COLUMN_ANNOTATION_CONTENTS),
+            format_header(EXCEL_COLUMN_ANNOTATION_TYPE),
+            format_header(EXCEL_COLUMN_ANNOTATION_LAYER_NAME),
+            format_header(EXCEL_COLUMN_ANNOTATION_COLOR_R),
+            format_header(EXCEL_COLUMN_ANNOTATION_COLOR_G),
+            format_header(EXCEL_COLUMN_ANNOTATION_COLOR_B),
+            format_header(EXCEL_COLUMN_ANNOTATION_COLOR_SAMPLE),
+            format_header(EXCEL_COLUMN_ANNOTATION_COUNT),
+        ]
+
+        assert list(df.columns) == expected_columns
+        assert len(df.columns) == 8
+
+    def test_annotations_analysis_sheet_data_accuracy(
+        self, temp_dir: str, annotation_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that annotation data is correctly written to sheet."""
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(annotation_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ANNOTATIONS_ANALYSIS)
+
+        # Verify we have 3 data rows
+        assert len(df) == 3
+
+        # Verify data values (check first row which should be sorted by count desc)
+        from core.constants import (
+            EXCEL_COLUMN_ANNOTATION_COLOR_R,
+            EXCEL_COLUMN_ANNOTATION_CONTENTS,
+            EXCEL_COLUMN_ANNOTATION_COUNT,
+            EXCEL_COLUMN_ANNOTATION_TYPE,
+        )
+
+        # First row should be "Sample Text" with count=3 (highest count)
+        first_row = df.iloc[0]
+        assert first_row[format_header(EXCEL_COLUMN_ANNOTATION_CONTENTS)] == "Sample Text"
+        assert first_row[format_header(EXCEL_COLUMN_ANNOTATION_TYPE)] == "TEXT"
+        assert first_row[format_header(EXCEL_COLUMN_ANNOTATION_COUNT)] == 3
+        assert first_row[format_header(EXCEL_COLUMN_ANNOTATION_COLOR_R)] == 255
+
+    def test_annotations_analysis_sheet_sorting(
+        self, temp_dir: str, annotation_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that annotations are sorted by count descending."""
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(annotation_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ANNOTATIONS_ANALYSIS)
+
+        from core.constants import EXCEL_COLUMN_ANNOTATION_COUNT
+
+        # Verify counts are in descending order
+        counts = df[format_header(EXCEL_COLUMN_ANNOTATION_COUNT)].tolist()
+        assert counts == sorted(counts, reverse=True)
+        assert counts == [3, 2, 1]
+
+    def test_annotations_analysis_sheet_empty_data(self, temp_dir: str) -> None:
+        """Test Annotations Analysis sheet with no annotation data."""
+        empty_data: ExtractionResult = {
+            "block_counts": {},
+            "block_entities": {},
+            "block_layer_pairs": {},
+            "block_rotation_counts": {},
+            "block_scale_data": {},
+            "block_xdata_apps": {},
+            "layer_block_insertion_counts": {},
+            "layer_entity_counts": {},
+            "layer_unique_color_counts": {},
+            "layer_annotation_counts": {},
+            "annotation_data": {},  # Empty annotations
+            "entity_type_counts": {},
+            "block_trimming_data": {},
+        }
+
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(empty_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ANNOTATIONS_ANALYSIS)
+
+        # Should have headers but no data rows
+        assert len(df) == 0
+        assert len(df.columns) == 8
+
+    def test_layer_analysis_uses_annotation_count_column(
+        self, temp_dir: str, annotation_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that Layer Analysis sheet uses renamed layer_annotation_count column."""
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(annotation_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
+
+        # Verify column header is "Layer Annotation Count" (formatted)
+        from core.constants import EXCEL_COLUMN_LAYER_ANNOTATION_COUNT
+
+        expected_header = format_header(EXCEL_COLUMN_LAYER_ANNOTATION_COUNT)
+        assert expected_header in df.columns
+        assert expected_header == "Layer Annotation Count"
+
+        # Verify data values match layer_annotation_counts from input
+        layer1_row = df[df[format_header(EXCEL_COLUMN_LAYER_NAME)] == "Layer1"].iloc[0]
+        assert layer1_row[expected_header] == 10
+
+    def test_annotations_analysis_integration_with_real_data(
+        self, temp_dir: str
+    ) -> None:
+        """Integration test with real annotation_test.dxf file."""
+        from core.extractor import extract_blocks
+
+        result = extract_blocks("app/tests/assets/annotation_test.dxf")
+        output_path = os.path.join(temp_dir, "annotation_test.dxf")
+        excel_path = write_excel(result, output_path)
+
+        # Verify sheet exists and has data
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ANNOTATIONS_ANALYSIS)
+        assert len(df) > 0  # Should have annotation data
+
+        # Verify all columns present
+        assert len(df.columns) == 8
+
+        # Verify sorting
+        from core.constants import EXCEL_COLUMN_ANNOTATION_COUNT
+
+        counts = df[format_header(EXCEL_COLUMN_ANNOTATION_COUNT)].tolist()
+        assert counts == sorted(counts, reverse=True)
+
+    def test_five_sheets_created(
+        self, temp_dir: str, annotation_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that exactly 5 sheets are created including Annotations Analysis."""
+        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        excel_path = write_excel(annotation_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+
+        # Verify exactly 5 sheets
+        assert len(wb.sheetnames) == 5
+
+        # Verify all expected sheet names
+        assert EXCEL_SHEET_BLOCK_ANALYSIS in wb.sheetnames
+        assert EXCEL_SHEET_LAYER_ANALYSIS in wb.sheetnames
+        assert EXCEL_SHEET_ENTITY_SUMMARY in wb.sheetnames
+        assert EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS in wb.sheetnames
+        assert EXCEL_SHEET_ANNOTATIONS_ANALYSIS in wb.sheetnames

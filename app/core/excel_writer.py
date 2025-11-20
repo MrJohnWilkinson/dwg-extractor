@@ -20,6 +20,14 @@ import pandas as pd
 from openpyxl import load_workbook
 
 from .constants import (
+    EXCEL_COLUMN_ANNOTATION_COLOR_B,
+    EXCEL_COLUMN_ANNOTATION_COLOR_G,
+    EXCEL_COLUMN_ANNOTATION_COLOR_R,
+    EXCEL_COLUMN_ANNOTATION_COLOR_SAMPLE,
+    EXCEL_COLUMN_ANNOTATION_CONTENTS,
+    EXCEL_COLUMN_ANNOTATION_COUNT,
+    EXCEL_COLUMN_ANNOTATION_LAYER_NAME,
+    EXCEL_COLUMN_ANNOTATION_TYPE,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
@@ -38,17 +46,19 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_XDATA_APPS,
     EXCEL_COLUMN_ENTITY_TYPE_COUNT,
     EXCEL_COLUMN_ENTITY_TYPE_NAME,
+    EXCEL_COLUMN_LAYER_ANNOTATION_COUNT,
     EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
     EXCEL_COLUMN_LAYER_NAME,
-    EXCEL_COLUMN_LAYER_TEXT_MTEXT_COUNT,
     EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT,
+    EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
     EXCEL_SHEET_LAYER_ANALYSIS,
 )
 from .excel_formatting import (
+    _format_annotations_analysis_sheet,
     _format_block_analysis_sheet,
     _format_block_geometry_analysis_sheet,
     _format_entity_summary_sheet,
@@ -178,11 +188,12 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
     """
     Generate a multi-sheet Excel file from comprehensive CAD extraction data.
 
-    This function creates an Excel workbook with four sheets:
+    This function creates an Excel workbook with five sheets:
     - Block Analysis: Simplified inventory with block-layer pairs and insertion counts
     - Layer Analysis: Layers with insertion counts and entity counts
     - Entity Summary: Entity types with total counts
     - Block Geometry Analysis: Consolidated transformations and geometry (rotations, scales, dimensions, segments)
+    - Annotations Analysis: Text annotations (TEXT/MTEXT) with contents, type, layer, color, and counts
 
     All sheets include headers, appropriate sorting, auto-filters, and proper column widths.
     The Block Geometry Analysis sheet includes red highlighting for mirrored blocks (negative scales).
@@ -232,6 +243,9 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
             # Sheet 4: Block Geometry Analysis
             _create_block_geometry_analysis_sheet(extraction_data, writer)
 
+            # Sheet 5: Annotations Analysis
+            _create_annotations_analysis_sheet(extraction_data, writer)
+
         # Load workbook for post-processing (formatting)
         wb = load_workbook(full_path)
 
@@ -240,6 +254,7 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         _format_layer_analysis_sheet(wb)
         _format_entity_summary_sheet(wb)
         _format_block_geometry_analysis_sheet(wb)
+        _format_annotations_analysis_sheet(wb)
 
         # Save workbook with formatting
         wb.save(full_path)
@@ -319,7 +334,7 @@ def _create_layer_analysis_sheet(
     layer_block_insertion_counts = data["layer_block_insertion_counts"]
     layer_entity_counts = data["layer_entity_counts"]
     layer_unique_color_counts = data["layer_unique_color_counts"]
-    layer_text_mtext_counts = data["layer_text_mtext_counts"]
+    layer_annotation_counts = data["layer_annotation_counts"]
 
     if layer_entity_counts:
         # Merge layer data into single DataFrame
@@ -327,14 +342,14 @@ def _create_layer_analysis_sheet(
         for layer_name, entity_count in layer_entity_counts.items():
             insertion_count = layer_block_insertion_counts.get(layer_name, 0)
             color_count = layer_unique_color_counts.get(layer_name, 0)
-            text_mtext_count = layer_text_mtext_counts.get(layer_name, 0)
+            annotation_count = layer_annotation_counts.get(layer_name, 0)
             rows.append(
                 {
                     EXCEL_COLUMN_LAYER_NAME: layer_name,
                     EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT: insertion_count,
                     EXCEL_COLUMN_LAYER_ENTITY_COUNT: entity_count,
                     EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT: color_count,
-                    EXCEL_COLUMN_LAYER_TEXT_MTEXT_COUNT: text_mtext_count,
+                    EXCEL_COLUMN_LAYER_ANNOTATION_COUNT: annotation_count,
                 }
             )
 
@@ -350,7 +365,7 @@ def _create_layer_analysis_sheet(
                 EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
                 EXCEL_COLUMN_LAYER_ENTITY_COUNT,
                 EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT,
-                EXCEL_COLUMN_LAYER_TEXT_MTEXT_COUNT,
+                EXCEL_COLUMN_LAYER_ANNOTATION_COUNT,
             ]
         )
 
@@ -506,3 +521,62 @@ def _create_block_geometry_analysis_sheet(
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS, index=False)
     logger.info(f"Block Geometry Analysis sheet created with {len(df)} rows")
+
+
+def _create_annotations_analysis_sheet(
+    data: ExtractionResult, writer: pd.ExcelWriter
+) -> None:
+    """Create the Annotations Analysis sheet with text annotation details."""
+    logger.info("Creating Annotations Analysis sheet...")
+
+    annotation_data = data["annotation_data"]
+
+    if annotation_data:
+        # Build DataFrame rows from annotation data
+        rows = []
+        for (
+            contents,
+            annotation_type,
+            layer_name,
+            color_r,
+            color_g,
+            color_b,
+        ), count in annotation_data.items():
+            rows.append(
+                {
+                    EXCEL_COLUMN_ANNOTATION_CONTENTS: contents,
+                    EXCEL_COLUMN_ANNOTATION_TYPE: annotation_type,
+                    EXCEL_COLUMN_ANNOTATION_LAYER_NAME: layer_name,
+                    EXCEL_COLUMN_ANNOTATION_COLOR_R: color_r,
+                    EXCEL_COLUMN_ANNOTATION_COLOR_G: color_g,
+                    EXCEL_COLUMN_ANNOTATION_COLOR_B: color_b,
+                    EXCEL_COLUMN_ANNOTATION_COLOR_SAMPLE: "",  # Placeholder for color fill
+                    EXCEL_COLUMN_ANNOTATION_COUNT: count,
+                }
+            )
+
+        df = pd.DataFrame(rows)
+        # Sort by count descending
+        df.sort_values(
+            by=EXCEL_COLUMN_ANNOTATION_COUNT, ascending=False, inplace=True
+        )
+    else:
+        # Create empty DataFrame with headers only
+        df = pd.DataFrame(
+            columns=[
+                EXCEL_COLUMN_ANNOTATION_CONTENTS,
+                EXCEL_COLUMN_ANNOTATION_TYPE,
+                EXCEL_COLUMN_ANNOTATION_LAYER_NAME,
+                EXCEL_COLUMN_ANNOTATION_COLOR_R,
+                EXCEL_COLUMN_ANNOTATION_COLOR_G,
+                EXCEL_COLUMN_ANNOTATION_COLOR_B,
+                EXCEL_COLUMN_ANNOTATION_COLOR_SAMPLE,
+                EXCEL_COLUMN_ANNOTATION_COUNT,
+            ]
+        )
+
+    # Format column headers for Excel display
+    df.columns = [format_header(col) for col in df.columns]
+
+    df.to_excel(writer, sheet_name=EXCEL_SHEET_ANNOTATIONS_ANALYSIS, index=False)
+    logger.info(f"Annotations Analysis sheet created with {len(df)} rows")

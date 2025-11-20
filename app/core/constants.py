@@ -18,6 +18,7 @@ EXCEL_SHEET_BLOCK_ANALYSIS: str = "Block Analysis"
 EXCEL_SHEET_LAYER_ANALYSIS: str = "Layer Analysis"
 EXCEL_SHEET_ENTITY_SUMMARY: str = "Entity Summary"
 EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS: str = "Block Geometry Analysis"
+EXCEL_SHEET_ANNOTATIONS_ANALYSIS: str = "Annotations Analysis"
 
 # Excel configuration - Block Counts sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
@@ -45,8 +46,8 @@ EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT: str = "layer_block_insertion_count"
 EXCEL_COLUMN_LAYER_ENTITY_COUNT: str = "layer_entity_count"
 # Domain: layer, Attribute: unique, Qualifier: color, Suffix: count
 EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT: str = "layer_unique_color_count"
-# Domain: layer, Attribute: text_mtext (combined TEXT + MTEXT entities), Suffix: count
-EXCEL_COLUMN_LAYER_TEXT_MTEXT_COUNT: str = "layer_text_mtext_count"
+# Domain: layer, Attribute: annotation (combined TEXT + MTEXT entities), Suffix: count
+EXCEL_COLUMN_LAYER_ANNOTATION_COUNT: str = "layer_annotation_count"
 
 # Excel configuration - Entity Summary sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
@@ -64,6 +65,18 @@ EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: str = "block_native_height"
 # Domain: block, Attribute: vertical/horizontal, Qualifier: segments (collection)
 EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS: str = "block_vertical_segments"
 EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS: str = "block_horizontal_segments"
+
+# Excel configuration - Annotations Analysis sheet columns
+# See app_docs/005-field-naming-convention.md for naming conventions
+# Domain: annotation (TEXT/MTEXT entities)
+EXCEL_COLUMN_ANNOTATION_CONTENTS: str = "annotation_contents"
+EXCEL_COLUMN_ANNOTATION_TYPE: str = "annotation_type"
+EXCEL_COLUMN_ANNOTATION_LAYER_NAME: str = "annotation_layer_name"
+EXCEL_COLUMN_ANNOTATION_COLOR_R: str = "annotation_color_r"
+EXCEL_COLUMN_ANNOTATION_COLOR_G: str = "annotation_color_g"
+EXCEL_COLUMN_ANNOTATION_COLOR_B: str = "annotation_color_b"
+EXCEL_COLUMN_ANNOTATION_COLOR_SAMPLE: str = "annotation_color_sample"
+EXCEL_COLUMN_ANNOTATION_COUNT: str = "annotation_count"
 
 # Excel configuration - Fill colors for scale highlighting
 # Yellow: Warning color for scale variance with all positive values

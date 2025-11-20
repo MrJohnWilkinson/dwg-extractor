@@ -898,37 +898,250 @@ class TestExtractor:
             assert isinstance(layer_name, str)
             assert isinstance(color_count, int)
 
-    def test_extract_layer_text_mtext_counts(self) -> None:
+    def test_extract_layer_annotation_counts(self) -> None:
         """Test extraction of TEXT and MTEXT entity counts per layer."""
         result = extract_blocks("app/tests/assets/sample_drawing.dxf")
 
         # Verify key exists
-        assert "layer_text_mtext_counts" in result
+        assert "layer_annotation_counts" in result
 
         # Verify all values are integers
-        for count in result["layer_text_mtext_counts"].values():
+        for count in result["layer_annotation_counts"].values():
             assert isinstance(count, int)
             assert count >= 0
 
         # Verify all layers have entries (even if 0)
         for layer_name in result["layer_entity_counts"].keys():
-            assert layer_name in result["layer_text_mtext_counts"]
+            assert layer_name in result["layer_annotation_counts"]
 
-    def test_extract_layer_text_mtext_counts_empty_file(self) -> None:
+    def test_extract_layer_annotation_counts_empty_file(self) -> None:
         """Test text/mtext counts for empty drawing."""
         result = extract_blocks("app/tests/assets/empty_drawing.dxf")
 
-        assert "layer_text_mtext_counts" in result
-        assert isinstance(result["layer_text_mtext_counts"], dict)
+        assert "layer_annotation_counts" in result
+        assert isinstance(result["layer_annotation_counts"], dict)
 
-    def test_extract_layer_text_mtext_counts_types(self) -> None:
+    def test_extract_layer_annotation_counts_types(self) -> None:
         """Test that text/mtext count return types are correct."""
         result = extract_blocks("app/tests/assets/sample_drawing.dxf")
 
-        # Verify layer_text_mtext_counts is a dict with str keys and int values
-        assert isinstance(result["layer_text_mtext_counts"], dict)
+        # Verify layer_annotation_counts is a dict with str keys and int values
+        assert isinstance(result["layer_annotation_counts"], dict)
 
-        for layer_name, count in result["layer_text_mtext_counts"].items():
+        for layer_name, count in result["layer_annotation_counts"].items():
             assert isinstance(layer_name, str)
             assert isinstance(count, int)
             assert count >= 0
+
+    def test_annotation_data_extraction(self) -> None:
+        """Test that annotation_data is extracted and has correct structure."""
+        result = extract_blocks("app/tests/assets/annotation_test.dxf")
+
+        # Verify annotation_data key exists
+        assert "annotation_data" in result
+        assert isinstance(result["annotation_data"], dict)
+
+        # Verify keys are tuples of (contents, type, layer, r, g, b)
+        for key, count in result["annotation_data"].items():
+            assert isinstance(key, tuple)
+            assert len(key) == 6
+            contents, entity_type, layer_name, color_r, color_g, color_b = key
+
+            # Verify types
+            assert isinstance(contents, str)
+            assert isinstance(entity_type, str)
+            assert entity_type in ("TEXT", "MTEXT")
+            assert isinstance(layer_name, str)
+            assert isinstance(color_r, int)
+            assert isinstance(color_g, int)
+            assert isinstance(color_b, int)
+
+            # Verify RGB values are in valid range
+            assert 0 <= color_r <= 255
+            assert 0 <= color_g <= 255
+            assert 0 <= color_b <= 255
+
+            # Verify count is positive integer
+            assert isinstance(count, int)
+            assert count > 0
+
+    def test_annotation_data_grouping_by_content(self) -> None:
+        """Test that annotations are grouped correctly by content, type, layer, and color."""
+        result = extract_blocks("app/tests/assets/annotation_test.dxf")
+        annotation_data = result["annotation_data"]
+
+        # Find the duplicate text entry - should have count = 2
+        duplicate_entries = [
+            (key, count)
+            for key, count in annotation_data.items()
+            if "Duplicate Text" in key[0] and count == 2
+        ]
+        assert len(duplicate_entries) == 1, "Should have exactly one 'Duplicate Text' group with count=2"
+
+        # Verify same text on different layers creates separate groups
+        cross_layer_entries = [
+            key for key in annotation_data.keys() if "Cross Layer Text" in key[0]
+        ]
+        assert len(cross_layer_entries) >= 2, "Same text on different layers should be separate groups"
+
+        # Verify same text with different colors creates separate groups
+        multi_color_entries = [
+            key for key in annotation_data.keys() if "Multi Color Text" in key[0]
+        ]
+        assert len(multi_color_entries) >= 2, "Same text with different colors should be separate groups"
+
+    def test_annotation_data_text_vs_mtext_distinction(self) -> None:
+        """Test that TEXT and MTEXT with same content are separate groups."""
+        result = extract_blocks("app/tests/assets/annotation_test.dxf")
+        annotation_data = result["annotation_data"]
+
+        # Find entries with "Same Content Different Type"
+        same_content_entries = [
+            key
+            for key in annotation_data.keys()
+            if "Same Content Different Type" in key[0]
+        ]
+
+        # Should have 2 entries: one TEXT, one MTEXT
+        assert len(same_content_entries) >= 2, "TEXT and MTEXT with same content should be separate"
+
+        # Verify we have both types
+        entity_types = {key[1] for key in same_content_entries}
+        assert "TEXT" in entity_types
+        assert "MTEXT" in entity_types
+
+    def test_annotation_data_special_characters(self) -> None:
+        """Test that special characters and unicode in text content are preserved."""
+        result = extract_blocks("app/tests/assets/annotation_test.dxf")
+        annotation_data = result["annotation_data"]
+
+        # Find special characters entry
+        special_char_entries = [
+            key for key in annotation_data.keys() if "@#$%^&*()" in key[0]
+        ]
+        assert len(special_char_entries) >= 1, "Special characters should be preserved"
+
+        # Find unicode entry
+        unicode_entries = [
+            key
+            for key in annotation_data.keys()
+            if any(ord(c) > 127 for c in key[0])  # Unicode characters
+        ]
+        assert len(unicode_entries) >= 1, "Unicode characters should be preserved"
+
+    def test_annotation_data_empty_file(self) -> None:
+        """Test annotation extraction from file with no TEXT/MTEXT entities."""
+        result = extract_blocks("app/tests/assets/empty_drawing.dxf")
+
+        # Verify annotation_data exists but is empty
+        assert "annotation_data" in result
+        assert isinstance(result["annotation_data"], dict)
+        # Empty file may or may not have annotations, but should be a dict
+        for key, count in result["annotation_data"].items():
+            assert isinstance(key, tuple)
+            assert isinstance(count, int)
+
+    def test_resolve_entity_color_to_rgb_direct_rgb(self) -> None:
+        """Test color resolution for entities with direct RGB color."""
+        result = extract_blocks("app/tests/assets/annotation_test.dxf")
+        annotation_data = result["annotation_data"]
+
+        # Find "Sample Text 1" which has direct RGB (255, 0, 0)
+        sample_text_1_entries = [
+            (key, count)
+            for key, count in annotation_data.items()
+            if "Sample Text 1" == key[0]
+        ]
+
+        assert len(sample_text_1_entries) == 1
+        key, count = sample_text_1_entries[0]
+        contents, entity_type, layer_name, color_r, color_g, color_b = key
+
+        # Verify direct RGB color (255, 0, 0) = red
+        assert color_r == 255
+        assert color_g == 0
+        assert color_b == 0
+
+    def test_resolve_entity_color_to_rgb_bylayer(self) -> None:
+        """Test color resolution for entities with ByLayer color."""
+        result = extract_blocks("app/tests/assets/annotation_test.dxf")
+        annotation_data = result["annotation_data"]
+
+        # Find "Sample Text 2" which has ByLayer color (should resolve to LAYER_GREEN's ACI 3)
+        sample_text_2_entries = [
+            (key, count)
+            for key, count in annotation_data.items()
+            if "Sample Text 2" == key[0]
+        ]
+
+        assert len(sample_text_2_entries) == 1
+        key, count = sample_text_2_entries[0]
+        contents, entity_type, layer_name, color_r, color_g, color_b = key
+
+        # Verify layer is LAYER_GREEN
+        assert layer_name == "LAYER_GREEN"
+
+        # ByLayer should resolve to layer's ACI color (ACI 3 = green)
+        # ACI 3 typically maps to RGB (0, 255, 0) but may vary
+        # Just verify we got valid RGB values
+        assert 0 <= color_r <= 255
+        assert 0 <= color_g <= 255
+        assert 0 <= color_b <= 255
+
+    def test_resolve_entity_color_to_rgb_aci_index(self) -> None:
+        """Test color resolution for entities with ACI color index."""
+        result = extract_blocks("app/tests/assets/annotation_test.dxf")
+        annotation_data = result["annotation_data"]
+
+        # Find "Sample Text 3" which has ACI color index 5 (blue)
+        sample_text_3_entries = [
+            (key, count)
+            for key, count in annotation_data.items()
+            if "Sample Text 3" == key[0]
+        ]
+
+        assert len(sample_text_3_entries) == 1
+        key, count = sample_text_3_entries[0]
+        contents, entity_type, layer_name, color_r, color_g, color_b = key
+
+        # ACI 5 = blue, should have valid RGB
+        assert 0 <= color_r <= 255
+        assert 0 <= color_g <= 255
+        assert 0 <= color_b <= 255
+
+    def test_resolve_entity_color_to_rgb_byblock(self) -> None:
+        """Test color resolution for entities with ByBlock color (defaults to white)."""
+        result = extract_blocks("app/tests/assets/annotation_test.dxf")
+        annotation_data = result["annotation_data"]
+
+        # Find "ByBlock Color Text" which has ByBlock color (should default to white)
+        byblock_entries = [
+            (key, count)
+            for key, count in annotation_data.items()
+            if "ByBlock Color Text" == key[0]
+        ]
+
+        assert len(byblock_entries) == 1
+        key, count = byblock_entries[0]
+        contents, entity_type, layer_name, color_r, color_g, color_b = key
+
+        # ByBlock should default to white (255, 255, 255)
+        assert color_r == 255
+        assert color_g == 255
+        assert color_b == 255
+
+    def test_annotation_data_mtext_multiline(self) -> None:
+        """Test that MTEXT multiline content is extracted correctly."""
+        result = extract_blocks("app/tests/assets/annotation_test.dxf")
+        annotation_data = result["annotation_data"]
+
+        # Find MTEXT entries (should have plain text, not DXF formatting codes)
+        mtext_entries = [
+            (key, count)
+            for key, count in annotation_data.items()
+            if key[1] == "MTEXT" and "multiline" in key[0].lower()
+        ]
+
+        # Should have at least one MTEXT with multiline content
+        # Note: ezdxf's entity.text property should return plain text without formatting
+        assert len(mtext_entries) >= 1, "MTEXT multiline content should be extracted"

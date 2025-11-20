@@ -16,6 +16,8 @@ from typing import Any, TypedDict
 
 import ezdxf
 from ezdxf import DXFError
+from ezdxf import colors as ezdxf_colors
+from ezdxf.document import Drawing
 
 from .constants import SUPPORTED_EXTENSIONS
 from .geometry import (
@@ -28,6 +30,81 @@ from .logger import setup_logger
 
 
 logger = setup_logger(__name__)
+
+
+def _resolve_entity_color_to_rgb(
+    entity: Any, doc: Drawing
+) -> tuple[int, int, int] | None:
+    """
+    Resolve an entity's color to RGB values.
+
+    Handles multiple color specifications including direct RGB, ByLayer, ByBlock, and ACI color indices.
+
+    Args:
+        entity: The ezdxf entity to resolve color for
+        doc: The DXF/DWG document containing the entity
+
+    Returns:
+        Tuple of (r, g, b) values (0-255 range) or None if color cannot be resolved
+
+    Examples:
+        >>> entity_with_rgb = ...  # Entity with direct RGB color
+        >>> _resolve_entity_color_to_rgb(entity_with_rgb, doc)
+        (255, 0, 0)  # Red
+
+        >>> entity_bylayer = ...  # Entity using ByLayer color
+        >>> _resolve_entity_color_to_rgb(entity_bylayer, doc)
+        (0, 255, 0)  # Resolved from layer color
+
+        >>> entity_aci = ...  # Entity with ACI color index
+        >>> _resolve_entity_color_to_rgb(entity_aci, doc)
+        (255, 255, 0)  # Yellow
+
+        >>> entity_invalid = ...  # Entity with invalid/missing color
+        >>> _resolve_entity_color_to_rgb(entity_invalid, doc)
+        None
+    """
+    try:
+        # Try direct RGB color first
+        if hasattr(entity, "rgb") and entity.rgb is not None:
+            rgb = entity.rgb
+            if isinstance(rgb, tuple) and len(rgb) == 3:
+                return (int(rgb[0]), int(rgb[1]), int(rgb[2]))
+            return None
+
+        # Get the color attribute
+        if not hasattr(entity.dxf, "color"):
+            return None
+
+        color_value = entity.dxf.color
+
+        # ByLayer color (256)
+        if color_value == 256:
+            try:
+                layer_name = entity.dxf.layer
+                layer = doc.layers.get(layer_name)
+                if layer and hasattr(layer.dxf, "color"):
+                    layer_color = layer.dxf.color
+                    # Convert ACI to RGB
+                    if 0 <= layer_color <= 255:
+                        return ezdxf_colors.aci2rgb(layer_color)
+            except (AttributeError, KeyError):
+                pass
+            return None
+
+        # ByBlock color (0) - default to white as safe fallback
+        if color_value == 0:
+            return (255, 255, 255)
+
+        # ACI color index (1-255)
+        if 1 <= color_value <= 255:
+            return ezdxf_colors.aci2rgb(color_value)
+
+        # Invalid or unsupported color
+        return None
+
+    except (AttributeError, TypeError, ValueError):
+        return None
 
 
 class ExtractionResult(TypedDict):
@@ -49,9 +126,13 @@ class ExtractionResult(TypedDict):
         layer_entity_counts: Dictionary mapping layer names to total entity counts on that layer
         layer_unique_color_counts: Dictionary mapping layer names to count of unique RGB color values on that layer
                                    Tracks distinct colors across all entities on each layer
-        layer_text_mtext_counts: Dictionary mapping layer names to combined TEXT and MTEXT entity counts
+        layer_annotation_counts: Dictionary mapping layer names to combined TEXT and MTEXT entity counts
                                 Counts both TEXT (single-line) and MTEXT (multi-line) entities on each layer
                                 Example: {'NOTES': 25, 'TITLE_BLOCK': 8, 'DIMENSIONS': 0}
+        annotation_data: Dictionary mapping annotation tuples to occurrence counts
+                        Key: (contents, type, layer_name, color_r, color_g, color_b)
+                        Value: count of annotations with that unique combination
+                        Example: {('DOOR', 'TEXT', 'NOTES', 255, 0, 0): 5, ('WINDOW', 'MTEXT', 'NOTES', 0, 255, 0): 3}
         entity_type_counts: Dictionary mapping entity type names to their total count in the drawing
         block_trimming_data: Dictionary mapping block names to their geometry analysis data.
                              Each block entry contains: native_width (float), native_height (float),
@@ -77,7 +158,8 @@ class ExtractionResult(TypedDict):
     layer_block_insertion_counts: dict[str, int]
     layer_entity_counts: dict[str, int]
     layer_unique_color_counts: dict[str, int]
-    layer_text_mtext_counts: dict[str, int]
+    layer_annotation_counts: dict[str, int]
+    annotation_data: dict[tuple[str, str, str, int, int, int], int]
     entity_type_counts: dict[str, int]
     block_trimming_data: dict[str, dict[str, Any]]
 
@@ -152,7 +234,8 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         layer_block_insertion_counts: dict[str, int] = {}
         layer_entity_counts: dict[str, int] = {}
         layer_unique_colors: dict[str, set[tuple[int, int, int]]] = {}
-        layer_text_mtext_counts: dict[str, int] = {}
+        layer_annotation_counts: dict[str, int] = {}
+        annotation_data: dict[tuple[str, str, str, int, int, int], int] = {}
         entity_type_counts: dict[str, int] = {}
         block_trimming_data: dict[str, dict[str, Any]] = {}
 
@@ -165,7 +248,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 continue
             layer_entity_counts[layer_name] = 0
             layer_block_insertion_counts[layer_name] = 0
-            layer_text_mtext_counts[layer_name] = 0
+            layer_annotation_counts[layer_name] = 0
         logger.info(f"Initialized {len(layer_entity_counts)} layers from layer table")
 
         # Extract block definition entity counts and geometry analysis
@@ -212,11 +295,40 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             # Count entities per layer
             layer_entity_counts[layer_name] = layer_entity_counts.get(layer_name, 0) + 1
 
-            # Count TEXT and MTEXT entities per layer
+            # Extract TEXT and MTEXT annotation data
             if entity_type in ("TEXT", "MTEXT"):
-                layer_text_mtext_counts[layer_name] = (
-                    layer_text_mtext_counts.get(layer_name, 0) + 1
+                # Count annotations per layer
+                layer_annotation_counts[layer_name] = (
+                    layer_annotation_counts.get(layer_name, 0) + 1
                 )
+
+                # Extract annotation details for Annotations Analysis sheet
+                try:
+                    # Get text contents
+                    if entity_type == "TEXT":
+                        contents = entity.dxf.text if hasattr(entity.dxf, "text") else ""
+                    else:  # MTEXT
+                        contents = entity.text if hasattr(entity, "text") else ""
+
+                    # Resolve color to RGB
+                    rgb_color = _resolve_entity_color_to_rgb(entity, doc)
+
+                    # Only track if we have content and could resolve color
+                    if contents and rgb_color is not None:
+                        annotation_key = (
+                            contents,
+                            entity_type,
+                            layer_name,
+                            rgb_color[0],
+                            rgb_color[1],
+                            rgb_color[2],
+                        )
+                        annotation_data[annotation_key] = (
+                            annotation_data.get(annotation_key, 0) + 1
+                        )
+                except (AttributeError, TypeError):
+                    # Skip entities with missing or invalid annotation data
+                    pass
 
             # Extract entity color for layer color analysis
             try:
@@ -317,9 +429,13 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         logger.info(
             f"Extracted color data for {len(layer_unique_color_counts)} layers"
         )
-        total_text_entities = sum(layer_text_mtext_counts.values())
+        total_annotation_entities = sum(layer_annotation_counts.values())
+        unique_annotation_groups = len(annotation_data)
         logger.info(
-            f"Found {total_text_entities} TEXT/MTEXT entities across {len(layer_text_mtext_counts)} layers"
+            f"Found {total_annotation_entities} annotation entities across {len(layer_annotation_counts)} layers"
+        )
+        logger.info(
+            f"Extracted {unique_annotation_groups} unique annotation groups"
         )
 
         # Return comprehensive result
@@ -333,7 +449,8 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             "layer_block_insertion_counts": layer_block_insertion_counts,
             "layer_entity_counts": layer_entity_counts,
             "layer_unique_color_counts": layer_unique_color_counts,
-            "layer_text_mtext_counts": layer_text_mtext_counts,
+            "layer_annotation_counts": layer_annotation_counts,
+            "annotation_data": annotation_data,
             "entity_type_counts": entity_type_counts,
             "block_trimming_data": block_trimming_data,
         }
