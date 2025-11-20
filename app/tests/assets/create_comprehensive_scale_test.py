@@ -12,7 +12,7 @@ import ezdxf
 from pathlib import Path
 
 
-def create_comprehensive_scale_test():
+def create_comprehensive_scale_test() -> None:
     """Create a DXF with block instances at various scales including negatives and 10x."""
     # Create new DXF document
     doc = ezdxf.new("R2010")

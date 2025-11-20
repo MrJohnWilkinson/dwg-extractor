@@ -14,7 +14,7 @@ import ezdxf
 from pathlib import Path
 
 
-def create_comprehensive_scale_test_compact():
+def create_comprehensive_scale_test_compact() -> None:
     """Create a compact DXF with block instances at various scales with visual grid."""
     # Create new DXF document
     doc = ezdxf.new("R2010")
@@ -120,7 +120,7 @@ def create_comprehensive_scale_test_compact():
     # Insert block instances with different scales and collect descriptions by row
     col = 0
     row = 0
-    row_descriptions = {}  # Store descriptions by row: {row: {"left": desc, "right": desc}}
+    row_descriptions: dict[int, dict[str, str]] = {}  # Store descriptions by row: {row: {"left": desc, "right": desc}}
 
     for description, x_scale, y_scale, z_scale in test_cases:
         # Calculate cell's top-left corner (with margin offset)
