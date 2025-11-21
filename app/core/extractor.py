@@ -1,13 +1,13 @@
 """
-DWG/DXF extraction logic for the DWG Block Extractor.
+DXF extraction logic for the DXF Block Extractor.
 
-This module provides functionality to parse DWG and DXF files using the ezdxf library,
+This module provides functionality to parse DXF files using the ezdxf library,
 extract comprehensive CAD analysis including block counts, layer metrics, and entity types.
 
 Usage:
     from core.extractor import extract_blocks
 
-    result = extract_blocks('/path/to/drawing.dwg')
+    result = extract_blocks('/path/to/drawing.dxf')
     # Returns: ExtractionResult with block_counts, block_entities, layer_insertions, etc.
 """
 
@@ -43,7 +43,7 @@ def _resolve_entity_color_to_rgb(
 
     Args:
         entity: The ezdxf entity to resolve color for
-        doc: The DXF/DWG document containing the entity
+        doc: The DXF document containing the entity
 
     Returns:
         Tuple of (r, g, b) values (0-255 range) or None if color cannot be resolved
@@ -320,7 +320,7 @@ class ExtractionResult(TypedDict):
 
 def extract_blocks(file_path: str) -> ExtractionResult:
     """
-    Extract comprehensive CAD analysis from a DWG or DXF file.
+    Extract comprehensive CAD analysis from a DXF file.
 
     This function loads a CAD file and extracts:
     - Block insertion counts
@@ -333,7 +333,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
     - Block trimming analysis (native dimensions and geometric segments)
 
     Args:
-        file_path: Path to the DWG or DXF file to process
+        file_path: Path to the DXF file to process
 
     Returns:
         ExtractionResult TypedDict containing all analysis data.
@@ -344,7 +344,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         ValueError: If the file extension is not supported or file is corrupted
 
     Examples:
-        >>> result = extract_blocks('drawing.dwg')
+        >>> result = extract_blocks('drawing.dxf')
         >>> result['block_counts']
         {'VALVE_GATE': 142, 'PIPE_SUPPORT': 89}
         >>> result['block_entities']
@@ -370,11 +370,11 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             f"Unsupported file extension: {path.suffix}. Supported: {SUPPORTED_EXTENSIONS}"
         )
         raise ValueError(
-            f"Unsupported file extension: {path.suffix}. Must be .dwg or .dxf"
+            f"Unsupported file extension: {path.suffix}. Must be .dxf"
         )
 
     try:
-        # Load DWG/DXF file
+        # Load DXF file
         doc = ezdxf.readfile(file_path)
         msp = doc.modelspace()
 
@@ -621,7 +621,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         return result
 
     except (DXFError, IOError, OSError) as e:
-        logger.error(f"Invalid or corrupted DXF/DWG file: {file_path} - {str(e)}")
+        logger.error(f"Invalid or corrupted DXF file: {file_path} - {str(e)}")
         raise ValueError(f"Invalid or corrupted file: {str(e)}")
     except Exception as e:
         logger.error(f"Unexpected error during extraction: {str(e)}", exc_info=True)

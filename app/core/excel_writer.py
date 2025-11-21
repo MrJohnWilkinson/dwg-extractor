@@ -1,5 +1,5 @@
 """
-Excel file generation for the DWG Block Extractor.
+Excel file generation for the DXF Block Extractor.
 
 This module provides functionality to convert comprehensive CAD analysis data into
 multi-sheet Excel workbooks with proper sorting, auto-filtering, and column widths.
@@ -8,8 +8,8 @@ Usage:
     from core.excel_writer import write_excel
     from core.extractor import ExtractionResult
 
-    result: ExtractionResult = extract_blocks('/path/to/drawing.dwg')
-    excel_path = write_excel(result, '/path/to/drawing.dwg')
+    result: ExtractionResult = extract_blocks('/path/to/drawing.dxf')
+    excel_path = write_excel(result, '/path/to/drawing.dxf')
     # Returns: '/path/to/drawing_blocks_20250117_143022.xlsx'
 """
 
@@ -211,7 +211,7 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
 
     Args:
         extraction_data: ExtractionResult TypedDict containing all CAD analysis data
-        output_path: Path to the original DWG/DXF file (used for output filename)
+        output_path: Path to the original DXF file (used for output filename)
 
     Returns:
         Full path to the created Excel file as a string
@@ -220,8 +220,8 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         ValueError: If extraction_data is None or invalid
 
     Examples:
-        >>> result = extract_blocks('drawing.dwg')
-        >>> excel_file = write_excel(result, 'drawing.dwg')
+        >>> result = extract_blocks('drawing.dxf')
+        >>> excel_file = write_excel(result, 'drawing.dxf')
         >>> print(excel_file)
         '/path/to/drawing_blocks_20250117_143022.xlsx'
     """

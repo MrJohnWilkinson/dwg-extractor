@@ -1,8 +1,8 @@
 """
-Application-wide constants for the DWG Block Extractor.
+Application-wide constants for the DXF Block Extractor.
 
 This module defines all constants used throughout the application including:
-- Supported file extensions for DWG/DXF files
+- Supported file extensions for DXF files
 - Excel output configuration (column names, worksheet name)
 - User-facing messages for UI and error handling
 
@@ -11,7 +11,7 @@ Usage:
 """
 
 # File extensions
-SUPPORTED_EXTENSIONS: tuple[str, str] = (".dwg", ".dxf")
+SUPPORTED_EXTENSIONS: tuple[str] = (".dxf",)
 
 # Excel configuration - Sheet names
 EXCEL_SHEET_BLOCK_ANALYSIS: str = "Block Analysis"
@@ -100,7 +100,7 @@ EXCEL_FILL_COLOR_SCALE_NEGATIVE: str = "FFA500FF"
 EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE: str = "FFFF0000"
 
 # UI messages
-MSG_SELECT_FILE: str = "Please select a DWG or DXF file"
+MSG_SELECT_FILE: str = "Please select a DXF file"
 MSG_PROCESSING: str = "Processing..."
 MSG_SUCCESS: str = "Extraction complete"
 MSG_ERROR_INVALID_FILE: str = "Invalid or corrupted file"

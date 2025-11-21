@@ -1,6 +1,6 @@
-# DWG Block Extractor
+# DXF Block Extractor
 
-A minimal Python desktop application that extracts block insertion counts from DWG/DXF CAD files and exports them to formatted Excel files.
+A minimal Python desktop application that extracts block insertion counts from DXF CAD files and exports them to formatted Excel files.
 
 ## Purpose
 
@@ -10,12 +10,12 @@ Extracts block reference counts from AutoCAD drawings and generates Excel report
 - Auto-filtered headers
 - Timestamped output files
 
-**User Flow:** Browse → Select DWG/DXF → Extract → Auto-open Excel (2 clicks)
+**User Flow:** Browse → Select DXF → Extract → Auto-open Excel (2 clicks)
 
 ## Tech Stack
 
 - **Python:** 3.11+ (managed with uv)
-- **CAD Parsing:** ezdxf (reads DWG/DXF files)
+- **CAD Parsing:** ezdxf (reads DXF files)
 - **Data Processing:** pandas (data manipulation)
 - **Excel Generation:** openpyxl (formatted Excel files)
 - **GUI Framework:** customtkinter (modern desktop UI)
@@ -33,7 +33,7 @@ dwg-extractor/
 │   │   ├── constants.py          # App constants
 │   │   ├── excel_formatting.py   # Excel formatting utilities
 │   │   ├── excel_writer.py       # Excel generation
-│   │   ├── extractor.py          # DWG/DXF extraction
+│   │   ├── extractor.py          # DXF extraction
 │   │   ├── geometry.py           # Geometric calculations
 │   │   └── logger.py             # Stdout logging
 │   ├── tests/                    # Test suite

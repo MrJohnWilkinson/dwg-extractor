@@ -1,7 +1,7 @@
 """
-DWG Block Extractor - GUI Application
+DXF Block Extractor - GUI Application
 
-A desktop application for extracting block insertion counts from DWG/DXF CAD files
+A desktop application for extracting block insertion counts from DXF CAD files
 and exporting them to formatted Excel files.
 
 Usage:
@@ -38,18 +38,18 @@ ctk.set_appearance_mode("system")  # Modes: "System" (default), "Dark", "Light"
 ctk.set_default_color_theme("blue")  # Themes: "blue" (default), "green", "dark-blue"
 
 
-class DWGExtractorApp(ctk.CTk):
-    """Main GUI application for DWG Block Extractor."""
+class DXFExtractorApp(ctk.CTk):
+    """Main GUI application for DXF Block Extractor."""
 
     def __init__(self) -> None:
         super().__init__()
 
         # Initialize logger
         self.logger: logging.Logger = setup_logger(__name__)
-        self.logger.info("DWG Block Extractor application started")
+        self.logger.info("DXF Block Extractor application started")
 
         # Window configuration
-        self.title("DWG Block Extractor")
+        self.title("DXF Block Extractor")
         self.geometry("500x300")
         self.resizable(False, False)
 
@@ -69,7 +69,7 @@ class DWGExtractorApp(ctk.CTk):
         # Title label
         title_label = ctk.CTkLabel(
             main_frame,
-            text="DWG Block Extractor",
+            text="DXF Block Extractor",
             font=ctk.CTkFont(size=20, weight="bold"),
         )
         title_label.pack(pady=(0, 20))
@@ -125,8 +125,8 @@ class DWGExtractorApp(ctk.CTk):
 
         # Open file dialog
         file_path = filedialog.askopenfilename(
-            title="Select DWG or DXF File",
-            filetypes=[("DWG/DXF Files", "*.dwg *.dxf"), ("All Files", "*.*")],
+            title="Select DXF File",
+            filetypes=[("DXF Files", "*.dxf"), ("All Files", "*.*")],
         )
 
         if file_path:
@@ -316,7 +316,7 @@ class DWGExtractorApp(ctk.CTk):
 
 def main() -> None:
     """Main entry point for the application."""
-    app = DWGExtractorApp()
+    app = DXFExtractorApp()
     app.mainloop()
 
 

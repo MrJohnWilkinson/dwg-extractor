@@ -1,7 +1,7 @@
 """
 Unit tests for the extractor module.
 
-This test suite validates the DWG/DXF extraction functionality including:
+This test suite validates the DXF extraction functionality including:
 - Valid file processing with known block counts
 - Empty file handling (no blocks)
 - Invalid/corrupted file error handling
@@ -188,26 +188,6 @@ class TestExtractor:
         # System layers starting with "*" should be skipped
         for layer_name in result["layer_entity_counts"].keys():
             assert not layer_name.startswith("*")
-
-    @pytest.mark.skip(
-        reason="ezdxf.readfile() does not support DWG files directly - requires ODA File Converter or ezdxf.recover"
-    )
-    def test_extract_real_dwg_file(self) -> None:
-        """Test extraction from a real DWG file."""
-        # Note: ezdxf.readfile() cannot read DWG files directly
-        # DWG support requires ODA File Converter or ezdxf.recover module
-        # This test is skipped as it's beyond the scope of Phase 2
-        result = extract_blocks("app/tests/assets/Supermarket-2020.dwg")
-
-        # Verify we get an ExtractionResult
-        assert isinstance(result, dict)
-        assert "block_counts" in result
-
-        # Verify all block names are strings and counts are positive integers
-        for block_name, count in result["block_counts"].items():
-            assert isinstance(block_name, str)
-            assert isinstance(count, int)
-            assert count > 0
 
     def test_extract_block_layer_pairs(self) -> None:
         """Test that block-layer pairs are extracted correctly."""

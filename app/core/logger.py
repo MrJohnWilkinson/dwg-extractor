@@ -1,5 +1,5 @@
 """
-Centralized logging configuration for the DWG Block Extractor application.
+Centralized logging configuration for the DXF Block Extractor application.
 
 This module provides stdout-only logging to enable real-time monitoring by LLM agents
 during development and ADW workflow execution. No file handlers are used to ensure

@@ -1,5 +1,5 @@
 """
-Shared type definitions for the DWG Block Extractor.
+Shared type definitions for the DXF Block Extractor.
 
 This module provides TypedDict definitions for internal data structures used
 throughout the codebase. Using TypedDict instead of generic dict[str, Any]

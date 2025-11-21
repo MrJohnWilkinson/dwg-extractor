@@ -1,5 +1,5 @@
 """
-Core module for DWG Block Extractor.
+Core module for DXF Block Extractor.
 
 This module exports the main types and functions used throughout the application.
 """

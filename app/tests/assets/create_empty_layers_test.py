@@ -14,6 +14,7 @@ Test characteristics:
 
 import ezdxf
 
+
 # Create a new DXF document
 doc = ezdxf.new("R2010")
 msp = doc.modelspace()
@@ -114,9 +115,7 @@ msp.add_line((5, 0), (5, 10), dxfattribs={"layer": "Electrical"})
 msp.add_circle((5, 5), radius=2, dxfattribs={"layer": "Plumbing"})
 
 # Layer "Annotations" - add text
-msp.add_text("Test Drawing", dxfattribs={"layer": "Annotations"}).set_placement(
-    (5, 12)
-)
+msp.add_text("Test Drawing", dxfattribs={"layer": "Annotations"}).set_placement((5, 12))
 
 # Layer "0" (default layer) - add one line
 msp.add_line((0, 0), (1, 1), dxfattribs={"layer": "0"})
@@ -128,5 +127,7 @@ output_path = "app/tests/assets/empty_layers_test.dxf"
 doc.saveas(output_path)
 print(f"Created test file: {output_path}")
 print(f"Total layers defined: {len(layer_names)}")
-print(f"Layers with entities: 6 (0, Walls, Furniture, Electrical, Plumbing, Annotations)")
+print(
+    "Layers with entities: 6 (0, Walls, Furniture, Electrical, Plumbing, Annotations)"
+)
 print(f"Empty layers: {len(layer_names) - 6}")

@@ -128,7 +128,7 @@ class TestExcelWriter:
         """Test that six sheets are created with correct names."""
         from core.constants import EXCEL_SHEET_COLOR_ANALYSIS
 
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Verify file exists
@@ -148,7 +148,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test Block Analysis sheet has correct simplified structure (5 columns, no rotations)."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Load Block Analysis sheet
@@ -175,7 +175,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test Layer Analysis sheet has correct columns and data."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Load Layer Analysis sheet
@@ -201,7 +201,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test Entity Summary sheet has correct columns and data."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Load Entity Summary sheet
@@ -220,7 +220,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that all sheets are sorted correctly."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Block Analysis: sorted by block_insertion_count descending
@@ -257,7 +257,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that auto-filters are applied to all sheets."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
@@ -282,7 +282,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that column widths are set correctly on all sheets."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
@@ -326,7 +326,7 @@ class TestExcelWriter:
             "color_analysis_data": [],
             "block_trimming_data": {},
         }
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(empty_data, output_path)
 
         # Verify file exists
@@ -353,7 +353,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that Block Geometry Analysis sheet contains rotation columns."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Load Block Geometry Analysis sheet
@@ -370,7 +370,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that Block Geometry Analysis sheet contains scale columns."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Load Block Geometry Analysis sheet
@@ -390,7 +390,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that timestamped filename format is maintained."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Verify filename pattern: test_drawing_blocks_YYYYMMDD_HHMMSS.xlsx
@@ -405,7 +405,7 @@ class TestExcelWriter:
 
     def test_none_data_raises_error(self, temp_dir: str) -> None:
         """Test that None data raises ValueError."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
 
         with pytest.raises(ValueError, match="extraction_data cannot be None"):
             write_excel(None, output_path)  # type: ignore[arg-type]
@@ -414,7 +414,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that Block Trimming Analysis sheet exists."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
@@ -424,7 +424,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test Block Geometry Analysis sheet has all 13 columns consolidated."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -459,7 +459,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test Block Trimming Analysis sheet has correct data types."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -484,7 +484,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that segments are formatted as comma-separated strings."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -511,7 +511,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that Block Trimming Analysis sheet is sorted alphabetically by block name."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -539,7 +539,7 @@ class TestExcelWriter:
             "block_trimming_data": {},
         }
 
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(empty_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -552,7 +552,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that Block Trimming Analysis sheet has auto-filter applied."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
@@ -566,7 +566,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that Block Geometry Analysis sheet is sorted alphabetically by block name."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -581,7 +581,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that Block Trimming Analysis sheet contains block-layer pairs with geometry data."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -627,7 +627,7 @@ class TestExcelWriter:
     ) -> None:
         """Test that blocks with scale variance have yellow fill highlighting."""
 
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
@@ -684,7 +684,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that Block Geometry Analysis sheet has appropriate column widths for 13 columns."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
@@ -724,7 +724,7 @@ class TestExcelWriter:
             "block_trimming_data": {},
         }
 
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(empty_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -781,7 +781,7 @@ class TestExcelWriter:
             },
         }
 
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(data_with_missing_geometry, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -793,7 +793,7 @@ class TestExcelWriter:
 
     def test_write_excel_value_error_invalid_data(self, temp_dir: str) -> None:
         """Test that write_excel raises exception for invalid extraction data structure."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
 
         # Test with missing required keys
         invalid_data_missing_keys: dict[str, dict[str, int]] = {
@@ -812,7 +812,7 @@ class TestExcelWriter:
         """Test that generic exceptions during Excel save are properly handled."""
 
         # Use an invalid output path to trigger save failure
-        invalid_path = os.path.join(temp_dir, "nonexistent_dir", "test.dwg")
+        invalid_path = os.path.join(temp_dir, "nonexistent_dir", "test.dxf")
 
         # Verify exception is raised for invalid path
         with pytest.raises(Exception):
@@ -825,7 +825,7 @@ class TestExcelWriter:
         # Extract real data from sample file
         extraction_data = extract_blocks("app/tests/assets/sample_drawing.dxf")
 
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(extraction_data, output_path)
 
         # Load all sheets and verify column names match formatted constants
@@ -881,7 +881,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test spec 010: Block Geometry Analysis sheet has consolidated 13 columns with scales and rotations."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         df_geometry = pd.read_excel(
@@ -951,7 +951,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test spec 012: Excel headers are formatted from snake_case constants to Title Case."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Load all sheets
@@ -1009,7 +1009,7 @@ class TestExcelWriter:
         from core.extractor import extract_blocks
 
         result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(result, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -1029,7 +1029,7 @@ class TestExcelWriter:
         from core.extractor import extract_blocks
 
         result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(result, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -1049,7 +1049,7 @@ class TestExcelWriter:
         from core.extractor import extract_blocks
 
         result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(result, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -1071,7 +1071,7 @@ class TestExcelWriter:
         from core.extractor import extract_blocks
 
         result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(result, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -1090,7 +1090,7 @@ class TestExcelWriter:
         from core.extractor import extract_blocks
 
         result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(result, output_path)
 
         wb = load_workbook(excel_path)
@@ -1114,7 +1114,7 @@ class TestExcelWriter:
         from core.extractor import extract_blocks
 
         result = extract_blocks("app/tests/assets/scale_variance_test.dxf")
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(result, output_path)
 
         wb = load_workbook(excel_path)
@@ -1215,7 +1215,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that frozen panes are applied to all four sheets."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
@@ -1258,7 +1258,7 @@ class TestExcelWriter:
             "color_analysis_data": [],
             "block_trimming_data": {},
         }
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(empty_data, output_path)
 
         wb = load_workbook(excel_path)
@@ -1280,7 +1280,7 @@ class TestExcelWriter:
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
         """Test that frozen panes cell reference is exactly A2 (freeze row 1)."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
@@ -1384,7 +1384,7 @@ class TestNegativeScaleTextGeneration:
             },
         }
 
-        output_path = os.path.join(temp_dir, "test.dwg")
+        output_path = os.path.join(temp_dir, "test.dxf")
         excel_path = write_excel(data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -1418,7 +1418,7 @@ class TestNegativeScaleTextGeneration:
             },
         }
 
-        output_path = os.path.join(temp_dir, "test.dwg")
+        output_path = os.path.join(temp_dir, "test.dxf")
         excel_path = write_excel(data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -1450,7 +1450,7 @@ class TestNegativeScaleTextGeneration:
             },
         }
 
-        output_path = os.path.join(temp_dir, "test.dwg")
+        output_path = os.path.join(temp_dir, "test.dxf")
         excel_path = write_excel(data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -1482,7 +1482,7 @@ class TestNegativeScaleTextGeneration:
             },
         }
 
-        output_path = os.path.join(temp_dir, "test.dwg")
+        output_path = os.path.join(temp_dir, "test.dxf")
         excel_path = write_excel(data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -1516,7 +1516,7 @@ class TestNegativeScaleTextGeneration:
             },
         }
 
-        output_path = os.path.join(temp_dir, "test.dwg")
+        output_path = os.path.join(temp_dir, "test.dxf")
         excel_path = write_excel(data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -1551,7 +1551,7 @@ class TestNegativeScaleTextGeneration:
             },
         }
 
-        output_path = os.path.join(temp_dir, "test.dwg")
+        output_path = os.path.join(temp_dir, "test.dxf")
         excel_path = write_excel(data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS)
@@ -1720,7 +1720,7 @@ class TestAnnotationsAnalysisSheet:
         self, temp_dir: str, annotation_extraction_data: ExtractionResult
     ) -> None:
         """Test that Annotations Analysis sheet is created."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(annotation_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
@@ -1730,7 +1730,7 @@ class TestAnnotationsAnalysisSheet:
         self, temp_dir: str, annotation_extraction_data: ExtractionResult
     ) -> None:
         """Test that Annotations Analysis sheet has correct column structure."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(annotation_extraction_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ANNOTATIONS_ANALYSIS)
@@ -1765,7 +1765,7 @@ class TestAnnotationsAnalysisSheet:
         self, temp_dir: str, annotation_extraction_data: ExtractionResult
     ) -> None:
         """Test that annotation data is correctly written to sheet."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(annotation_extraction_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ANNOTATIONS_ANALYSIS)
@@ -1794,7 +1794,7 @@ class TestAnnotationsAnalysisSheet:
         self, temp_dir: str, annotation_extraction_data: ExtractionResult
     ) -> None:
         """Test that annotations are sorted by count descending."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(annotation_extraction_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ANNOTATIONS_ANALYSIS)
@@ -1825,7 +1825,7 @@ class TestAnnotationsAnalysisSheet:
             "block_trimming_data": {},
         }
 
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(empty_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ANNOTATIONS_ANALYSIS)
@@ -1838,7 +1838,7 @@ class TestAnnotationsAnalysisSheet:
         self, temp_dir: str, annotation_extraction_data: ExtractionResult
     ) -> None:
         """Test that Layer Analysis sheet uses renamed layer_annotation_count column."""
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(annotation_extraction_data, output_path)
 
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_LAYER_ANALYSIS)
@@ -1883,7 +1883,7 @@ class TestAnnotationsAnalysisSheet:
         """Test that exactly 6 sheets are created including Color Analysis."""
         from core.constants import EXCEL_SHEET_COLOR_ANALYSIS
 
-        output_path = os.path.join(temp_dir, "test_drawing.dwg")
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(annotation_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
