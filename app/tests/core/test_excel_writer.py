@@ -796,7 +796,7 @@ class TestExcelWriter:
         output_path = os.path.join(temp_dir, "test_drawing.dwg")
 
         # Test with missing required keys
-        invalid_data_missing_keys: dict = {  # type: ignore[var-annotated]
+        invalid_data_missing_keys: dict[str, dict[str, int]] = {
             "block_counts": {"VALVE": 10}
             # Missing other required keys
         }

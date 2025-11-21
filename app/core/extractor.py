@@ -27,6 +27,7 @@ from .geometry import (
     _get_intersection_points,
 )
 from .logger import setup_logger
+from .types import BlockTrimmingData, ColorAnalysisRecord
 
 
 logger = setup_logger(__name__)
@@ -107,7 +108,7 @@ def _resolve_entity_color_to_rgb(
         return None
 
 
-def extract_color_analysis(doc: Drawing) -> list[dict[str, Any]]:
+def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
     """
     Extract color analysis data from all Line, Polyline, TEXT, and MTEXT entities.
 
@@ -146,7 +147,7 @@ def extract_color_analysis(doc: Drawing) -> list[dict[str, Any]]:
         geometric_entities: dict[tuple[int, int, int, str, str], int] = {}
 
         # List for text annotations (each is individual)
-        text_annotations: list[dict[str, Any]] = []
+        text_annotations: list[ColorAnalysisRecord] = []
 
         msp = doc.modelspace()
         entity_count = 0
@@ -210,16 +211,16 @@ def extract_color_analysis(doc: Drawing) -> list[dict[str, Any]]:
         logger.info(f"Processed {entity_count} entities for color analysis")
 
         # Convert geometric entities dict to list of records
-        geometric_records = [
-            {
-                "annotation_contents": "",
-                "layer_name": layer_name,
-                "color_r": color_r,
-                "color_g": color_g,
-                "color_b": color_b,
-                "entity_type": entity_type,
-                "entity_count": count,
-            }
+        geometric_records: list[ColorAnalysisRecord] = [
+            ColorAnalysisRecord(
+                annotation_contents="",
+                layer_name=layer_name,
+                color_r=color_r,
+                color_g=color_g,
+                color_b=color_b,
+                entity_type=entity_type,
+                entity_count=count,
+            )
             for (
                 color_r,
                 color_g,
@@ -313,8 +314,8 @@ class ExtractionResult(TypedDict):
     layer_annotation_counts: dict[str, int]
     annotation_data: dict[tuple[str, str, str, int, int, int], int]
     entity_type_counts: dict[str, int]
-    block_trimming_data: dict[str, dict[str, Any]]
-    color_analysis_data: list[dict[str, Any]]
+    block_trimming_data: dict[str, BlockTrimmingData]
+    color_analysis_data: list[ColorAnalysisRecord]
 
 
 def extract_blocks(file_path: str) -> ExtractionResult:
@@ -390,7 +391,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         layer_annotation_counts: dict[str, int] = {}
         annotation_data: dict[tuple[str, str, str, int, int, int], int] = {}
         entity_type_counts: dict[str, int] = {}
-        block_trimming_data: dict[str, dict[str, Any]] = {}
+        block_trimming_data: dict[str, BlockTrimmingData] = {}
 
         # Initialize all layers from layer table with 0 counts
         logger.info("Initializing layers from layer table...")

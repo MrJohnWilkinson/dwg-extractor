@@ -229,10 +229,18 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     yellow_highlighted = 0
 
     def _is_negative_number(value: object) -> bool:
-        """Check if cell value is a negative number."""
+        """Check if cell value is a negative number.
+
+        Args:
+            value: Cell value which can be various types (int, float, str, None,
+                   Decimal, bool, date, time, etc. from openpyxl)
+
+        Returns:
+            True if value is a negative int or float, False otherwise
+        """
         if value is None:
             return False
-        if isinstance(value, (int, float)):
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
             return value < 0
         # String values like "VARIES" or "VARIES (-)" and other types are not negative numbers
         return False

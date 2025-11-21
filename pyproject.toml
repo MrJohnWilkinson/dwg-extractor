@@ -47,11 +47,17 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 check_untyped_defs = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_reexport = true
 exclude = ['.venv', 'build', 'dist']
 
 [[tool.mypy.overrides]]
 module = ["ezdxf", "ezdxf.*", "customtkinter", "customtkinter.*"]
 ignore_missing_imports = true
+# ezdxf lacks explicit __all__ exports, so disable implicit_reexport check for it
+implicit_reexport = true
 
 [tool.ruff]
 line-length = 88
