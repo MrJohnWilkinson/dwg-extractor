@@ -42,7 +42,7 @@ class BlockTrimmingData(TypedDict):
 
 class ColorAnalysisRecord(TypedDict):
     """
-    Color analysis record for Lines, Polylines, TEXT, and MTEXT entities.
+    Color analysis record for Lines, Polylines, Hatches, TEXT, and MTEXT entities.
 
     Contains entity information grouped by RGB color, layer name, and entity type.
     Used in the color_analysis_data field of ExtractionResult.
@@ -55,7 +55,7 @@ class ColorAnalysisRecord(TypedDict):
         color_b: Blue component (0-255)
         color_aci: AutoCAD Color Index (0-256) or None for True Color (24-bit RGB)
                    0 = ByBlock, 1-7 = named colors, 8-255 = numbered colors, 256 = ByLayer
-        entity_type: Entity type string ('Lines', 'Polylines', 'TEXT', or 'MTEXT')
+        entity_type: Entity type string ('Lines', 'Polylines', 'Hatches', 'TEXT', or 'MTEXT')
         entity_count: Count of entities with this unique combination
     """
 

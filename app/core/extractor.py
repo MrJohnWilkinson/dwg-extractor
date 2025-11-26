@@ -213,10 +213,10 @@ def _resolve_entity_color_to_rgb(
 
 def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
     """
-    Extract color analysis data from all Line, Polyline, TEXT, and MTEXT entities.
+    Extract color analysis data from all Line, Polyline, HATCH, TEXT, and MTEXT entities.
 
     This function analyzes drawing entities grouped by their RGB color, layer name, and entity type.
-    Geometric entities (Lines/Polylines) are aggregated by unique combinations with counts.
+    Geometric entities (Lines/Polylines/Hatches) are aggregated by unique combinations with counts.
     Text entities (TEXT/MTEXT) are extracted individually with full content.
 
     Args:
@@ -231,7 +231,7 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
             - color_g (int): Green component 0-255
             - color_b (int): Blue component 0-255
             - color_aci (int | None): AutoCAD Color Index (0-256) or None for True Color
-            - entity_type (str): 'Lines', 'Polylines', 'TEXT', or 'MTEXT'
+            - entity_type (str): 'Lines', 'Polylines', 'Hatches', 'TEXT', or 'MTEXT'
             - entity_count (int): Count of entities (1 for text, aggregate for geometric)
 
     Examples:
@@ -260,7 +260,7 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
             entity_type = entity.dxftype()
 
             # Filter for relevant entity types
-            if entity_type not in ("LINE", "LWPOLYLINE", "POLYLINE", "TEXT", "MTEXT"):
+            if entity_type not in ("LINE", "LWPOLYLINE", "POLYLINE", "HATCH", "TEXT", "MTEXT"):
                 continue
 
             # Resolve entity color to RGB and ACI
@@ -283,6 +283,10 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
 
             elif entity_type in ("LWPOLYLINE", "POLYLINE"):
                 key = (color_r, color_g, color_b, color_aci, layer_name, "Polylines")
+                geometric_entities[key] = geometric_entities.get(key, 0) + 1
+
+            elif entity_type == "HATCH":
+                key = (color_r, color_g, color_b, color_aci, layer_name, "Hatches")
                 geometric_entities[key] = geometric_entities.get(key, 0) + 1
 
             # Handle text entities (TEXT and MTEXT)
@@ -395,9 +399,9 @@ class ExtractionResult(TypedDict):
         block_trimming_data: Dictionary mapping block names to their geometry analysis data.
                              Each block entry contains: native_width (float), native_height (float),
                              vertical_segments (list[float] - left-to-right), horizontal_segments (list[float] - bottom-to-top)
-        color_analysis_data: List of color analysis records. Each record contains: annotation_contents (str, blank for Lines/Polylines),
+        color_analysis_data: List of color analysis records. Each record contains: annotation_contents (str, blank for Lines/Polylines/Hatches),
                             layer_name (str), color_r (int 0-255), color_g (int 0-255), color_b (int 0-255),
-                            entity_type (str: 'Lines', 'Polylines', 'TEXT', 'MTEXT'), entity_count (int)
+                            entity_type (str: 'Lines', 'Polylines', 'Hatches', 'TEXT', 'MTEXT'), entity_count (int)
                             Example: [{'annotation_contents': '', 'layer_name': 'WALLS', 'color_r': 255, 'color_g': 0, 'color_b': 0,
                                       'entity_type': 'Lines', 'entity_count': 45}, ...]
 
