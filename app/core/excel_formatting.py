@@ -375,15 +375,16 @@ def _format_color_analysis_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "A2"
     logger.info("Frozen panes applied to Color Analysis sheet")
 
-    # Set column widths (8 columns: A-H)
+    # Set column widths (9 columns: A-I)
     ws.column_dimensions["A"].width = 50  # color_annotation_contents
     ws.column_dimensions["B"].width = 20  # color_layer_name
     ws.column_dimensions["C"].width = 10  # color_red
     ws.column_dimensions["D"].width = 10  # color_green
     ws.column_dimensions["E"].width = 10  # color_blue
     ws.column_dimensions["F"].width = 12  # color_sample
-    ws.column_dimensions["G"].width = 20  # color_entity_type
-    ws.column_dimensions["H"].width = 15  # color_entity_count
+    ws.column_dimensions["G"].width = 20  # color_autocad_name
+    ws.column_dimensions["H"].width = 20  # color_entity_type
+    ws.column_dimensions["I"].width = 15  # color_entity_count
 
     # Enable text wrapping on header row
     header_alignment = Alignment(wrap_text=True, vertical="top")
@@ -395,13 +396,13 @@ def _format_color_analysis_sheet(wb: Workbook) -> None:
     for row_idx in range(2, ws.max_row + 1):
         ws.cell(row=row_idx, column=1).alignment = content_alignment
 
-    # Apply right-alignment to numeric columns (C, D, E, H)
+    # Apply right-alignment to numeric columns (C, D, E, I)
     right_alignment = Alignment(horizontal="right")
     for row_idx in range(2, ws.max_row + 1):
         ws.cell(row=row_idx, column=3).alignment = right_alignment  # color_red
         ws.cell(row=row_idx, column=4).alignment = right_alignment  # color_green
         ws.cell(row=row_idx, column=5).alignment = right_alignment  # color_blue
-        ws.cell(row=row_idx, column=8).alignment = right_alignment  # color_entity_count
+        ws.cell(row=row_idx, column=9).alignment = right_alignment  # color_entity_count
 
     # Apply RGB color fills to color_sample column (column F)
     color_fills_applied = 0

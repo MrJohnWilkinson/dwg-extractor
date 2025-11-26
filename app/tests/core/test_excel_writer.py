@@ -1898,3 +1898,204 @@ class TestAnnotationsAnalysisSheet:
         assert EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_ANNOTATIONS_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_COLOR_ANALYSIS in wb.sheetnames
+
+
+class TestAciDisplayNameMapping:
+    """Test suite for ACI (AutoCAD Color Index) display name mapping."""
+
+    def test_get_aci_display_name_true_color(self) -> None:
+        """Test that None returns 'True Color'."""
+        from core.excel_writer import _get_aci_display_name
+
+        assert _get_aci_display_name(None) == "True Color"
+
+    def test_get_aci_display_name_byblock(self) -> None:
+        """Test that ACI 0 returns 'ByBlock'."""
+        from core.excel_writer import _get_aci_display_name
+
+        assert _get_aci_display_name(0) == "ByBlock"
+
+    def test_get_aci_display_name_bylayer(self) -> None:
+        """Test that ACI 256 returns 'ByLayer'."""
+        from core.excel_writer import _get_aci_display_name
+
+        assert _get_aci_display_name(256) == "ByLayer"
+
+    def test_get_aci_display_name_named_colors(self) -> None:
+        """Test that ACI 1-7 return named colors."""
+        from core.excel_writer import _get_aci_display_name
+
+        assert _get_aci_display_name(1) == "Red"
+        assert _get_aci_display_name(2) == "Yellow"
+        assert _get_aci_display_name(3) == "Green"
+        assert _get_aci_display_name(4) == "Cyan"
+        assert _get_aci_display_name(5) == "Blue"
+        assert _get_aci_display_name(6) == "Magenta"
+        assert _get_aci_display_name(7) == "White"
+
+    def test_get_aci_display_name_numbered_colors(self) -> None:
+        """Test that ACI 8-255 return 'Color N' format."""
+        from core.excel_writer import _get_aci_display_name
+
+        assert _get_aci_display_name(8) == "Color 8"
+        assert _get_aci_display_name(30) == "Color 30"
+        assert _get_aci_display_name(100) == "Color 100"
+        assert _get_aci_display_name(220) == "Color 220"
+        assert _get_aci_display_name(255) == "Color 255"
+
+    def test_get_aci_display_name_boundary_values(self) -> None:
+        """Test boundary values between named and numbered colors."""
+        from core.excel_writer import _get_aci_display_name
+
+        # ACI 7 is last named color
+        assert _get_aci_display_name(7) == "White"
+        # ACI 8 is first numbered color
+        assert _get_aci_display_name(8) == "Color 8"
+
+
+class TestColorAnalysisExcelOutput:
+    """Test suite for Color Analysis sheet Excel output with AutoCAD name column."""
+
+    @pytest.fixture
+    def temp_dir(self) -> Iterator[str]:
+        """Create a temporary directory for test outputs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield tmpdir
+
+    @pytest.fixture
+    def color_analysis_data(self) -> ExtractionResult:
+        """Provide sample extraction data with color analysis records."""
+        return {
+            "block_counts": {},
+            "block_entities": {},
+            "block_layer_pairs": {},
+            "block_rotation_counts": {},
+            "block_scale_data": {},
+            "block_xdata_apps": {},
+            "layer_block_insertion_counts": {"Layer1": 0},
+            "layer_entity_counts": {"Layer1": 10},
+            "layer_unique_color_counts": {"Layer1": 3},
+            "layer_annotation_counts": {"Layer1": 2},
+            "annotation_data": {},
+            "entity_type_counts": {"LINE": 5, "TEXT": 2},
+            "color_analysis_data": [
+                {
+                    "annotation_contents": "",
+                    "layer_name": "Layer1",
+                    "color_r": 255,
+                    "color_g": 0,
+                    "color_b": 0,
+                    "color_aci": 1,
+                    "entity_type": "Lines",
+                    "entity_count": 3,
+                },
+                {
+                    "annotation_contents": "",
+                    "layer_name": "Layer1",
+                    "color_r": 255,
+                    "color_g": 255,
+                    "color_b": 0,
+                    "color_aci": 2,
+                    "entity_type": "Lines",
+                    "entity_count": 2,
+                },
+                {
+                    "annotation_contents": "Sample Text",
+                    "layer_name": "Layer1",
+                    "color_r": 124,
+                    "color_g": 82,
+                    "color_b": 165,
+                    "color_aci": None,  # True Color
+                    "entity_type": "TEXT",
+                    "entity_count": 1,
+                },
+                {
+                    "annotation_contents": "",
+                    "layer_name": "Layer1",
+                    "color_r": 255,
+                    "color_g": 255,
+                    "color_b": 255,
+                    "color_aci": 256,  # ByLayer
+                    "entity_type": "Lines",
+                    "entity_count": 1,
+                },
+            ],
+            "block_trimming_data": {},
+        }
+
+    def test_color_analysis_sheet_has_autocad_name_column(
+        self, temp_dir: str, color_analysis_data: ExtractionResult
+    ) -> None:
+        """Test that Color Analysis sheet includes the AutoCAD Name column."""
+        from core.constants import EXCEL_SHEET_COLOR_ANALYSIS
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(color_analysis_data, output_path)
+
+        # Load Color Analysis sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_COLOR_ANALYSIS)
+
+        # Verify "Color Autocad Name" column exists
+        assert "Color Autocad Name" in df.columns
+
+    def test_color_analysis_sheet_column_position(
+        self, temp_dir: str, color_analysis_data: ExtractionResult
+    ) -> None:
+        """Test that AutoCAD Name column appears after Color Sample."""
+        from core.constants import EXCEL_SHEET_COLOR_ANALYSIS
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(color_analysis_data, output_path)
+
+        # Load Color Analysis sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_COLOR_ANALYSIS)
+
+        # Expected column order (9 columns now)
+        expected_columns = [
+            "Color Annotation Contents",
+            "Color Layer Name",
+            "Color Red",
+            "Color Green",
+            "Color Blue",
+            "Color Sample",
+            "Color Autocad Name",
+            "Color Entity Type",
+            "Color Entity Count",
+        ]
+
+        assert list(df.columns) == expected_columns
+
+    def test_color_analysis_sheet_aci_values_mapped(
+        self, temp_dir: str, color_analysis_data: ExtractionResult
+    ) -> None:
+        """Test that ACI values are correctly mapped to display names."""
+        from core.constants import EXCEL_SHEET_COLOR_ANALYSIS
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(color_analysis_data, output_path)
+
+        # Load Color Analysis sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_COLOR_ANALYSIS)
+
+        # Get AutoCAD Name values
+        autocad_names = df["Color Autocad Name"].tolist()
+
+        # Should have mapped values
+        assert "Red" in autocad_names  # ACI 1
+        assert "Yellow" in autocad_names  # ACI 2
+        assert "True Color" in autocad_names  # ACI None
+        assert "ByLayer" in autocad_names  # ACI 256
+
+    def test_color_analysis_sheet_nine_columns(
+        self, temp_dir: str, color_analysis_data: ExtractionResult
+    ) -> None:
+        """Test that Color Analysis sheet has exactly 9 columns."""
+        from core.constants import EXCEL_SHEET_COLOR_ANALYSIS
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(color_analysis_data, output_path)
+
+        # Load Color Analysis sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_COLOR_ANALYSIS)
+
+        assert len(df.columns) == 9

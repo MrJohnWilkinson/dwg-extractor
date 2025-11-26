@@ -88,6 +88,7 @@ EXCEL_COLUMN_COLOR_RED: str = "color_red"
 EXCEL_COLUMN_COLOR_GREEN: str = "color_green"
 EXCEL_COLUMN_COLOR_BLUE: str = "color_blue"
 EXCEL_COLUMN_COLOR_SAMPLE: str = "color_sample"
+EXCEL_COLUMN_COLOR_AUTOCAD_NAME: str = "color_autocad_name"
 EXCEL_COLUMN_COLOR_ENTITY_TYPE: str = "color_entity_type"
 EXCEL_COLUMN_COLOR_ENTITY_COUNT: str = "color_entity_count"
 

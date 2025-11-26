@@ -17,6 +17,7 @@ Track the ACI (AutoCAD Color Index) value during color extraction in `extractor.
 - ACI 1-7: Named colors (Red, Yellow, Green, Cyan, Blue, Magenta, White)
 - ACI 8-255: "Color N" format (e.g., "Color 30", "Color 220")
 - ACI 256: "ByLayer"
+- ACI None: "True Color" (for 24-bit RGB colors that bypass the ACI palette)
 
 The new column will appear after "Color Sample" in the Color Analysis sheet.
 
@@ -37,7 +38,7 @@ None required - all changes are modifications to existing files.
 
 ## Implementation Plan
 ### Phase 1: Foundation
-1. Update `ColorAnalysisRecord` TypedDict to include `color_aci: int` field
+1. Update `ColorAnalysisRecord` TypedDict to include `color_aci: int | None` field (None for True Color entities)
 2. Refactor `_resolve_entity_color_to_rgb()` to return both RGB and ACI values
 3. Add `EXCEL_COLUMN_COLOR_AUTOCAD_NAME` constant following naming conventions
 
@@ -54,7 +55,8 @@ None required - all changes are modifications to existing files.
 ## Step by Step Tasks
 
 ### Step 1: Update ColorAnalysisRecord TypedDict
-- Add `color_aci: int` field to `ColorAnalysisRecord` in `app/core/types.py`
+- Add `color_aci: int | None` field to `ColorAnalysisRecord` in `app/core/types.py`
+- None indicates True Color (24-bit RGB) which has no ACI index
 - Update docstring to document the new field
 
 ### Step 2: Add Excel Column Constant
@@ -62,10 +64,10 @@ None required - all changes are modifications to existing files.
 - Place it after `EXCEL_COLUMN_COLOR_SAMPLE` to maintain logical grouping
 
 ### Step 3: Refactor _resolve_entity_color_to_rgb to Return ACI
-- Create new function `_resolve_entity_color_with_aci()` that returns `tuple[tuple[int, int, int], int] | None`
-- Return tuple of (rgb_tuple, aci_value) or None
+- Create new function `_resolve_entity_color_with_aci()` that returns `tuple[tuple[int, int, int], int | None] | None`
+- Return tuple of (rgb_tuple, aci_value) or None; aci_value is None for True Color entities
 - Keep existing `_resolve_entity_color_to_rgb()` as a wrapper for backwards compatibility
-- Handle special cases: ByBlock (0), ByLayer (256), and direct ACI (1-255)
+- Handle special cases: ByBlock (0), ByLayer (256), direct ACI (1-255), and True Color (returns None for ACI)
 
 ### Step 4: Update extract_color_analysis() to Capture ACI
 - Modify `extract_color_analysis()` to use `_resolve_entity_color_with_aci()`
@@ -73,8 +75,9 @@ None required - all changes are modifications to existing files.
 - Ensure geometric entities and text entities both capture ACI values
 
 ### Step 5: Create ACI Display Name Mapping Function
-- Add `_get_aci_display_name(aci: int) -> str` function in `excel_writer.py`
+- Add `_get_aci_display_name(aci: int | None) -> str` function in `excel_writer.py`
 - Implement mapping logic:
+  - None -> "True Color" (24-bit RGB, no ACI index)
   - 0 -> "ByBlock"
   - 1 -> "Red"
   - 2 -> "Yellow"
@@ -104,6 +107,7 @@ None required - all changes are modifications to existing files.
 ### Step 8: Write Unit Tests for ACI Extraction
 - Add tests in `test_extractor.py` for `_resolve_entity_color_with_aci()`
 - Test ACI values for ByBlock (0), named colors (1-7), numbered colors (8-255), ByLayer (256)
+- Test True Color entities return None for ACI (use `true_color_test.dxf` fixture)
 - Test that `color_aci` field is present in all `ColorAnalysisRecord` entries
 
 ### Step 9: Write Unit Tests for ACI Display Name Mapping
@@ -111,6 +115,7 @@ None required - all changes are modifications to existing files.
 - Test all named colors (1-7)
 - Test numbered colors (8, 30, 220, 255)
 - Test special values (0 = ByBlock, 256 = ByLayer)
+- Test None returns "True Color"
 
 ### Step 10: Write Unit Tests for Excel Output
 - Add tests in `test_excel_writer.py` to verify new column appears in output
@@ -141,7 +146,8 @@ None required - all changes are modifications to existing files.
 - ByBlock color (ACI 0): Should display "ByBlock"
 - ByLayer color (ACI 256): Should display "ByLayer"
 - Boundary colors: ACI 7 (White), ACI 8 (first numbered), ACI 255 (last numbered)
-- Mixed color sources: Drawing with ByLayer, ByBlock, named, and numbered colors
+- True Color (ACI None): Should display "True Color"
+- Mixed color sources: Drawing with ByLayer, ByBlock, named, numbered, and True Colors
 
 ### Playwright MCP Tests
 Not applicable - this feature is backend Excel generation only, no UI changes.
@@ -153,8 +159,9 @@ Not applicable - this feature is backend Excel generation only, no UI changes.
 - [ ] ACI 8-255 display as "Color N" format (e.g., "Color 30", "Color 220")
 - [ ] ACI 0 displays "ByBlock"
 - [ ] ACI 256 displays "ByLayer"
+- [ ] True Color entities (ACI None) display "True Color"
 - [ ] All existing tests pass
-- [ ] New tests cover all ACI mappings
+- [ ] New tests cover all ACI mappings including True Color
 - [ ] Column width is appropriate for content
 
 ## Validation Commands
@@ -171,5 +178,7 @@ Execute every command to validate the feature works correctly with zero regressi
 - The ACI (AutoCAD Color Index) is a standard 256-color palette used by AutoCAD since early versions
 - Colors 1-7 are the "primary" colors with official names; colors 8-255 are referred to by number
 - ByBlock (0) means the entity inherits color from its parent block; ByLayer (256) means it inherits from its layer
+- True Color (24-bit RGB) entities bypass the ACI palette entirely; these return `None` for ACI and display as "True Color"
+- The existing `_resolve_entity_color_to_rgb()` already handles True Color via `entity.dxf.true_color` (added in spec 006)
 - The ezdxf library provides `aci2rgb()` for converting ACI to RGB, but not the reverse; we track ACI during extraction
 - The existing `_resolve_entity_color_to_rgb()` function already handles the ACI resolution logic; we're extending it to preserve the ACI value

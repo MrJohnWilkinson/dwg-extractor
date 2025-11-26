@@ -79,6 +79,99 @@ def _clean_mtext_content(entity: Any) -> str:
         return str(entity.text) if hasattr(entity, "text") else ""
 
 
+def _resolve_entity_color_with_aci(
+    entity: Any, doc: Drawing
+) -> tuple[tuple[int, int, int], int | None] | None:
+    """
+    Resolve an entity's color to RGB values and ACI (AutoCAD Color Index).
+
+    Handles multiple color specifications including direct RGB (True Color),
+    ByLayer, ByBlock, and ACI color indices.
+
+    Args:
+        entity: The ezdxf entity to resolve color for
+        doc: The DXF document containing the entity
+
+    Returns:
+        Tuple of ((r, g, b), aci_value) where:
+        - (r, g, b) are RGB values (0-255 range)
+        - aci_value is the ACI index (0-256) or None for True Color
+        Returns None if color cannot be resolved.
+
+    Examples:
+        >>> entity_true_color = ...  # Entity with True Color (24-bit RGB)
+        >>> _resolve_entity_color_with_aci(entity_true_color, doc)
+        ((255, 128, 0), None)  # Orange True Color, no ACI
+
+        >>> entity_bylayer = ...  # Entity using ByLayer color
+        >>> _resolve_entity_color_with_aci(entity_bylayer, doc)
+        ((0, 255, 0), 256)  # Resolved RGB from layer, ACI 256 (ByLayer)
+
+        >>> entity_aci = ...  # Entity with ACI color index 1 (red)
+        >>> _resolve_entity_color_with_aci(entity_aci, doc)
+        ((255, 0, 0), 1)  # Red, ACI 1
+
+        >>> entity_byblock = ...  # Entity with ByBlock color
+        >>> _resolve_entity_color_with_aci(entity_byblock, doc)
+        ((255, 255, 255), 0)  # White fallback, ACI 0 (ByBlock)
+    """
+    try:
+        # Try direct RGB color first (True Color - no ACI index)
+        if hasattr(entity, "rgb") and entity.rgb is not None:
+            rgb = entity.rgb
+            if isinstance(rgb, tuple) and len(rgb) == 3:
+                return ((int(rgb[0]), int(rgb[1]), int(rgb[2])), None)
+            return None
+
+        # Check for True Color (group code 420 - packed 24-bit RGB)
+        try:
+            true_color = entity.dxf.get("true_color", None)
+            if true_color is not None:
+                # Unpack 24-bit integer to RGB
+                r = (true_color >> 16) & 0xFF
+                g = (true_color >> 8) & 0xFF
+                b = true_color & 0xFF
+                return ((r, g, b), None)  # True Color has no ACI
+        except (AttributeError, TypeError):
+            pass
+
+        # Get the color attribute
+        if not hasattr(entity.dxf, "color"):
+            return None
+
+        color_value = entity.dxf.color
+
+        # ByLayer color (256)
+        if color_value == 256:
+            try:
+                layer_name = entity.dxf.layer
+                layer = doc.layers.get(layer_name)
+                if layer and hasattr(layer.dxf, "color"):
+                    layer_color = layer.dxf.color
+                    # Convert ACI to RGB
+                    if 0 <= layer_color <= 255:
+                        rgb = ezdxf_colors.aci2rgb(layer_color)
+                        return (rgb, 256)  # Return ACI 256 (ByLayer)
+            except (AttributeError, KeyError):
+                pass
+            return None
+
+        # ByBlock color (0) - default to white as safe fallback
+        if color_value == 0:
+            return ((255, 255, 255), 0)  # Return ACI 0 (ByBlock)
+
+        # ACI color index (1-255)
+        if 1 <= color_value <= 255:
+            rgb = ezdxf_colors.aci2rgb(color_value)
+            return (rgb, color_value)
+
+        # Invalid or unsupported color
+        return None
+
+    except (AttributeError, TypeError, ValueError):
+        return None
+
+
 def _resolve_entity_color_to_rgb(
     entity: Any, doc: Drawing
 ) -> tuple[int, int, int] | None:
@@ -86,6 +179,7 @@ def _resolve_entity_color_to_rgb(
     Resolve an entity's color to RGB values.
 
     Handles multiple color specifications including direct RGB, ByLayer, ByBlock, and ACI color indices.
+    This is a convenience wrapper around _resolve_entity_color_with_aci() for backwards compatibility.
 
     Args:
         entity: The ezdxf entity to resolve color for
@@ -111,59 +205,10 @@ def _resolve_entity_color_to_rgb(
         >>> _resolve_entity_color_to_rgb(entity_invalid, doc)
         None
     """
-    try:
-        # Try direct RGB color first
-        if hasattr(entity, "rgb") and entity.rgb is not None:
-            rgb = entity.rgb
-            if isinstance(rgb, tuple) and len(rgb) == 3:
-                return (int(rgb[0]), int(rgb[1]), int(rgb[2]))
-            return None
-
-        # Check for True Color (group code 420 - packed 24-bit RGB)
-        try:
-            true_color = entity.dxf.get("true_color", None)
-            if true_color is not None:
-                # Unpack 24-bit integer to RGB
-                r = (true_color >> 16) & 0xFF
-                g = (true_color >> 8) & 0xFF
-                b = true_color & 0xFF
-                return (r, g, b)
-        except (AttributeError, TypeError):
-            pass
-
-        # Get the color attribute
-        if not hasattr(entity.dxf, "color"):
-            return None
-
-        color_value = entity.dxf.color
-
-        # ByLayer color (256)
-        if color_value == 256:
-            try:
-                layer_name = entity.dxf.layer
-                layer = doc.layers.get(layer_name)
-                if layer and hasattr(layer.dxf, "color"):
-                    layer_color = layer.dxf.color
-                    # Convert ACI to RGB
-                    if 0 <= layer_color <= 255:
-                        return ezdxf_colors.aci2rgb(layer_color)
-            except (AttributeError, KeyError):
-                pass
-            return None
-
-        # ByBlock color (0) - default to white as safe fallback
-        if color_value == 0:
-            return (255, 255, 255)
-
-        # ACI color index (1-255)
-        if 1 <= color_value <= 255:
-            return ezdxf_colors.aci2rgb(color_value)
-
-        # Invalid or unsupported color
+    result = _resolve_entity_color_with_aci(entity, doc)
+    if result is None:
         return None
-
-    except (AttributeError, TypeError, ValueError):
-        return None
+    return result[0]
 
 
 def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
@@ -185,6 +230,7 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
             - color_r (int): Red component 0-255
             - color_g (int): Green component 0-255
             - color_b (int): Blue component 0-255
+            - color_aci (int | None): AutoCAD Color Index (0-256) or None for True Color
             - entity_type (str): 'Lines', 'Polylines', 'TEXT', or 'MTEXT'
             - entity_count (int): Count of entities (1 for text, aggregate for geometric)
 
@@ -193,16 +239,16 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
         >>> results = extract_color_analysis(doc)
         >>> results[0]
         {'annotation_contents': '', 'layer_name': 'WALLS', 'color_r': 255, 'color_g': 0, 'color_b': 0,
-         'entity_type': 'Lines', 'entity_count': 45}
+         'color_aci': 1, 'entity_type': 'Lines', 'entity_count': 45}
         >>> results[5]
         {'annotation_contents': 'DOOR', 'layer_name': 'NOTES', 'color_r': 0, 'color_g': 255, 'color_b': 0,
-         'entity_type': 'TEXT', 'entity_count': 1}
+         'color_aci': 3, 'entity_type': 'TEXT', 'entity_count': 1}
     """
     try:
         logger.info("Starting color analysis extraction...")
 
-        # Dictionary for grouping geometric entities: (R, G, B, layer_name, entity_type) -> count
-        geometric_entities: dict[tuple[int, int, int, str, str], int] = {}
+        # Dictionary for grouping geometric entities: (R, G, B, ACI, layer_name, entity_type) -> count
+        geometric_entities: dict[tuple[int, int, int, int | None, str, str], int] = {}
 
         # List for text annotations (each is individual)
         text_annotations: list[ColorAnalysisRecord] = []
@@ -217,10 +263,12 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
             if entity_type not in ("LINE", "LWPOLYLINE", "POLYLINE", "TEXT", "MTEXT"):
                 continue
 
-            # Resolve entity color to RGB
-            rgb = _resolve_entity_color_to_rgb(entity, doc)
-            if rgb is None:
+            # Resolve entity color to RGB and ACI
+            color_result = _resolve_entity_color_with_aci(entity, doc)
+            if color_result is None:
                 continue
+
+            rgb, color_aci = color_result
 
             # Get layer name
             layer_name = entity.dxf.layer if hasattr(entity.dxf, "layer") else "0"
@@ -230,11 +278,11 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
 
             # Handle geometric entities (Lines and Polylines)
             if entity_type == "LINE":
-                key = (color_r, color_g, color_b, layer_name, "Lines")
+                key = (color_r, color_g, color_b, color_aci, layer_name, "Lines")
                 geometric_entities[key] = geometric_entities.get(key, 0) + 1
 
             elif entity_type in ("LWPOLYLINE", "POLYLINE"):
-                key = (color_r, color_g, color_b, layer_name, "Polylines")
+                key = (color_r, color_g, color_b, color_aci, layer_name, "Polylines")
                 geometric_entities[key] = geometric_entities.get(key, 0) + 1
 
             # Handle text entities (TEXT and MTEXT)
@@ -247,6 +295,7 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
                         "color_r": color_r,
                         "color_g": color_g,
                         "color_b": color_b,
+                        "color_aci": color_aci,
                         "entity_type": "TEXT",
                         "entity_count": 1,
                     }
@@ -261,6 +310,7 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
                         "color_r": color_r,
                         "color_g": color_g,
                         "color_b": color_b,
+                        "color_aci": color_aci,
                         "entity_type": "MTEXT",
                         "entity_count": 1,
                     }
@@ -276,6 +326,7 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
                 color_r=color_r,
                 color_g=color_g,
                 color_b=color_b,
+                color_aci=color_aci,
                 entity_type=entity_type,
                 entity_count=count,
             )
@@ -283,6 +334,7 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
                 color_r,
                 color_g,
                 color_b,
+                color_aci,
                 layer_name,
                 entity_type,
             ), count in geometric_entities.items()

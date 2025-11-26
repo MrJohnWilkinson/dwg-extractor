@@ -53,6 +53,8 @@ class ColorAnalysisRecord(TypedDict):
         color_r: Red component (0-255)
         color_g: Green component (0-255)
         color_b: Blue component (0-255)
+        color_aci: AutoCAD Color Index (0-256) or None for True Color (24-bit RGB)
+                   0 = ByBlock, 1-7 = named colors, 8-255 = numbered colors, 256 = ByLayer
         entity_type: Entity type string ('Lines', 'Polylines', 'TEXT', or 'MTEXT')
         entity_count: Count of entities with this unique combination
     """
@@ -62,5 +64,6 @@ class ColorAnalysisRecord(TypedDict):
     color_r: int
     color_g: int
     color_b: int
+    color_aci: int | None
     entity_type: str
     entity_count: int

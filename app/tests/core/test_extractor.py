@@ -18,6 +18,7 @@ import pytest
 from core.extractor import (
     _clean_mtext_content,
     _resolve_entity_color_to_rgb,
+    _resolve_entity_color_with_aci,
     extract_blocks,
 )
 from core.geometry import (
@@ -1883,3 +1884,151 @@ class TestTrueColorExtraction:
         # Should return ACI red
         assert rgb is not None
         assert rgb == (255, 0, 0)
+
+
+class TestAciExtraction:
+    """Test suite for ACI (AutoCAD Color Index) extraction functionality."""
+
+    def test_resolve_entity_color_with_aci_true_color(self) -> None:
+        """Test that True Color entities return None for ACI value."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Create LINE with True Color (124, 82, 165)
+        line = msp.add_line((0, 0), (100, 0))
+        line.rgb = (124, 82, 165)
+
+        result = _resolve_entity_color_with_aci(line, doc)
+
+        assert result is not None
+        rgb, aci = result
+        assert rgb == (124, 82, 165)
+        assert aci is None  # True Color has no ACI index
+
+    def test_resolve_entity_color_with_aci_byblock(self) -> None:
+        """Test that ByBlock (ACI 0) is correctly extracted."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Create line with ByBlock color (color=0)
+        line = msp.add_line((0, 0), (100, 0), dxfattribs={"color": 0})
+
+        result = _resolve_entity_color_with_aci(line, doc)
+
+        assert result is not None
+        rgb, aci = result
+        assert rgb == (255, 255, 255)  # ByBlock defaults to white
+        assert aci == 0  # ByBlock ACI
+
+    def test_resolve_entity_color_with_aci_bylayer(self) -> None:
+        """Test that ByLayer (ACI 256) is correctly extracted."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Create layer with ACI color 3 (green)
+        doc.layers.add("TEST_LAYER", color=3)
+
+        # Create line with ByLayer color (color=256)
+        line = msp.add_line((0, 0), (100, 0), dxfattribs={"color": 256, "layer": "TEST_LAYER"})
+
+        result = _resolve_entity_color_with_aci(line, doc)
+
+        assert result is not None
+        rgb, aci = result
+        # Should resolve to layer's ACI 3 (green) RGB
+        assert 0 <= rgb[0] <= 255
+        assert 0 <= rgb[1] <= 255
+        assert 0 <= rgb[2] <= 255
+        assert aci == 256  # ByLayer ACI
+
+    def test_resolve_entity_color_with_aci_named_colors(self) -> None:
+        """Test ACI extraction for named colors (1-7)."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Test all named ACI colors
+        named_colors = {
+            1: "Red",
+            2: "Yellow",
+            3: "Green",
+            4: "Cyan",
+            5: "Blue",
+            6: "Magenta",
+            7: "White",
+        }
+
+        for aci_value, name in named_colors.items():
+            line = msp.add_line((0, aci_value * 10), (100, aci_value * 10), dxfattribs={"color": aci_value})
+
+            result = _resolve_entity_color_with_aci(line, doc)
+
+            assert result is not None, f"Failed to extract ACI {aci_value} ({name})"
+            rgb, aci = result
+            assert aci == aci_value, f"Expected ACI {aci_value}, got {aci}"
+            # RGB values should be valid
+            assert 0 <= rgb[0] <= 255
+            assert 0 <= rgb[1] <= 255
+            assert 0 <= rgb[2] <= 255
+
+    def test_resolve_entity_color_with_aci_numbered_colors(self) -> None:
+        """Test ACI extraction for numbered colors (8-255)."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Test a few numbered colors
+        test_colors = [8, 30, 100, 200, 255]
+
+        for aci_value in test_colors:
+            line = msp.add_line((0, 0), (100, 0), dxfattribs={"color": aci_value})
+
+            result = _resolve_entity_color_with_aci(line, doc)
+
+            assert result is not None, f"Failed to extract ACI {aci_value}"
+            rgb, aci = result
+            assert aci == aci_value, f"Expected ACI {aci_value}, got {aci}"
+
+    def test_color_analysis_includes_color_aci_field(self) -> None:
+        """Test that color_analysis_data records include the color_aci field."""
+        result = extract_blocks("app/tests/assets/sample_drawing.dxf")
+        color_data = result["color_analysis_data"]
+
+        for record in color_data:
+            assert "color_aci" in record, "Record missing color_aci field"
+            # color_aci should be int or None
+            aci = record["color_aci"]
+            assert aci is None or isinstance(aci, int), f"Invalid color_aci type: {type(aci)}"
+            if aci is not None:
+                assert 0 <= aci <= 256, f"Invalid ACI value: {aci}"
+
+    def test_color_analysis_true_color_has_none_aci(self) -> None:
+        """Test that True Color entities in color_analysis_data have color_aci=None."""
+        result = extract_blocks("app/tests/assets/true_color_test.dxf")
+        color_data = result["color_analysis_data"]
+
+        # Find records with True Color RGB values (not standard ACI colors)
+        # True Color (124, 82, 165) - purple
+        purple_records = [
+            r for r in color_data
+            if r["color_r"] == 124 and r["color_g"] == 82 and r["color_b"] == 165
+        ]
+
+        assert len(purple_records) >= 1, "Should have True Color records"
+        for record in purple_records:
+            assert record["color_aci"] is None, "True Color should have color_aci=None"
+
+    def test_color_analysis_aci_colors_have_aci_value(self) -> None:
+        """Test that ACI color entities have correct color_aci values."""
+        result = extract_blocks("app/tests/assets/true_color_test.dxf")
+        color_data = result["color_analysis_data"]
+
+        # Find records with ACI red (255, 0, 0) - should have ACI 1
+        red_records = [
+            r for r in color_data
+            if r["color_r"] == 255 and r["color_g"] == 0 and r["color_b"] == 0
+        ]
+
+        # At least some should have ACI color
+        aci_red_records = [r for r in red_records if r["color_aci"] is not None]
+        if aci_red_records:
+            for record in aci_red_records:
+                assert record["color_aci"] == 1, f"Red should be ACI 1, got {record['color_aci']}"

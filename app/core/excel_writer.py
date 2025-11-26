@@ -45,6 +45,7 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_XDATA_APPS,
     EXCEL_COLUMN_COLOR_ANNOTATION_CONTENTS,
+    EXCEL_COLUMN_COLOR_AUTOCAD_NAME,
     EXCEL_COLUMN_COLOR_BLUE,
     EXCEL_COLUMN_COLOR_ENTITY_COUNT,
     EXCEL_COLUMN_COLOR_ENTITY_TYPE,
@@ -80,6 +81,73 @@ from .logger import setup_logger
 
 
 logger = setup_logger(__name__)
+
+
+# ACI (AutoCAD Color Index) named colors (1-7)
+_ACI_NAMED_COLORS: dict[int, str] = {
+    1: "Red",
+    2: "Yellow",
+    3: "Green",
+    4: "Cyan",
+    5: "Blue",
+    6: "Magenta",
+    7: "White",
+}
+
+
+def _get_aci_display_name(aci: int | None) -> str:
+    """
+    Map an ACI (AutoCAD Color Index) value to a human-readable display name.
+
+    AutoCAD uses a standardized 256-color palette (ACI) where:
+    - ACI 0: "ByBlock" - inherits color from parent block
+    - ACI 1-7: Named primary colors (Red, Yellow, Green, Cyan, Blue, Magenta, White)
+    - ACI 8-255: Numbered colors ("Color N" format)
+    - ACI 256: "ByLayer" - inherits color from layer
+    - ACI None: "True Color" - 24-bit RGB color that bypasses the ACI palette
+
+    Args:
+        aci: AutoCAD Color Index value (0-256) or None for True Color
+
+    Returns:
+        Human-readable display name for the color
+
+    Examples:
+        >>> _get_aci_display_name(None)
+        'True Color'
+        >>> _get_aci_display_name(0)
+        'ByBlock'
+        >>> _get_aci_display_name(1)
+        'Red'
+        >>> _get_aci_display_name(7)
+        'White'
+        >>> _get_aci_display_name(30)
+        'Color 30'
+        >>> _get_aci_display_name(256)
+        'ByLayer'
+    """
+    # True Color (24-bit RGB, no ACI index)
+    if aci is None:
+        return "True Color"
+
+    # ByBlock
+    if aci == 0:
+        return "ByBlock"
+
+    # Named primary colors (1-7)
+    if aci in _ACI_NAMED_COLORS:
+        return _ACI_NAMED_COLORS[aci]
+
+    # ByLayer
+    if aci == 256:
+        return "ByLayer"
+
+    # Numbered colors (8-255)
+    if 8 <= aci <= 255:
+        return f"Color {aci}"
+
+    # Fallback for invalid values (should not happen)
+    return f"Unknown ({aci})"
 
 
 def _has_x_scale_variance(scale_set: set[tuple[float, float]]) -> bool:
@@ -606,6 +674,9 @@ def _create_color_analysis_sheet(
         # Build DataFrame directly from color analysis data
         rows = []
         for record in color_analysis_data:
+            # Map ACI value to human-readable display name
+            aci_display_name = _get_aci_display_name(record["color_aci"])
+
             rows.append(
                 {
                     EXCEL_COLUMN_COLOR_ANNOTATION_CONTENTS: record[
@@ -616,6 +687,7 @@ def _create_color_analysis_sheet(
                     EXCEL_COLUMN_COLOR_GREEN: record["color_g"],
                     EXCEL_COLUMN_COLOR_BLUE: record["color_b"],
                     EXCEL_COLUMN_COLOR_SAMPLE: "",  # Placeholder for color fill
+                    EXCEL_COLUMN_COLOR_AUTOCAD_NAME: aci_display_name,
                     EXCEL_COLUMN_COLOR_ENTITY_TYPE: record["entity_type"],
                     EXCEL_COLUMN_COLOR_ENTITY_COUNT: record["entity_count"],
                 }
@@ -624,7 +696,7 @@ def _create_color_analysis_sheet(
         df = pd.DataFrame(rows)
         # Data is already sorted from extract_color_analysis()
     else:
-        # Create empty DataFrame with headers only
+        # Create empty DataFrame with headers only (9 columns now)
         df = pd.DataFrame(
             columns=[
                 EXCEL_COLUMN_COLOR_ANNOTATION_CONTENTS,
@@ -633,6 +705,7 @@ def _create_color_analysis_sheet(
                 EXCEL_COLUMN_COLOR_GREEN,
                 EXCEL_COLUMN_COLOR_BLUE,
                 EXCEL_COLUMN_COLOR_SAMPLE,
+                EXCEL_COLUMN_COLOR_AUTOCAD_NAME,
                 EXCEL_COLUMN_COLOR_ENTITY_TYPE,
                 EXCEL_COLUMN_COLOR_ENTITY_COUNT,
             ]
