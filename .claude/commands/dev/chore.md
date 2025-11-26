@@ -1,3 +1,9 @@
+---
+description: Create a new plan in specs/*.md to resolve a chore
+argument-hint: <chore description>
+model: opus
+---
+
 # Chore Planning
 
 Create a new plan in specs/*.md to resolve the chore using the exact specified markdown `Plan Format`. Follow the `Instructions` to create the plan use the `Relevant Files` to focus on the right files. Follow the `Report` section to properly report the results of your work.

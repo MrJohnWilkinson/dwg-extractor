@@ -1,3 +1,8 @@
+---
+description: Execute comprehensive validation tests for frontend and backend
+model: opus
+---
+
 # Application Validation Test Suite
 
 Execute comprehensive validation tests for both frontend and backend components, returning results in a standardized JSON format for automated processing.

@@ -2,6 +2,7 @@
 allowed-tools: Bash(git:*), Bash(mkdir:*), Bash(cp:*), Bash(rm:*), Bash(gh:*), Bash(curl:*), Bash(tar:*)
 argument-hint: [PATHS_TO_SYNC]
 description: Pull updates from template repository to current project
+model: opus
 ---
 
 # Update Repository From Template

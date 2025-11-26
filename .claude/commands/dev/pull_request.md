@@ -1,3 +1,9 @@
+---
+description: Create a pull request from current branch
+argument-hint: <branch_name> <issue> <plan_file> <adw_id>
+model: opus
+---
+
 # Create Pull Request
 
 Based on the `Instructions` below, take the `Variables` follow the `Run` section to create a pull request. Then follow the `Report` section to report the results of your work.

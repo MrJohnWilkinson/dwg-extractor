@@ -1,3 +1,8 @@
+---
+description: Archive numbered analysis files from ai_output and specs directories
+model: opus
+---
+
 # Directory Cleanup
 
 ## Purpose

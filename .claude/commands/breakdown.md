@@ -1,6 +1,7 @@
 ---
 description: Break down large documents into manageable single-session tasks
 argument-hint: <file path to document>
+model: opus
 ---
 
 # Breakdown Planning

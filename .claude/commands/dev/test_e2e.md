@@ -1,3 +1,9 @@
+---
+description: Orchestrate end-to-end test execution with sub-agents
+argument-hint: <e2e test file path>
+model: opus
+---
+
 # E2E Test Orchestrator
 
 Orchestrate end-to-end (E2E) test execution by spawning sub-agents for each test scenario. This preserves the orchestrator's context window and allows testing files with many scenarios.

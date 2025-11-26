@@ -1,3 +1,8 @@
+---
+description: Create conventional commit message and commit changes
+model: opus
+---
+
 # Generate Git Commit
 
 Create a conventional commit message based on changes and create the commit.

@@ -1,3 +1,9 @@
+---
+description: Select appropriate command based on GitHub issue type
+argument-hint: <github issue JSON>
+model: opus
+---
+
 # Github Issue Command Selection
 
 Based on the `Github Issue` below, follow the `Instructions` to select the appropriate command to execute based on the `Command Mapping`.

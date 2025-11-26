@@ -1,3 +1,9 @@
+---
+description: Create a new plan in specs/*.md to implement a feature
+argument-hint: <feature description>
+model: opus
+---
+
 # Feature Planning
 
 Create a new plan in specs/*.md to implement the feature using the exact specified markdown `Plan Format`. Follow the `Instructions` to create the plan use the `Relevant Files` to focus on the right files.

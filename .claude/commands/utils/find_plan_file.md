@@ -1,3 +1,9 @@
+---
+description: Find the path to recently created plan file
+argument-hint: <previous step output>
+model: opus
+---
+
 # Find Plan File
 
 Based on the `Previous Step Output` below, follow the `Instructions` to find the path to the plan file that was just created.

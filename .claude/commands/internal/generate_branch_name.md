@@ -1,3 +1,9 @@
+---
+description: Generate concise git branch name from issue details
+argument-hint: <issue_class> <adw_id> <issue>
+model: opus
+---
+
 # Generate Git Branch Name
 
 Based on the `Instructions` below, take the `Variables` follow the `Run` section to generate a concise Git branch name following the specified format. Then follow the `Report` section to report the results of your work.

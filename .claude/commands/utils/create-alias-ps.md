@@ -1,5 +1,5 @@
 ---
-model: sonnet
+model: opus
 hints: PowerShell alias creation - $1=alias_name $2=command_or_path
 argument-hint: [alias_name] [command/path]
 description: Create a new PowerShell alias or function-based alias

@@ -1,3 +1,9 @@
+---
+description: Generate specification files from a task breakdown document
+argument-hint: <breakdown file path>
+model: opus
+---
+
 # Breakdown to Specs Generator
 
 Generate specification files from a task breakdown document by launching sub-agents sequentially. Each sub-agent creates a detailed spec file by running /utils:prime and the suggested command (/dev:feature, /dev:bug, or /dev:chore).

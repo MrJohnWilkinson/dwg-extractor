@@ -1,3 +1,9 @@
+---
+description: Orchestrate sub-agents to sequentially complete multiple implementation specs
+argument-hint: <spec file paths>
+model: opus
+---
+
 # Spec Orchestration
 
 Orchestrate sub-agents to sequentially complete multiple implementation specs. For each spec, launch sub-agents in a loop until completion is verified, with safety limits and error handling.

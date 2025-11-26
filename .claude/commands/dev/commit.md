@@ -1,3 +1,9 @@
+---
+description: Create detailed conventional commit with context and benefits
+argument-hint: [type] [description]
+model: opus
+---
+
 # Generate Git Commit (Balanced Style)
 
 Create a detailed conventional commit message with context, changes, and benefits.

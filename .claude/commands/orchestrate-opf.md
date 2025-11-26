@@ -1,3 +1,9 @@
+---
+description: Generate and implement specs in one piece flow from breakdown document
+argument-hint: <breakdown file path>
+model: opus
+---
+
 # One Piece Flow Orchestration
 
 Orchestrate sub-agents to sequentially generate and implement specifications in a single flow. Each task in the breakdown is fully completed (spec generated, then implemented) before moving to the next task, allowing later tasks to learn from actual implementation results.

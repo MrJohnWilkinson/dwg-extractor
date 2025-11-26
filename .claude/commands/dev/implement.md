@@ -1,3 +1,9 @@
+---
+description: Implement a specification plan from specs/*.md
+argument-hint: <plan file path>
+model: opus
+---
+
 # Implement the following plan
 Follow the `Instructions` to implement the plan then `Report` the completed work.
 

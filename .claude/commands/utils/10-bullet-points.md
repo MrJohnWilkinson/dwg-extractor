@@ -1,7 +1,7 @@
 ---
 description: Answer questions using concise bullet points
 argument-hint: <question>
-model: sonnet
+model: opus
 ---
 
 # Answer Question in 10 Bullet Points or Less

@@ -1,3 +1,8 @@
+---
+description: Install dependencies and prime the codebase
+model: opus
+---
+
 # Install & Prime
 
 ## Read

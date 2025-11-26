@@ -1,6 +1,7 @@
 ---
 description: Generate analysis report in ai_output directory
 argument-hint: <report topic/details>
+model: opus
 ---
 
 # Report Generation

@@ -1,3 +1,9 @@
+---
+description: Create a new plan in specs/*.md to resolve a bug
+argument-hint: <bug description>
+model: opus
+---
+
 # Bug Planning
 
 Create a new plan in specs/*.md to resolve the bug using the exact specified markdown `Plan Format`. Follow the `Instructions` to create the plan use the `Relevant Files` to focus on the right files.

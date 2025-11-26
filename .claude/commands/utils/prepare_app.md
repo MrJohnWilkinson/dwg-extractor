@@ -1,3 +1,8 @@
+---
+description: Setup the application for review or testing
+model: opus
+---
+
 # Prepare Application
 
 Setup the application for the review or test.
