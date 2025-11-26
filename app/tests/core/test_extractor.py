@@ -15,7 +15,11 @@ from pathlib import Path
 import ezdxf
 import pytest
 
-from core.extractor import _clean_mtext_content, extract_blocks
+from core.extractor import (
+    _clean_mtext_content,
+    _resolve_entity_color_to_rgb,
+    extract_blocks,
+)
 from core.geometry import (
     _calculate_segments,
     _categorize_rotation,
@@ -1650,3 +1654,232 @@ class TestMtextFormatting:
             assert "\\L" not in contents
             assert "\\O" not in contents
             assert "\\C" not in contents or contents.count("\\") == 0
+
+
+class TestTrueColorExtraction:
+    """Test suite for True Color (24-bit RGB) extraction functionality."""
+
+    def test_resolve_entity_color_to_rgb_true_color(self) -> None:
+        """Test True Color extraction from entities with 24-bit RGB colors."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Create LINE with True Color (124, 82, 165)
+        line = msp.add_line((0, 0), (100, 0))
+        line.rgb = (124, 82, 165)
+
+        # Resolve color
+        rgb = _resolve_entity_color_to_rgb(line, doc)
+
+        assert rgb is not None
+        assert rgb == (124, 82, 165)
+
+    def test_resolve_entity_color_to_rgb_true_color_cyan(self) -> None:
+        """Test True Color extraction with cyan color (0, 165, 165) from bug report."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Create LINE with True Color (0, 165, 165)
+        line = msp.add_line((0, 0), (100, 0))
+        line.rgb = (0, 165, 165)
+
+        # Resolve color
+        rgb = _resolve_entity_color_to_rgb(line, doc)
+
+        assert rgb is not None
+        assert rgb == (0, 165, 165)
+
+    def test_true_color_in_annotation_data(self) -> None:
+        """Verify True Colors appear in annotation_data for TEXT/MTEXT entities."""
+        result = extract_blocks("app/tests/assets/true_color_test.dxf")
+        annotation_data = result["annotation_data"]
+
+        # Find TRUE COLOR TEXT entry - should have RGB (255, 128, 0)
+        true_color_text_entries = [
+            (key, count)
+            for key, count in annotation_data.items()
+            if "TRUE COLOR TEXT" in key[0]
+        ]
+
+        assert len(true_color_text_entries) >= 1
+        key, count = true_color_text_entries[0]
+        contents, entity_type, layer_name, color_r, color_g, color_b = key
+
+        # Verify True Color RGB (255, 128, 0) - orange
+        assert color_r == 255
+        assert color_g == 128
+        assert color_b == 0
+
+    def test_true_color_in_color_analysis(self) -> None:
+        """Verify True Colors appear in color_analysis_data."""
+        result = extract_blocks("app/tests/assets/true_color_test.dxf")
+        color_data = result["color_analysis_data"]
+
+        # Find records with specific True Colors
+        # LINE with True Color (124, 82, 165) - purple
+        purple_lines = [
+            r
+            for r in color_data
+            if r["color_r"] == 124
+            and r["color_g"] == 82
+            and r["color_b"] == 165
+            and r["entity_type"] == "Lines"
+        ]
+        assert len(purple_lines) >= 1
+
+        # LINE with True Color (0, 165, 165) - cyan
+        cyan_lines = [
+            r
+            for r in color_data
+            if r["color_r"] == 0 and r["color_g"] == 165 and r["color_b"] == 165
+        ]
+        assert len(cyan_lines) >= 1
+
+    def test_true_color_mixed_with_aci(self) -> None:
+        """Verify both True Color and ACI entities are extracted correctly."""
+        result = extract_blocks("app/tests/assets/true_color_test.dxf")
+        color_data = result["color_analysis_data"]
+
+        # Find ACI color entries
+        # ACI 1 = Red (255, 0, 0)
+        red_aci_lines = [
+            r
+            for r in color_data
+            if r["color_r"] == 255
+            and r["color_g"] == 0
+            and r["color_b"] == 0
+            and r["entity_type"] == "Lines"
+        ]
+        assert len(red_aci_lines) >= 1
+
+        # Find True Color entries
+        # True Color (100, 200, 150) - custom green
+        custom_green_lines = [
+            r
+            for r in color_data
+            if r["color_r"] == 100
+            and r["color_g"] == 200
+            and r["color_b"] == 150
+        ]
+        assert len(custom_green_lines) >= 1
+
+    def test_true_color_text_annotations(self) -> None:
+        """Test True Color extraction from TEXT and MTEXT entities."""
+        result = extract_blocks("app/tests/assets/true_color_test.dxf")
+        color_data = result["color_analysis_data"]
+
+        # Find TRUE COLOR MTEXT entry with RGB (128, 0, 255) - purple
+        purple_mtext = [
+            r
+            for r in color_data
+            if r["entity_type"] == "MTEXT"
+            and r["color_r"] == 128
+            and r["color_g"] == 0
+            and r["color_b"] == 255
+        ]
+        assert len(purple_mtext) >= 1
+
+        # Find ANNOTATION WITH TRUE COLOR with RGB (200, 100, 50) - brownish
+        brownish_text = [
+            r
+            for r in color_data
+            if r["entity_type"] == "TEXT"
+            and r["color_r"] == 200
+            and r["color_g"] == 100
+            and r["color_b"] == 50
+        ]
+        assert len(brownish_text) >= 1
+
+    def test_true_color_overrides_bylayer(self) -> None:
+        """Test that True Color overrides ByLayer color setting."""
+        result = extract_blocks("app/tests/assets/true_color_test.dxf")
+        color_data = result["color_analysis_data"]
+
+        # LINE with True Color (50, 150, 250) - light blue
+        # This line has color=256 (ByLayer) but also has True Color set
+        # True Color should take precedence
+        light_blue_lines = [
+            r
+            for r in color_data
+            if r["color_r"] == 50
+            and r["color_g"] == 150
+            and r["color_b"] == 250
+            and r["entity_type"] == "Lines"
+        ]
+        assert len(light_blue_lines) >= 1
+
+    def test_true_color_extraction_preserves_all_rgb_values(self) -> None:
+        """Test that all RGB component values are correctly preserved."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Test edge cases for RGB values
+        test_colors = [
+            (0, 0, 0),  # Black
+            (255, 255, 255),  # White
+            (128, 128, 128),  # Gray
+            (255, 0, 0),  # Red
+            (0, 255, 0),  # Green
+            (0, 0, 255),  # Blue
+            (1, 2, 3),  # Low values
+            (252, 253, 254),  # High values
+        ]
+
+        for i, color in enumerate(test_colors):
+            line = msp.add_line((0, i * 10), (100, i * 10))
+            line.rgb = color
+
+            rgb = _resolve_entity_color_to_rgb(line, doc)
+
+            assert rgb is not None, f"Failed to extract color {color}"
+            assert rgb == color, f"Expected {color}, got {rgb}"
+
+    def test_true_color_via_dxf_true_color_property(self) -> None:
+        """Test True Color extraction via entity.dxf.true_color packed integer."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Create a line and manually set true_color as packed integer
+        line = msp.add_line((0, 0), (100, 0))
+
+        # Pack RGB (100, 150, 200) as 24-bit integer
+        # value = (R << 16) | (G << 8) | B
+        packed_color = (100 << 16) | (150 << 8) | 200
+        line.dxf.true_color = packed_color
+
+        # Resolve color
+        rgb = _resolve_entity_color_to_rgb(line, doc)
+
+        assert rgb is not None
+        assert rgb == (100, 150, 200)
+
+    def test_true_color_takes_precedence_over_aci(self) -> None:
+        """Test that True Color is checked before ACI color index."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Create a line with both ACI color and True Color
+        line = msp.add_line((0, 0), (100, 0), dxfattribs={"color": 1})  # ACI red
+
+        # Set True Color - this should take precedence
+        line.rgb = (0, 128, 64)  # Custom green
+
+        rgb = _resolve_entity_color_to_rgb(line, doc)
+
+        # Should return True Color, not ACI red (255, 0, 0)
+        assert rgb is not None
+        assert rgb == (0, 128, 64)
+
+    def test_aci_color_still_works_without_true_color(self) -> None:
+        """Test that ACI colors still work when no True Color is present."""
+        doc = ezdxf.new("R2010")
+        msp = doc.modelspace()
+
+        # Create line with only ACI color
+        line = msp.add_line((0, 0), (100, 0), dxfattribs={"color": 1})  # ACI red
+
+        rgb = _resolve_entity_color_to_rgb(line, doc)
+
+        # Should return ACI red
+        assert rgb is not None
+        assert rgb == (255, 0, 0)

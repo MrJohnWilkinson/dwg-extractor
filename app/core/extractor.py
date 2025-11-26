@@ -119,6 +119,18 @@ def _resolve_entity_color_to_rgb(
                 return (int(rgb[0]), int(rgb[1]), int(rgb[2]))
             return None
 
+        # Check for True Color (group code 420 - packed 24-bit RGB)
+        try:
+            true_color = entity.dxf.get("true_color", None)
+            if true_color is not None:
+                # Unpack 24-bit integer to RGB
+                r = (true_color >> 16) & 0xFF
+                g = (true_color >> 8) & 0xFF
+                b = true_color & 0xFF
+                return (r, g, b)
+        except (AttributeError, TypeError):
+            pass
+
         # Get the color attribute
         if not hasattr(entity.dxf, "color"):
             return None
