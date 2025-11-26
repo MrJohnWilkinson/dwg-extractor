@@ -11,6 +11,7 @@ Usage:
     # Returns: ExtractionResult with block_counts, block_entities, layer_insertions, etc.
 """
 
+import re
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -31,6 +32,51 @@ from .types import BlockTrimmingData, ColorAnalysisRecord
 
 
 logger = setup_logger(__name__)
+
+
+def _clean_mtext_content(entity: Any) -> str:
+    """
+    Clean MTEXT content by stripping formatting codes and normalizing whitespace.
+
+    Uses ezdxf's built-in plain_text() method to remove formatting codes, then
+    converts newlines to spaces and collapses multiple spaces.
+
+    Args:
+        entity: The MTEXT entity to extract clean text from
+
+    Returns:
+        Cleaned plain text string with formatting codes removed and whitespace normalized.
+
+    Examples:
+        >>> # MTEXT with paragraph alignment code
+        >>> _clean_mtext_content(mtext_with_pxqc)  # raw: "\\pxqc;CENTERED"
+        "CENTERED"
+
+        >>> # MTEXT with paragraph breaks
+        >>> _clean_mtext_content(mtext_with_breaks)  # raw: "LINE1\\PLINE2"
+        "LINE1 LINE2"
+
+        >>> # Complex formatting
+        >>> _clean_mtext_content(mtext_complex)  # raw: "\\pxqc;MENS CASUAL\\P PANTS"
+        "MENS CASUAL PANTS"
+    """
+    try:
+        # Use ezdxf's plain_text() to strip formatting codes
+        # split=False returns a single string (cast needed for type checker)
+        plain_result = entity.plain_text(split=False)
+        plain: str = plain_result if isinstance(plain_result, str) else "\n".join(plain_result)
+
+        # Replace newlines with spaces (plain_text converts \P to newline)
+        text = plain.replace("\n", " ")
+
+        # Collapse multiple consecutive spaces into single space
+        text = re.sub(r" +", " ", text)
+
+        # Strip leading/trailing whitespace
+        return text.strip()
+    except (AttributeError, TypeError):
+        # Fallback to raw text if plain_text() fails
+        return str(entity.text) if hasattr(entity, "text") else ""
 
 
 def _resolve_entity_color_to_rgb(
@@ -195,7 +241,7 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
                 )
 
             elif entity_type == "MTEXT":
-                text_content = entity.text if hasattr(entity, "text") else ""
+                text_content = _clean_mtext_content(entity)
                 text_annotations.append(
                     {
                         "annotation_contents": text_content,
@@ -464,7 +510,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                             entity.dxf.text if hasattr(entity.dxf, "text") else ""
                         )
                     else:  # MTEXT
-                        contents = entity.text if hasattr(entity, "text") else ""
+                        contents = _clean_mtext_content(entity)
 
                     # Resolve color to RGB
                     rgb_color = _resolve_entity_color_to_rgb(entity, doc)
