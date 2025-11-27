@@ -78,6 +78,7 @@ from .excel_formatting import (
 )
 from .extractor import ExtractionResult
 from .logger import setup_logger
+from .types import BlockRotationKey
 
 
 logger = setup_logger(__name__)
@@ -367,19 +368,19 @@ def _create_block_analysis_sheet(
     if block_layer_pairs:
         # Unpack block-layer pairs into DataFrame rows (simplified - no rotations)
         rows = []
-        for (block_name, layer_name), insertion_count in block_layer_pairs.items():
-            entity_count = block_entities.get(block_name, 0)
+        for key, insertion_count in block_layer_pairs.items():
+            entity_count = block_entities.get(key.block_name, 0)
 
             # Get XDATA apps for this block-layer pair
-            xdata_apps = block_xdata_apps.get((block_name, layer_name), set())
+            xdata_apps = block_xdata_apps.get(key, set())
             xdata_apps_str = ", ".join(sorted(xdata_apps)) if xdata_apps else "-"
 
             rows.append(
                 {
-                    EXCEL_COLUMN_BLOCK_NAME: block_name,
+                    EXCEL_COLUMN_BLOCK_NAME: key.block_name,
                     EXCEL_COLUMN_BLOCK_INSERTION_COUNT: insertion_count,
                     EXCEL_COLUMN_BLOCK_ENTITY_COUNT: entity_count,
-                    EXCEL_COLUMN_BLOCK_LAYER_NAME: layer_name,
+                    EXCEL_COLUMN_BLOCK_LAYER_NAME: key.layer_name,
                     EXCEL_COLUMN_BLOCK_XDATA_APPS: xdata_apps_str,
                 }
             )
@@ -500,24 +501,59 @@ def _create_block_geometry_analysis_sheet(
     if block_layer_pairs:
         # Build DataFrame rows from block-layer pairs with all geometry data
         rows = []
-        for (block_name, layer_name), _insertion_count in block_layer_pairs.items():
+        for key, _insertion_count in block_layer_pairs.items():
             # Look up geometry data for this block
-            geometry_data = block_trimming_data.get(block_name)
+            geometry_data = block_trimming_data.get(key.block_name)
 
             # Skip blocks without geometry data (anonymous blocks, etc.)
             if geometry_data is None:
                 continue
 
             # Extract rotation counts for this block-layer pair
-            rot_0 = block_rotation_counts.get((block_name, layer_name, "0"), 0)
-            rot_90 = block_rotation_counts.get((block_name, layer_name, "90"), 0)
-            rot_180 = block_rotation_counts.get((block_name, layer_name, "180"), 0)
-            rot_270 = block_rotation_counts.get((block_name, layer_name, "270"), 0)
-            rot_other = block_rotation_counts.get((block_name, layer_name, "other"), 0)
+            rot_0 = block_rotation_counts.get(
+                BlockRotationKey(
+                    block_name=key.block_name,
+                    layer_name=key.layer_name,
+                    rotation_category="0",
+                ),
+                0,
+            )
+            rot_90 = block_rotation_counts.get(
+                BlockRotationKey(
+                    block_name=key.block_name,
+                    layer_name=key.layer_name,
+                    rotation_category="90",
+                ),
+                0,
+            )
+            rot_180 = block_rotation_counts.get(
+                BlockRotationKey(
+                    block_name=key.block_name,
+                    layer_name=key.layer_name,
+                    rotation_category="180",
+                ),
+                0,
+            )
+            rot_270 = block_rotation_counts.get(
+                BlockRotationKey(
+                    block_name=key.block_name,
+                    layer_name=key.layer_name,
+                    rotation_category="270",
+                ),
+                0,
+            )
+            rot_other = block_rotation_counts.get(
+                BlockRotationKey(
+                    block_name=key.block_name,
+                    layer_name=key.layer_name,
+                    rotation_category="other",
+                ),
+                0,
+            )
 
             # Extract scale data for this block (all insertions across all layers)
             # Determine if X or Y scales vary, display "VARIES" or "VARIES (-)" or numeric value
-            scale_set = block_scale_data.get(block_name, {(1.0, 1.0)})
+            scale_set = block_scale_data.get(key.block_name, {(1.0, 1.0)})
 
             if _has_x_scale_variance(scale_set):
                 if _has_negative_scale_in_set(scale_set, "x"):
@@ -559,8 +595,8 @@ def _create_block_geometry_analysis_sheet(
 
             rows.append(
                 {
-                    EXCEL_COLUMN_BLOCK_NAME: block_name,
-                    EXCEL_COLUMN_BLOCK_LAYER_NAME: layer_name,
+                    EXCEL_COLUMN_BLOCK_NAME: key.block_name,
+                    EXCEL_COLUMN_BLOCK_LAYER_NAME: key.layer_name,
                     EXCEL_COLUMN_BLOCK_ROTATION_0: rot_0,
                     EXCEL_COLUMN_BLOCK_ROTATION_90: rot_90,
                     EXCEL_COLUMN_BLOCK_ROTATION_180: rot_180,
@@ -616,22 +652,15 @@ def _create_annotations_analysis_sheet(
     if annotation_data:
         # Build DataFrame rows from annotation data
         rows = []
-        for (
-            contents,
-            annotation_type,
-            layer_name,
-            color_r,
-            color_g,
-            color_b,
-        ), count in annotation_data.items():
+        for key, count in annotation_data.items():
             rows.append(
                 {
-                    EXCEL_COLUMN_ANNOTATION_CONTENTS: contents,
-                    EXCEL_COLUMN_ANNOTATION_TYPE: annotation_type,
-                    EXCEL_COLUMN_ANNOTATION_LAYER_NAME: layer_name,
-                    EXCEL_COLUMN_ANNOTATION_COLOR_R: color_r,
-                    EXCEL_COLUMN_ANNOTATION_COLOR_G: color_g,
-                    EXCEL_COLUMN_ANNOTATION_COLOR_B: color_b,
+                    EXCEL_COLUMN_ANNOTATION_CONTENTS: key.annotation_contents,
+                    EXCEL_COLUMN_ANNOTATION_TYPE: key.annotation_type,
+                    EXCEL_COLUMN_ANNOTATION_LAYER_NAME: key.layer_name,
+                    EXCEL_COLUMN_ANNOTATION_COLOR_R: key.color_r,
+                    EXCEL_COLUMN_ANNOTATION_COLOR_G: key.color_g,
+                    EXCEL_COLUMN_ANNOTATION_COLOR_B: key.color_b,
                     EXCEL_COLUMN_ANNOTATION_COLOR_SAMPLE: "",  # Placeholder for color fill
                     EXCEL_COLUMN_ANNOTATION_COUNT: count,
                 }

@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(tree:*)",
+      "Bash(test:*)",
+      "SlashCommand(/dev:commit)",
+      "Bash(cat:*)",
+      "Bash(sort:*)",
+      "Bash(UV_PROJECT=app uv pip install:*)",
+      "Bash(bash:*)",
+      "Bash(scripts/start.sh:*)",
+      "Bash(scripts/build.sh:*)",
+      "WebSearch",
+      "WebFetch(domain:ezdxf.readthedocs.io)",
+      "Bash(lsb_release:*)",
+      "Bash(ldd:*)",
+      "Bash(tar:*)",
+      "Bash(git restore:*)",
+      "Bash(xvfb-run uv run pytest:*)",
+      "Bash(done)",
+      "Bash(while read file)",
+      "Bash(git mv:*)",
+      "Bash(rm:*)",
+      "Bash(MENS CASUALP PANTS\" now displays as \"MENS CASUAL PANTS\"\n- Paragraph breaks (\\P) become spaces, not newlines\n- All 259 tests passing, mypy and ruff checks clean\n\nResolves: specs/004-clean-mtext-annotation-content.md\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

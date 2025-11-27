@@ -27,6 +27,7 @@ from core.geometry import (
     _get_block_bounding_box,
     _get_intersection_points,
 )
+from core.types import AnnotationKey, BlockLayerKey, BlockRotationKey
 
 
 class TestExtractor:
@@ -205,12 +206,11 @@ class TestExtractor:
         # Verify block_layer_pairs has at least one entry
         assert len(result["block_layer_pairs"]) > 0
 
-        # Verify all keys are tuples of (str, str) and values are positive integers
+        # Verify all keys are BlockLayerKey dataclasses and values are positive integers
         for pair_key, count in result["block_layer_pairs"].items():
-            assert isinstance(pair_key, tuple)
-            assert len(pair_key) == 2
-            assert isinstance(pair_key[0], str)  # block_name
-            assert isinstance(pair_key[1], str)  # layer_name
+            assert isinstance(pair_key, BlockLayerKey)
+            assert isinstance(pair_key.block_name, str)
+            assert isinstance(pair_key.layer_name, str)
             assert isinstance(count, int)
             assert count > 0
 
@@ -225,22 +225,19 @@ class TestExtractor:
         assert total_pair_count == total_block_count
         assert total_pair_count == 18  # Known count from sample_drawing.dxf
 
-    def test_block_layer_pairs_tuple_keys(self) -> None:
-        """Test that all block_layer_pairs keys are (str, str) tuples."""
+    def test_block_layer_pairs_dataclass_keys(self) -> None:
+        """Test that all block_layer_pairs keys are BlockLayerKey dataclasses."""
         result = extract_blocks("app/tests/assets/sample_drawing.dxf")
 
         for pair_key in result["block_layer_pairs"].keys():
-            # Verify key is a tuple
-            assert isinstance(pair_key, tuple)
-            # Verify tuple has exactly 2 elements
-            assert len(pair_key) == 2
-            # Verify both elements are strings
-            block_name, layer_name = pair_key
-            assert isinstance(block_name, str)
-            assert isinstance(layer_name, str)
+            # Verify key is a BlockLayerKey dataclass
+            assert isinstance(pair_key, BlockLayerKey)
+            # Verify fields are strings
+            assert isinstance(pair_key.block_name, str)
+            assert isinstance(pair_key.layer_name, str)
             # Verify neither is empty
-            assert len(block_name) > 0
-            assert len(layer_name) > 0
+            assert len(pair_key.block_name) > 0
+            assert len(pair_key.layer_name) > 0
 
     def test_block_layer_pairs_empty_file(self) -> None:
         """Test that empty file returns empty block_layer_pairs dict."""
@@ -311,20 +308,18 @@ class TestExtractor:
         # Should have at least one entry for files with blocks
         assert len(result["block_rotation_counts"]) > 0
 
-    def test_block_rotation_counts_tuple_keys(self) -> None:
-        """Test that all block_rotation_counts keys are (str, str, str) tuples."""
+    def test_block_rotation_counts_dataclass_keys(self) -> None:
+        """Test that all block_rotation_counts keys are BlockRotationKey dataclasses."""
         result = extract_blocks("app/tests/assets/test_rotations.dxf")
 
-        # Verify all keys are 3-element tuples
+        # Verify all keys are BlockRotationKey dataclasses
         for rotation_key in result["block_rotation_counts"].keys():
-            assert isinstance(rotation_key, tuple)
-            assert len(rotation_key) == 3
-            block_name, layer_name, rotation_category = rotation_key
-            assert isinstance(block_name, str)
-            assert isinstance(layer_name, str)
-            assert isinstance(rotation_category, str)
-            assert len(block_name) > 0
-            assert len(layer_name) > 0
+            assert isinstance(rotation_key, BlockRotationKey)
+            assert isinstance(rotation_key.block_name, str)
+            assert isinstance(rotation_key.layer_name, str)
+            assert isinstance(rotation_key.rotation_category, str)
+            assert len(rotation_key.block_name) > 0
+            assert len(rotation_key.layer_name) > 0
 
     def test_block_rotation_counts_valid_categories(self) -> None:
         """Test that rotation categories are only valid values."""
@@ -333,8 +328,7 @@ class TestExtractor:
         valid_categories = {"0", "90", "180", "270", "other"}
 
         for rotation_key in result["block_rotation_counts"].keys():
-            _, _, rotation_category = rotation_key
-            assert rotation_category in valid_categories
+            assert rotation_key.rotation_category in valid_categories
 
     def test_block_rotation_counts_conservation(self) -> None:
         """Test that sum of rotation counts equals sum of block_layer_pairs."""
@@ -357,12 +351,57 @@ class TestExtractor:
         # 1 block at 270° on LAYER_B
         # 2 blocks at non-standard angles (45°, 135°) on LAYER_C
 
-        # Verify specific rotation counts
-        assert result["block_rotation_counts"][("TEST_BLOCK", "LAYER_A", "0")] == 5
-        assert result["block_rotation_counts"][("TEST_BLOCK", "LAYER_A", "90")] == 3
-        assert result["block_rotation_counts"][("TEST_BLOCK", "LAYER_B", "180")] == 2
-        assert result["block_rotation_counts"][("TEST_BLOCK", "LAYER_B", "270")] == 1
-        assert result["block_rotation_counts"][("TEST_BLOCK", "LAYER_C", "other")] == 2
+        # Verify specific rotation counts using BlockRotationKey
+        assert (
+            result["block_rotation_counts"][
+                BlockRotationKey(
+                    block_name="TEST_BLOCK",
+                    layer_name="LAYER_A",
+                    rotation_category="0",
+                )
+            ]
+            == 5
+        )
+        assert (
+            result["block_rotation_counts"][
+                BlockRotationKey(
+                    block_name="TEST_BLOCK",
+                    layer_name="LAYER_A",
+                    rotation_category="90",
+                )
+            ]
+            == 3
+        )
+        assert (
+            result["block_rotation_counts"][
+                BlockRotationKey(
+                    block_name="TEST_BLOCK",
+                    layer_name="LAYER_B",
+                    rotation_category="180",
+                )
+            ]
+            == 2
+        )
+        assert (
+            result["block_rotation_counts"][
+                BlockRotationKey(
+                    block_name="TEST_BLOCK",
+                    layer_name="LAYER_B",
+                    rotation_category="270",
+                )
+            ]
+            == 1
+        )
+        assert (
+            result["block_rotation_counts"][
+                BlockRotationKey(
+                    block_name="TEST_BLOCK",
+                    layer_name="LAYER_C",
+                    rotation_category="other",
+                )
+            ]
+            == 2
+        )
 
         # Verify total count
         total = sum(result["block_rotation_counts"].values())
@@ -812,7 +851,7 @@ class TestExtractor:
         assert isinstance(result["block_xdata_apps"], dict)
 
         # Verify WITH_XDATA on LAYER_A has ACAD and CUSTOM_APP
-        layer_a_key = ("WITH_XDATA", "LAYER_A")
+        layer_a_key = BlockLayerKey(block_name="WITH_XDATA", layer_name="LAYER_A")
         assert layer_a_key in result["block_xdata_apps"]
         layer_a_apps = result["block_xdata_apps"][layer_a_key]
         assert isinstance(layer_a_apps, set)
@@ -820,7 +859,7 @@ class TestExtractor:
         assert "CUSTOM_APP" in layer_a_apps
 
         # Verify WITH_XDATA on LAYER_B has BIM_TOOL and ACAD
-        layer_b_key = ("WITH_XDATA", "LAYER_B")
+        layer_b_key = BlockLayerKey(block_name="WITH_XDATA", layer_name="LAYER_B")
         assert layer_b_key in result["block_xdata_apps"]
         layer_b_apps = result["block_xdata_apps"][layer_b_key]
         assert isinstance(layer_b_apps, set)
@@ -828,7 +867,7 @@ class TestExtractor:
         assert "ACAD" in layer_b_apps
 
         # Verify NO_XDATA on LAYER_A either doesn't exist or has empty set
-        no_xdata_key = ("NO_XDATA", "LAYER_A")
+        no_xdata_key = BlockLayerKey(block_name="NO_XDATA", layer_name="LAYER_A")
         if no_xdata_key in result["block_xdata_apps"]:
             assert len(result["block_xdata_apps"][no_xdata_key]) == 0
 
@@ -926,25 +965,23 @@ class TestExtractor:
         assert "annotation_data" in result
         assert isinstance(result["annotation_data"], dict)
 
-        # Verify keys are tuples of (contents, type, layer, r, g, b)
+        # Verify keys are AnnotationKey dataclasses
         for key, count in result["annotation_data"].items():
-            assert isinstance(key, tuple)
-            assert len(key) == 6
-            contents, entity_type, layer_name, color_r, color_g, color_b = key
+            assert isinstance(key, AnnotationKey)
 
             # Verify types
-            assert isinstance(contents, str)
-            assert isinstance(entity_type, str)
-            assert entity_type in ("TEXT", "MTEXT")
-            assert isinstance(layer_name, str)
-            assert isinstance(color_r, int)
-            assert isinstance(color_g, int)
-            assert isinstance(color_b, int)
+            assert isinstance(key.annotation_contents, str)
+            assert isinstance(key.annotation_type, str)
+            assert key.annotation_type in ("TEXT", "MTEXT")
+            assert isinstance(key.layer_name, str)
+            assert isinstance(key.color_r, int)
+            assert isinstance(key.color_g, int)
+            assert isinstance(key.color_b, int)
 
             # Verify RGB values are in valid range
-            assert 0 <= color_r <= 255
-            assert 0 <= color_g <= 255
-            assert 0 <= color_b <= 255
+            assert 0 <= key.color_r <= 255
+            assert 0 <= key.color_g <= 255
+            assert 0 <= key.color_b <= 255
 
             # Verify count is positive integer
             assert isinstance(count, int)
@@ -959,7 +996,7 @@ class TestExtractor:
         duplicate_entries = [
             (key, count)
             for key, count in annotation_data.items()
-            if "Duplicate Text" in key[0] and count == 2
+            if "Duplicate Text" in key.annotation_contents and count == 2
         ]
         assert len(duplicate_entries) == 1, (
             "Should have exactly one 'Duplicate Text' group with count=2"
@@ -967,7 +1004,9 @@ class TestExtractor:
 
         # Verify same text on different layers creates separate groups
         cross_layer_entries = [
-            key for key in annotation_data.keys() if "Cross Layer Text" in key[0]
+            key
+            for key in annotation_data.keys()
+            if "Cross Layer Text" in key.annotation_contents
         ]
         assert len(cross_layer_entries) >= 2, (
             "Same text on different layers should be separate groups"
@@ -975,7 +1014,9 @@ class TestExtractor:
 
         # Verify same text with different colors creates separate groups
         multi_color_entries = [
-            key for key in annotation_data.keys() if "Multi Color Text" in key[0]
+            key
+            for key in annotation_data.keys()
+            if "Multi Color Text" in key.annotation_contents
         ]
         assert len(multi_color_entries) >= 2, (
             "Same text with different colors should be separate groups"
@@ -990,7 +1031,7 @@ class TestExtractor:
         same_content_entries = [
             key
             for key in annotation_data.keys()
-            if "Same Content Different Type" in key[0]
+            if "Same Content Different Type" in key.annotation_contents
         ]
 
         # Should have 2 entries: one TEXT, one MTEXT
@@ -999,7 +1040,7 @@ class TestExtractor:
         )
 
         # Verify we have both types
-        entity_types = {key[1] for key in same_content_entries}
+        entity_types = {key.annotation_type for key in same_content_entries}
         assert "TEXT" in entity_types
         assert "MTEXT" in entity_types
 
@@ -1010,7 +1051,9 @@ class TestExtractor:
 
         # Find special characters entry
         special_char_entries = [
-            key for key in annotation_data.keys() if "@#$%^&*()" in key[0]
+            key
+            for key in annotation_data.keys()
+            if "@#$%^&*()" in key.annotation_contents
         ]
         assert len(special_char_entries) >= 1, "Special characters should be preserved"
 
@@ -1018,7 +1061,7 @@ class TestExtractor:
         unicode_entries = [
             key
             for key in annotation_data.keys()
-            if any(ord(c) > 127 for c in key[0])  # Unicode characters
+            if any(ord(c) > 127 for c in key.annotation_contents)  # Unicode characters
         ]
         assert len(unicode_entries) >= 1, "Unicode characters should be preserved"
 
@@ -1031,7 +1074,7 @@ class TestExtractor:
         assert isinstance(result["annotation_data"], dict)
         # Empty file may or may not have annotations, but should be a dict
         for key, count in result["annotation_data"].items():
-            assert isinstance(key, tuple)
+            assert isinstance(key, AnnotationKey)
             assert isinstance(count, int)
 
     def test_resolve_entity_color_to_rgb_direct_rgb(self) -> None:
@@ -1043,17 +1086,16 @@ class TestExtractor:
         sample_text_1_entries = [
             (key, count)
             for key, count in annotation_data.items()
-            if "Sample Text 1" == key[0]
+            if "Sample Text 1" == key.annotation_contents
         ]
 
         assert len(sample_text_1_entries) == 1
         key, count = sample_text_1_entries[0]
-        contents, entity_type, layer_name, color_r, color_g, color_b = key
 
         # Verify direct RGB color (255, 0, 0) = red
-        assert color_r == 255
-        assert color_g == 0
-        assert color_b == 0
+        assert key.color_r == 255
+        assert key.color_g == 0
+        assert key.color_b == 0
 
     def test_resolve_entity_color_to_rgb_bylayer(self) -> None:
         """Test color resolution for entities with ByLayer color."""
@@ -1064,22 +1106,21 @@ class TestExtractor:
         sample_text_2_entries = [
             (key, count)
             for key, count in annotation_data.items()
-            if "Sample Text 2" == key[0]
+            if "Sample Text 2" == key.annotation_contents
         ]
 
         assert len(sample_text_2_entries) == 1
         key, count = sample_text_2_entries[0]
-        contents, entity_type, layer_name, color_r, color_g, color_b = key
 
         # Verify layer is LAYER_GREEN
-        assert layer_name == "LAYER_GREEN"
+        assert key.layer_name == "LAYER_GREEN"
 
         # ByLayer should resolve to layer's ACI color (ACI 3 = green)
         # ACI 3 typically maps to RGB (0, 255, 0) but may vary
         # Just verify we got valid RGB values
-        assert 0 <= color_r <= 255
-        assert 0 <= color_g <= 255
-        assert 0 <= color_b <= 255
+        assert 0 <= key.color_r <= 255
+        assert 0 <= key.color_g <= 255
+        assert 0 <= key.color_b <= 255
 
     def test_resolve_entity_color_to_rgb_aci_index(self) -> None:
         """Test color resolution for entities with ACI color index."""
@@ -1090,17 +1131,16 @@ class TestExtractor:
         sample_text_3_entries = [
             (key, count)
             for key, count in annotation_data.items()
-            if "Sample Text 3" == key[0]
+            if "Sample Text 3" == key.annotation_contents
         ]
 
         assert len(sample_text_3_entries) == 1
         key, count = sample_text_3_entries[0]
-        contents, entity_type, layer_name, color_r, color_g, color_b = key
 
         # ACI 5 = blue, should have valid RGB
-        assert 0 <= color_r <= 255
-        assert 0 <= color_g <= 255
-        assert 0 <= color_b <= 255
+        assert 0 <= key.color_r <= 255
+        assert 0 <= key.color_g <= 255
+        assert 0 <= key.color_b <= 255
 
     def test_resolve_entity_color_to_rgb_byblock(self) -> None:
         """Test color resolution for entities with ByBlock color (defaults to white)."""
@@ -1111,17 +1151,16 @@ class TestExtractor:
         byblock_entries = [
             (key, count)
             for key, count in annotation_data.items()
-            if "ByBlock Color Text" == key[0]
+            if "ByBlock Color Text" == key.annotation_contents
         ]
 
         assert len(byblock_entries) == 1
         key, count = byblock_entries[0]
-        contents, entity_type, layer_name, color_r, color_g, color_b = key
 
         # ByBlock should default to white (255, 255, 255)
-        assert color_r == 255
-        assert color_g == 255
-        assert color_b == 255
+        assert key.color_r == 255
+        assert key.color_g == 255
+        assert key.color_b == 255
 
     def test_annotation_data_mtext_multiline(self) -> None:
         """Test that MTEXT multiline content is extracted correctly."""
@@ -1132,7 +1171,8 @@ class TestExtractor:
         mtext_entries = [
             (key, count)
             for key, count in annotation_data.items()
-            if key[1] == "MTEXT" and "multiline" in key[0].lower()
+            if key.annotation_type == "MTEXT"
+            and "multiline" in key.annotation_contents.lower()
         ]
 
         # Should have at least one MTEXT with multiline content
@@ -1405,37 +1445,45 @@ class TestMtextFormatting:
 
         # Find CENTERED TEXT entry (should have formatting stripped)
         centered_entries = [
-            key for key in annotation_data.keys() if "CENTERED TEXT" in key[0]
+            key
+            for key in annotation_data.keys()
+            if "CENTERED TEXT" in key.annotation_contents
         ]
         assert len(centered_entries) >= 1
         # The content should be "CENTERED TEXT", not "\\pxqc;CENTERED TEXT"
         for key in centered_entries:
-            assert "\\pxqc" not in key[0]
-            assert "pxqc" not in key[0].lower()
+            assert "\\pxqc" not in key.annotation_contents
+            assert "pxqc" not in key.annotation_contents.lower()
 
         # Check left aligned
         left_entries = [
-            key for key in annotation_data.keys() if "LEFT ALIGNED" in key[0]
+            key
+            for key in annotation_data.keys()
+            if "LEFT ALIGNED" in key.annotation_contents
         ]
         assert len(left_entries) >= 1
         for key in left_entries:
-            assert "\\pxql" not in key[0]
+            assert "\\pxql" not in key.annotation_contents
 
         # Check right aligned
         right_entries = [
-            key for key in annotation_data.keys() if "RIGHT ALIGNED" in key[0]
+            key
+            for key in annotation_data.keys()
+            if "RIGHT ALIGNED" in key.annotation_contents
         ]
         assert len(right_entries) >= 1
         for key in right_entries:
-            assert "\\pxqr" not in key[0]
+            assert "\\pxqr" not in key.annotation_contents
 
         # Check justified
         justified_entries = [
-            key for key in annotation_data.keys() if "JUSTIFIED TEXT" in key[0]
+            key
+            for key in annotation_data.keys()
+            if "JUSTIFIED TEXT" in key.annotation_contents
         ]
         assert len(justified_entries) >= 1
         for key in justified_entries:
-            assert "\\pxqj" not in key[0]
+            assert "\\pxqj" not in key.annotation_contents
 
     def test_mtext_paragraph_breaks_become_spaces(self) -> None:
         """Verify \\P paragraph breaks become single spaces, not newlines."""
@@ -1443,11 +1491,13 @@ class TestMtextFormatting:
         annotation_data = result["annotation_data"]
 
         # Find LINE ONE LINE TWO entry
-        line_entries = [key for key in annotation_data.keys() if "LINE ONE" in key[0]]
+        line_entries = [
+            key for key in annotation_data.keys() if "LINE ONE" in key.annotation_contents
+        ]
         assert len(line_entries) >= 1
 
         for key in line_entries:
-            contents = key[0]
+            contents = key.annotation_contents
             # Should not contain \\P
             assert "\\P" not in contents
             # Should not contain newlines
@@ -1463,24 +1513,26 @@ class TestMtextFormatting:
 
         # Find underlined text entry
         underline_entries = [
-            key for key in annotation_data.keys() if "UNDERLINED" in key[0]
+            key
+            for key in annotation_data.keys()
+            if "UNDERLINED" in key.annotation_contents
         ]
         assert len(underline_entries) >= 1
 
         for key in underline_entries:
-            contents = key[0]
+            contents = key.annotation_contents
             # Should not contain \\L or \\l
             assert "\\L" not in contents
             assert "\\l" not in contents
 
         # Find overlined text entry
         overline_entries = [
-            key for key in annotation_data.keys() if "OVERLINED" in key[0]
+            key for key in annotation_data.keys() if "OVERLINED" in key.annotation_contents
         ]
         assert len(overline_entries) >= 1
 
         for key in overline_entries:
-            contents = key[0]
+            contents = key.annotation_contents
             # Should not contain \\O or \\o
             assert "\\O" not in contents
             assert "\\o" not in contents
@@ -1494,11 +1546,11 @@ class TestMtextFormatting:
         color_entries = [
             key
             for key in annotation_data.keys()
-            if "RED" in key[0] and "WHITE" in key[0]
+            if "RED" in key.annotation_contents and "WHITE" in key.annotation_contents
         ]
 
         for key in color_entries:
-            contents = key[0]
+            contents = key.annotation_contents
             # Should not contain \\C followed by numbers and semicolon
             assert "\\C1;" not in contents
             assert "\\C7;" not in contents
@@ -1510,12 +1562,14 @@ class TestMtextFormatting:
 
         # Find MENS CASUAL entry
         mens_entries = [
-            key for key in annotation_data.keys() if "MENS CASUAL" in key[0]
+            key
+            for key in annotation_data.keys()
+            if "MENS CASUAL" in key.annotation_contents
         ]
         assert len(mens_entries) >= 1
 
         for key in mens_entries:
-            contents = key[0]
+            contents = key.annotation_contents
             # Should not contain any formatting codes
             assert "\\pxqc" not in contents
             assert "\\P" not in contents
@@ -1535,12 +1589,12 @@ class TestMtextFormatting:
         plain_entries = [
             key
             for key in annotation_data.keys()
-            if "PLAIN TEXT WITHOUT FORMATTING" in key[0]
+            if "PLAIN TEXT WITHOUT FORMATTING" in key.annotation_contents
         ]
         assert len(plain_entries) >= 1
 
         for key in plain_entries:
-            contents = key[0]
+            contents = key.annotation_contents
             # Should be exactly "PLAIN TEXT WITHOUT FORMATTING"
             assert contents == "PLAIN TEXT WITHOUT FORMATTING"
 
@@ -1553,13 +1607,13 @@ class TestMtextFormatting:
         text_entries = [
             (key, count)
             for key, count in annotation_data.items()
-            if key[1] == "TEXT"  # entity_type is at index 1
+            if key.annotation_type == "TEXT"
         ]
         assert len(text_entries) > 0
 
         # Verify TEXT entities have expected content
         for key, count in text_entries:
-            contents = key[0]
+            contents = key.annotation_contents
             assert isinstance(contents, str)
             # TEXT entities should have their content preserved
             assert len(contents) > 0 or contents == ""
@@ -1574,11 +1628,13 @@ class TestMtextFormatting:
         word_entries = [
             key
             for key in annotation_data.keys()
-            if "WORD1" in key[0] and "WORD2" in key[0] and "\\~" not in key[0]
+            if "WORD1" in key.annotation_contents
+            and "WORD2" in key.annotation_contents
+            and "\\~" not in key.annotation_contents
         ]
 
         for key in word_entries:
-            contents = key[0]
+            contents = key.annotation_contents
             # Should not have multiple consecutive spaces
             assert "  " not in contents  # No double spaces
             # Should have single space between words
@@ -1592,10 +1648,12 @@ class TestMtextFormatting:
         annotation_data = result["annotation_data"]
 
         # Find BOLD text entry
-        bold_entries = [key for key in annotation_data.keys() if "BOLD" in key[0]]
+        bold_entries = [
+            key for key in annotation_data.keys() if "BOLD" in key.annotation_contents
+        ]
 
         for key in bold_entries:
-            contents = key[0]
+            contents = key.annotation_contents
             # Should not contain font codes
             assert "\\f" not in contents
             assert "Arial" not in contents or "NORMAL" in contents
@@ -1606,10 +1664,12 @@ class TestMtextFormatting:
         annotation_data = result["annotation_data"]
 
         # Find BIG text entry
-        big_entries = [key for key in annotation_data.keys() if "BIG" in key[0]]
+        big_entries = [
+            key for key in annotation_data.keys() if "BIG" in key.annotation_contents
+        ]
 
         for key in big_entries:
-            contents = key[0]
+            contents = key.annotation_contents
             # Should not contain height codes
             assert "\\H" not in contents
 
@@ -1707,17 +1767,16 @@ class TestTrueColorExtraction:
         true_color_text_entries = [
             (key, count)
             for key, count in annotation_data.items()
-            if "TRUE COLOR TEXT" in key[0]
+            if "TRUE COLOR TEXT" in key.annotation_contents
         ]
 
         assert len(true_color_text_entries) >= 1
         key, count = true_color_text_entries[0]
-        contents, entity_type, layer_name, color_r, color_g, color_b = key
 
         # Verify True Color RGB (255, 128, 0) - orange
-        assert color_r == 255
-        assert color_g == 128
-        assert color_b == 0
+        assert key.color_r == 255
+        assert key.color_g == 128
+        assert key.color_b == 0
 
     def test_true_color_in_color_analysis(self) -> None:
         """Verify True Colors appear in color_analysis_data."""

@@ -56,6 +56,7 @@ from core.constants import (
 from core.excel_formatting import format_header
 from core.excel_writer import write_excel
 from core.extractor import ExtractionResult
+from core.types import BlockLayerKey, BlockRotationKey
 
 
 class TestExcelWriter:
@@ -74,18 +75,30 @@ class TestExcelWriter:
             "block_counts": {"VALVE": 10, "PIPE": 5, "TAG": 3},
             "block_entities": {"VALVE": 8, "PIPE": 12, "TAG": 4},
             "block_layer_pairs": {
-                ("VALVE", "Layer1"): 7,
-                ("VALVE", "Layer2"): 3,
-                ("PIPE", "Layer1"): 5,
-                ("TAG", "Layer1"): 3,
+                BlockLayerKey(block_name="VALVE", layer_name="Layer1"): 7,
+                BlockLayerKey(block_name="VALVE", layer_name="Layer2"): 3,
+                BlockLayerKey(block_name="PIPE", layer_name="Layer1"): 5,
+                BlockLayerKey(block_name="TAG", layer_name="Layer1"): 3,
             },
             "block_rotation_counts": {
-                ("VALVE", "Layer1", "0"): 5,
-                ("VALVE", "Layer1", "90"): 2,
-                ("VALVE", "Layer2", "0"): 3,
-                ("PIPE", "Layer1", "0"): 3,
-                ("PIPE", "Layer1", "180"): 2,
-                ("TAG", "Layer1", "other"): 3,
+                BlockRotationKey(
+                    block_name="VALVE", layer_name="Layer1", rotation_category="0"
+                ): 5,
+                BlockRotationKey(
+                    block_name="VALVE", layer_name="Layer1", rotation_category="90"
+                ): 2,
+                BlockRotationKey(
+                    block_name="VALVE", layer_name="Layer2", rotation_category="0"
+                ): 3,
+                BlockRotationKey(
+                    block_name="PIPE", layer_name="Layer1", rotation_category="0"
+                ): 3,
+                BlockRotationKey(
+                    block_name="PIPE", layer_name="Layer1", rotation_category="180"
+                ): 2,
+                BlockRotationKey(
+                    block_name="TAG", layer_name="Layer1", rotation_category="other"
+                ): 3,
             },
             "block_scale_data": {
                 "VALVE": {(1.0, 1.0), (-1.0, 1.0)},
@@ -757,8 +770,10 @@ class TestExcelWriter:
             "block_counts": {"VALVE": 10, "ANONYMOUS": 5},
             "block_entities": {"VALVE": 8, "ANONYMOUS": 0},
             "block_layer_pairs": {
-                ("VALVE", "Layer1"): 10,
-                ("ANONYMOUS", "Layer1"): 5,  # This block has no geometry data
+                BlockLayerKey(block_name="VALVE", layer_name="Layer1"): 10,
+                BlockLayerKey(
+                    block_name="ANONYMOUS", layer_name="Layer1"
+                ): 5,  # This block has no geometry data
             },
             "block_rotation_counts": {},
             "block_scale_data": {},
@@ -1140,17 +1155,28 @@ class TestExcelWriter:
                 "block_counts": {"BLOCK_A": 3, "BLOCK_B": 2},
                 "block_entities": {"BLOCK_A": 5, "BLOCK_B": 3},
                 "block_layer_pairs": {
-                    ("BLOCK_A", "LAYER_1"): 3,
-                    ("BLOCK_B", "LAYER_1"): 2,
+                    BlockLayerKey(block_name="BLOCK_A", layer_name="LAYER_1"): 3,
+                    BlockLayerKey(block_name="BLOCK_B", layer_name="LAYER_1"): 2,
                 },
                 "block_rotation_counts": {
-                    ("BLOCK_A", "LAYER_1", "0"): 3,
-                    ("BLOCK_B", "LAYER_1", "0"): 2,
+                    BlockRotationKey(
+                        block_name="BLOCK_A",
+                        layer_name="LAYER_1",
+                        rotation_category="0",
+                    ): 3,
+                    BlockRotationKey(
+                        block_name="BLOCK_B",
+                        layer_name="LAYER_1",
+                        rotation_category="0",
+                    ): 2,
                 },
                 "block_scale_data": {"BLOCK_A": {(1.0, 1.0)}, "BLOCK_B": {(1.0, 1.0)}},
                 "block_xdata_apps": {
-                    ("BLOCK_A", "LAYER_1"): {"ACAD", "CUSTOM_APP"},
-                    ("BLOCK_B", "LAYER_1"): set(),
+                    BlockLayerKey(block_name="BLOCK_A", layer_name="LAYER_1"): {
+                        "ACAD",
+                        "CUSTOM_APP",
+                    },
+                    BlockLayerKey(block_name="BLOCK_B", layer_name="LAYER_1"): set(),
                 },
                 "layer_block_insertion_counts": {"LAYER_1": 5},
                 "layer_entity_counts": {"LAYER_1": 10},
@@ -1361,7 +1387,9 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {("TEST", "0"): 2},
+            "block_layer_pairs": {
+                BlockLayerKey(block_name="TEST", layer_name="0"): 2
+            },
             "block_rotation_counts": {},
             "block_scale_data": {
                 "TEST": {(1.0, 1.0), (-1.0, 1.0)}
@@ -1395,7 +1423,9 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {("TEST", "0"): 2},
+            "block_layer_pairs": {
+                BlockLayerKey(block_name="TEST", layer_name="0"): 2
+            },
             "block_rotation_counts": {},
             "block_scale_data": {
                 "TEST": {(1.0, 1.0), (2.0, 1.0)}
@@ -1429,7 +1459,9 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {("TEST", "0"): 2},
+            "block_layer_pairs": {
+                BlockLayerKey(block_name="TEST", layer_name="0"): 2
+            },
             "block_rotation_counts": {},
             "block_scale_data": {"TEST": {(-1.0, 1.0)}},  # Consistent negative X scale
             "block_xdata_apps": {},
@@ -1461,7 +1493,9 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {("TEST", "0"): 2},
+            "block_layer_pairs": {
+                BlockLayerKey(block_name="TEST", layer_name="0"): 2
+            },
             "block_rotation_counts": {},
             "block_scale_data": {"TEST": {(1.0, 1.0)}},  # Consistent positive scale
             "block_xdata_apps": {},
@@ -1493,7 +1527,9 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {("TEST", "0"): 2},
+            "block_layer_pairs": {
+                BlockLayerKey(block_name="TEST", layer_name="0"): 2
+            },
             "block_rotation_counts": {},
             "block_scale_data": {
                 "TEST": {(1.0, 2.0), (-1.0, 2.0)}
@@ -1528,7 +1564,9 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {("TEST", "0"): 2},
+            "block_layer_pairs": {
+                BlockLayerKey(block_name="TEST", layer_name="0"): 2
+            },
             "block_rotation_counts": {},
             "block_scale_data": {
                 "TEST": {(1.0, 1.0), (-1.0, 2.0)}
@@ -1688,11 +1726,19 @@ class TestAnnotationsAnalysisSheet:
     @pytest.fixture
     def annotation_extraction_data(self) -> ExtractionResult:
         """Provide sample extraction data with annotations."""
+        from core.types import AnnotationKey
+
         return {
             "block_counts": {"VALVE": 5},
             "block_entities": {"VALVE": 8},
-            "block_layer_pairs": {("VALVE", "Layer1"): 5},
-            "block_rotation_counts": {("VALVE", "Layer1", "0"): 5},
+            "block_layer_pairs": {
+                BlockLayerKey(block_name="VALVE", layer_name="Layer1"): 5
+            },
+            "block_rotation_counts": {
+                BlockRotationKey(
+                    block_name="VALVE", layer_name="Layer1", rotation_category="0"
+                ): 5
+            },
             "block_scale_data": {"VALVE": {(1.0, 1.0)}},
             "block_xdata_apps": {},
             "layer_block_insertion_counts": {"Layer1": 5},
@@ -1700,9 +1746,30 @@ class TestAnnotationsAnalysisSheet:
             "layer_unique_color_counts": {"Layer1": 2},
             "layer_annotation_counts": {"Layer1": 10},
             "annotation_data": {
-                ("Sample Text", "TEXT", "Layer1", 255, 0, 0): 3,
-                ("Another Text", "MTEXT", "Layer2", 0, 255, 0): 2,
-                ("Third Text", "TEXT", "Layer1", 0, 0, 255): 1,
+                AnnotationKey(
+                    annotation_contents="Sample Text",
+                    annotation_type="TEXT",
+                    layer_name="Layer1",
+                    color_r=255,
+                    color_g=0,
+                    color_b=0,
+                ): 3,
+                AnnotationKey(
+                    annotation_contents="Another Text",
+                    annotation_type="MTEXT",
+                    layer_name="Layer2",
+                    color_r=0,
+                    color_g=255,
+                    color_b=0,
+                ): 2,
+                AnnotationKey(
+                    annotation_contents="Third Text",
+                    annotation_type="TEXT",
+                    layer_name="Layer1",
+                    color_r=0,
+                    color_g=0,
+                    color_b=255,
+                ): 1,
             },
             "entity_type_counts": {"INSERT": 5, "LINE": 20},
             "color_analysis_data": [],

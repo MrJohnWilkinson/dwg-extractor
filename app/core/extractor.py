@@ -29,8 +29,12 @@ from .geometry import (
 )
 from .logger import setup_logger
 from .types import (
+    AnnotationKey,
+    BlockLayerKey,
+    BlockRotationKey,
     BlockTrimmingData,
     ColorAnalysisRecord,
+    ColorEntityKey,
 )
 
 
@@ -252,8 +256,8 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
     try:
         logger.info("Starting color analysis extraction...")
 
-        # Dictionary for grouping geometric entities: (R, G, B, ACI, layer_name, entity_type) -> count
-        geometric_entities: dict[tuple[int, int, int, int | None, str, str], int] = {}
+        # Dictionary for grouping geometric entities using ColorEntityKey
+        geometric_entities: dict[ColorEntityKey, int] = {}
 
         # List for text annotations (each is individual)
         text_annotations: list[ColorAnalysisRecord] = []
@@ -290,15 +294,36 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
 
             # Handle geometric entities (Lines and Polylines)
             if entity_type == "LINE":
-                key = (color_r, color_g, color_b, color_aci, layer_name, "Lines")
+                key = ColorEntityKey(
+                    color_r=color_r,
+                    color_g=color_g,
+                    color_b=color_b,
+                    color_aci=color_aci,
+                    layer_name=layer_name,
+                    entity_type="Lines",
+                )
                 geometric_entities[key] = geometric_entities.get(key, 0) + 1
 
             elif entity_type in ("LWPOLYLINE", "POLYLINE"):
-                key = (color_r, color_g, color_b, color_aci, layer_name, "Polylines")
+                key = ColorEntityKey(
+                    color_r=color_r,
+                    color_g=color_g,
+                    color_b=color_b,
+                    color_aci=color_aci,
+                    layer_name=layer_name,
+                    entity_type="Polylines",
+                )
                 geometric_entities[key] = geometric_entities.get(key, 0) + 1
 
             elif entity_type == "HATCH":
-                key = (color_r, color_g, color_b, color_aci, layer_name, "Hatches")
+                key = ColorEntityKey(
+                    color_r=color_r,
+                    color_g=color_g,
+                    color_b=color_b,
+                    color_aci=color_aci,
+                    layer_name=layer_name,
+                    entity_type="Hatches",
+                )
                 geometric_entities[key] = geometric_entities.get(key, 0) + 1
 
             # Handle text entities (TEXT and MTEXT)
@@ -338,22 +363,15 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
         geometric_records: list[ColorAnalysisRecord] = [
             ColorAnalysisRecord(
                 annotation_contents="",
-                layer_name=layer_name,
-                color_r=color_r,
-                color_g=color_g,
-                color_b=color_b,
-                color_aci=color_aci,
-                entity_type=entity_type,
+                layer_name=key.layer_name,
+                color_r=key.color_r,
+                color_g=key.color_g,
+                color_b=key.color_b,
+                color_aci=key.color_aci,
+                entity_type=key.entity_type,
                 entity_count=count,
             )
-            for (
-                color_r,
-                color_g,
-                color_b,
-                color_aci,
-                layer_name,
-                entity_type,
-            ), count in geometric_entities.items()
+            for key, count in geometric_entities.items()
         ]
 
         # Combine geometric and text records
@@ -388,13 +406,13 @@ class ExtractionResult(TypedDict):
     Attributes:
         block_counts: Dictionary mapping block names to insertion counts
         block_entities: Dictionary mapping block names to entity count within their definition
-        block_layer_pairs: Dictionary mapping (block_name, layer_name) tuples to insertion counts
-        block_rotation_counts: Dictionary mapping (block_name, layer_name, rotation_category) tuples to insertion counts
+        block_layer_pairs: Dictionary mapping BlockLayerKey to insertion counts
+        block_rotation_counts: Dictionary mapping BlockRotationKey to insertion counts
                                Rotation categories are strings: '0', '90', '180', '270', 'other'
         block_scale_data: Dictionary mapping block names to sets of unique (x_scale, y_scale) tuples
                           Tracks ALL unique scale combinations across all insertions and layers per block
                           Scale values indicate transformation factors (1.0 = normal, -1.0 = mirrored, 2.0 = 200%)
-        block_xdata_apps: Dictionary mapping (block_name, layer_name) tuples to sets of XDATA application IDs
+        block_xdata_apps: Dictionary mapping BlockLayerKey to sets of XDATA application IDs
                           Collects unique application IDs from XDATA attached to block INSERT entities
         layer_block_insertion_counts: Dictionary mapping layer names to block insertion counts on that layer
         layer_entity_counts: Dictionary mapping layer names to total entity counts on that layer
@@ -403,10 +421,8 @@ class ExtractionResult(TypedDict):
         layer_annotation_counts: Dictionary mapping layer names to combined TEXT and MTEXT entity counts
                                 Counts both TEXT (single-line) and MTEXT (multi-line) entities on each layer
                                 Example: {'NOTES': 25, 'TITLE_BLOCK': 8, 'DIMENSIONS': 0}
-        annotation_data: Dictionary mapping annotation tuples to occurrence counts
-                        Key: (contents, type, layer_name, color_r, color_g, color_b)
-                        Value: count of annotations with that unique combination
-                        Example: {('DOOR', 'TEXT', 'NOTES', 255, 0, 0): 5, ('WINDOW', 'MTEXT', 'NOTES', 0, 255, 0): 3}
+        annotation_data: Dictionary mapping AnnotationKey to occurrence counts
+                        Example: {AnnotationKey('DOOR', 'TEXT', 'NOTES', 255, 0, 0): 5}
         entity_type_counts: Dictionary mapping entity type names to their total count in the drawing
         block_trimming_data: Dictionary mapping block names to their geometry analysis data.
                              Each block entry contains: native_width (float), native_height (float),
@@ -418,10 +434,10 @@ class ExtractionResult(TypedDict):
                                       'entity_type': 'Lines', 'entity_count': 45}, ...]
 
     Examples:
-        block_layer_pairs: {('DOOR', 'WALLS'): 5, ('DOOR', 'OPENINGS'): 3, ('WINDOW', 'WALLS'): 8}
-        block_rotation_counts: {('DOOR', 'WALLS', '0'): 12, ('DOOR', 'WALLS', '90'): 18, ('DOOR', 'WALLS', '180'): 10}
+        block_layer_pairs: {BlockLayerKey('DOOR', 'WALLS'): 5, BlockLayerKey('WINDOW', 'WALLS'): 8}
+        block_rotation_counts: {BlockRotationKey('DOOR', 'WALLS', '0'): 12, BlockRotationKey('DOOR', 'WALLS', '90'): 18}
         block_scale_data: {'DOOR': {(1.0, 1.0), (2.0, 1.0)}, 'WINDOW': {(-1.0, 1.0)}}
-        block_xdata_apps: {('DOOR', 'WALLS'): {'ACAD', 'CUSTOM_APP'}, ('WINDOW', 'WALLS'): {'BIM_TOOL'}}
+        block_xdata_apps: {BlockLayerKey('DOOR', 'WALLS'): {'ACAD', 'CUSTOM_APP'}}
         layer_unique_color_counts: {'WALLS': 3, 'DOORS': 1, 'WINDOWS': 2}
         block_trimming_data: {'SHELF_4FT': {'native_width': 1200.0, 'native_height': 600.0,
                                              'vertical_segments': [50.0, 1100.0, 50.0],
@@ -430,15 +446,15 @@ class ExtractionResult(TypedDict):
 
     block_counts: dict[str, int]
     block_entities: dict[str, int]
-    block_layer_pairs: dict[tuple[str, str], int]
-    block_rotation_counts: dict[tuple[str, str, str], int]
+    block_layer_pairs: dict[BlockLayerKey, int]
+    block_rotation_counts: dict[BlockRotationKey, int]
     block_scale_data: dict[str, set[tuple[float, float]]]
-    block_xdata_apps: dict[tuple[str, str], set[str]]
+    block_xdata_apps: dict[BlockLayerKey, set[str]]
     layer_block_insertion_counts: dict[str, int]
     layer_entity_counts: dict[str, int]
     layer_unique_color_counts: dict[str, int]
     layer_annotation_counts: dict[str, int]
-    annotation_data: dict[tuple[str, str, str, int, int, int], int]
+    annotation_data: dict[AnnotationKey, int]
     entity_type_counts: dict[str, int]
     block_trimming_data: dict[str, BlockTrimmingData]
     color_analysis_data: list[ColorAnalysisRecord]
@@ -505,15 +521,15 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         # Initialize result dictionaries
         block_counts: dict[str, int] = {}
         block_entities: dict[str, int] = {}
-        block_layer_pairs: dict[tuple[str, str], int] = {}
-        block_rotation_counts: dict[tuple[str, str, str], int] = {}
+        block_layer_pairs: dict[BlockLayerKey, int] = {}
+        block_rotation_counts: dict[BlockRotationKey, int] = {}
         block_scale_data: dict[str, set[tuple[float, float]]] = {}
-        block_xdata_apps: dict[tuple[str, str], set[str]] = {}
+        block_xdata_apps: dict[BlockLayerKey, set[str]] = {}
         layer_block_insertion_counts: dict[str, int] = {}
         layer_entity_counts: dict[str, int] = {}
         layer_unique_colors: dict[str, set[tuple[int, int, int]]] = {}
         layer_annotation_counts: dict[str, int] = {}
-        annotation_data: dict[tuple[str, str, str, int, int, int], int] = {}
+        annotation_data: dict[AnnotationKey, int] = {}
         entity_type_counts: dict[str, int] = {}
         block_trimming_data: dict[str, BlockTrimmingData] = {}
 
@@ -595,13 +611,13 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
                     # Only track if we have content and could resolve color
                     if contents and rgb_color is not None:
-                        annotation_key = (
-                            contents,
-                            entity_type,
-                            layer_name,
-                            rgb_color[0],
-                            rgb_color[1],
-                            rgb_color[2],
+                        annotation_key = AnnotationKey(
+                            annotation_contents=contents,
+                            annotation_type=entity_type,
+                            layer_name=layer_name,
+                            color_r=rgb_color[0],
+                            color_g=rgb_color[1],
+                            color_b=rgb_color[2],
                         )
                         annotation_data[annotation_key] = (
                             annotation_data.get(annotation_key, 0) + 1
@@ -633,13 +649,20 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 )
 
                 # Track block-layer pairs
-                pair_key = (block_name, layer_name)
+                pair_key = BlockLayerKey(
+                    block_name=block_name,
+                    layer_name=layer_name,
+                )
                 block_layer_pairs[pair_key] = block_layer_pairs.get(pair_key, 0) + 1
 
                 # Track block rotation counts
                 rotation = entity.dxf.rotation
                 rotation_category = _categorize_rotation(rotation)
-                rotation_key = (block_name, layer_name, rotation_category)
+                rotation_key = BlockRotationKey(
+                    block_name=block_name,
+                    layer_name=layer_name,
+                    rotation_category=rotation_category,
+                )
                 block_rotation_counts[rotation_key] = (
                     block_rotation_counts.get(rotation_key, 0) + 1
                 )

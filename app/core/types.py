@@ -5,8 +5,14 @@ This module provides TypedDict definitions for internal data structures used
 throughout the codebase. Using TypedDict instead of generic dict[str, Any]
 improves type safety, IDE support, and code documentation.
 
+Frozen dataclass keys provide:
+1. Named fields - LLMs and developers understand BlockLayerKey(block_name="DOOR", layer_name="WALLS")
+2. Docstrings - Each key class documents its purpose and field meanings
+3. Type safety - Field names prevent positional errors when constructing keys
+4. Hashability - frozen=True enables use as dict keys
+
 Usage:
-    from core.types import BlockTrimmingData, ColorAnalysisRecord
+    from core.types import BlockTrimmingData, ColorAnalysisRecord, BlockLayerKey
 
     # Type-safe block trimming data
     trimming: BlockTrimmingData = {
@@ -15,9 +21,95 @@ Usage:
         "vertical_segments": [50.0, 1100.0, 50.0],
         "horizontal_segments": [25.0, 550.0, 25.0],
     }
+
+    # Frozen dataclass key for dictionary indexing
+    key = BlockLayerKey(block_name="DOOR", layer_name="WALLS")
 """
 
+from dataclasses import dataclass
 from typing import TypedDict
+
+
+@dataclass(frozen=True)
+class BlockLayerKey:
+    """
+    Hashable key identifying a unique block-layer combination for insertion tracking.
+
+    Used as dictionary key in block_layer_pairs and block_xdata_apps fields.
+
+    Attributes:
+        block_name: Name of the block definition
+        layer_name: Name of the layer where the block is inserted
+    """
+
+    block_name: str
+    layer_name: str
+
+
+@dataclass(frozen=True)
+class BlockRotationKey:
+    """
+    Hashable key identifying block insertions by layer and rotation category.
+
+    Used as dictionary key in block_rotation_counts field.
+
+    Attributes:
+        block_name: Name of the block definition
+        layer_name: Name of the layer where the block is inserted
+        rotation_category: One of '0', '90', '180', '270', 'other'
+    """
+
+    block_name: str
+    layer_name: str
+    rotation_category: str
+
+
+@dataclass(frozen=True)
+class AnnotationKey:
+    """
+    Hashable key identifying unique text annotations by content, type, layer, and RGB color.
+
+    Used as dictionary key in annotation_data field.
+
+    Attributes:
+        annotation_contents: Text content of the annotation
+        annotation_type: Entity type string ('TEXT' or 'MTEXT')
+        layer_name: Name of the layer containing the annotation
+        color_r: Red component (0-255)
+        color_g: Green component (0-255)
+        color_b: Blue component (0-255)
+    """
+
+    annotation_contents: str
+    annotation_type: str
+    layer_name: str
+    color_r: int
+    color_g: int
+    color_b: int
+
+
+@dataclass(frozen=True)
+class ColorEntityKey:
+    """
+    Hashable key for grouping geometric entities by RGB color, ACI index, layer, and entity type.
+
+    Used internally in extract_color_analysis() for aggregating entity counts.
+
+    Attributes:
+        color_r: Red component (0-255)
+        color_g: Green component (0-255)
+        color_b: Blue component (0-255)
+        color_aci: AutoCAD Color Index (0-256) or None for True Color
+        layer_name: Name of the layer containing the entity
+        entity_type: Entity type string ('Lines', 'Polylines', 'Hatches')
+    """
+
+    color_r: int
+    color_g: int
+    color_b: int
+    color_aci: int | None
+    layer_name: str
+    entity_type: str
 
 
 class BlockTrimmingData(TypedDict):
