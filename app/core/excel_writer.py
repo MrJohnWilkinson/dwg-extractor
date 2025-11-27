@@ -329,17 +329,25 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
             _create_color_analysis_sheet(extraction_data, writer)
 
         # Load workbook for post-processing (formatting)
+        logger.debug("Loading workbook for formatting stage...")
         wb = load_workbook(full_path)
 
         # Apply formatting to all sheets
+        logger.debug("Applying formatting to Block Analysis sheet...")
         _format_block_analysis_sheet(wb)
+        logger.debug("Applying formatting to Layer Analysis sheet...")
         _format_layer_analysis_sheet(wb)
+        logger.debug("Applying formatting to Entity Summary sheet...")
         _format_entity_summary_sheet(wb)
+        logger.debug("Applying formatting to Block Geometry Analysis sheet...")
         _format_block_geometry_analysis_sheet(wb)
+        logger.debug("Applying formatting to Annotations Analysis sheet...")
         _format_annotations_analysis_sheet(wb)
+        logger.debug("Applying formatting to Color Analysis sheet...")
         _format_color_analysis_sheet(wb)
 
         # Save workbook with formatting
+        logger.debug("Saving workbook with formatting applied...")
         wb.save(full_path)
 
         logger.info(f"Multi-sheet Excel file created successfully at {full_path}")
@@ -365,6 +373,8 @@ def _create_block_analysis_sheet(
     block_entities = data["block_entities"]
     block_xdata_apps = data["block_xdata_apps"]
 
+    logger.debug(f"Block Analysis: {len(block_layer_pairs)} block-layer pairs to process")
+
     if block_layer_pairs:
         # Unpack block-layer pairs into DataFrame rows (simplified - no rotations)
         rows = []
@@ -374,6 +384,10 @@ def _create_block_analysis_sheet(
             # Get XDATA apps for this block-layer pair
             xdata_apps = block_xdata_apps.get(key, set())
             xdata_apps_str = ", ".join(sorted(xdata_apps)) if xdata_apps else "-"
+
+            logger.debug(
+                f"Processing block-layer pair: {key.block_name}/{key.layer_name}, count={insertion_count}"
+            )
 
             rows.append(
                 {
@@ -418,6 +432,8 @@ def _create_layer_analysis_sheet(
     layer_entity_counts = data["layer_entity_counts"]
     layer_unique_color_counts = data["layer_unique_color_counts"]
     layer_annotation_counts = data["layer_annotation_counts"]
+
+    logger.debug(f"Layer Analysis: {len(layer_entity_counts)} layers to process")
 
     if layer_entity_counts:
         # Merge layer data into single DataFrame
@@ -467,6 +483,8 @@ def _create_entity_summary_sheet(
 
     entity_type_counts = data["entity_type_counts"]
 
+    logger.debug(f"Entity Summary: {len(entity_type_counts)} entity types to process")
+
     if entity_type_counts:
         # Convert entity types to DataFrame
         df = pd.DataFrame(
@@ -497,6 +515,10 @@ def _create_block_geometry_analysis_sheet(
     block_trimming_data = data["block_trimming_data"]
     block_rotation_counts = data["block_rotation_counts"]
     block_scale_data = data["block_scale_data"]
+
+    logger.debug(
+        f"Block Geometry Analysis: {len(block_layer_pairs)} pairs, {len(block_trimming_data)} geometry records"
+    )
 
     if block_layer_pairs:
         # Build DataFrame rows from block-layer pairs with all geometry data
@@ -555,7 +577,13 @@ def _create_block_geometry_analysis_sheet(
             # Determine if X or Y scales vary, display "VARIES" or "VARIES (-)" or numeric value
             scale_set = block_scale_data.get(key.block_name, {(1.0, 1.0)})
 
-            if _has_x_scale_variance(scale_set):
+            x_variance = _has_x_scale_variance(scale_set)
+            y_variance = _has_y_scale_variance(scale_set)
+            logger.debug(
+                f"Scale variance for {key.block_name}: x_variance={x_variance}, y_variance={y_variance}"
+            )
+
+            if x_variance:
                 if _has_negative_scale_in_set(scale_set, "x"):
                     x_scale: str | float = "VARIES (-)"
                 else:
@@ -563,7 +591,7 @@ def _create_block_geometry_analysis_sheet(
             else:
                 x_scale = _get_single_scale_value(scale_set, "x")
 
-            if _has_y_scale_variance(scale_set):
+            if y_variance:
                 if _has_negative_scale_in_set(scale_set, "y"):
                     y_scale: str | float = "VARIES (-)"
                 else:
@@ -649,6 +677,8 @@ def _create_annotations_analysis_sheet(
 
     annotation_data = data["annotation_data"]
 
+    logger.debug(f"Annotations Analysis: {len(annotation_data)} annotation groups to process")
+
     if annotation_data:
         # Build DataFrame rows from annotation data
         rows = []
@@ -698,6 +728,8 @@ def _create_color_analysis_sheet(
     logger.info("Creating Color Analysis sheet...")
 
     color_analysis_data = data["color_analysis_data"]
+
+    logger.debug(f"Color Analysis: {len(color_analysis_data)} records to process")
 
     if color_analysis_data:
         # Build DataFrame directly from color analysis data

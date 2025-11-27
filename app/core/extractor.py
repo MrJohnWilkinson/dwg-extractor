@@ -140,6 +140,7 @@ def _resolve_entity_color_with_aci(
                 r = (true_color >> 16) & 0xFF
                 g = (true_color >> 8) & 0xFF
                 b = true_color & 0xFF
+                logger.debug(f"Resolved True Color: RGB=({r}, {g}, {b})")
                 return ((r, g, b), None)  # True Color has no ACI
         except (AttributeError, TypeError):
             pass
@@ -264,7 +265,11 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
 
         msp = doc.modelspace()
         entity_count = 0
+        total_entities = sum(1 for _ in msp)
+        logger.debug(f"Color analysis starting with {total_entities} total modelspace entities")
 
+        # Re-iterate since we consumed the iterator
+        msp = doc.modelspace()
         for entity in msp:
             entity_type = entity.dxftype()
 
@@ -358,6 +363,9 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
                 )
 
         logger.info(f"Processed {entity_count} entities for color analysis")
+        logger.debug(
+            f"Color analysis complete: {len(geometric_entities)} geometric groups, {len(text_annotations)} text entities"
+        )
 
         # Convert geometric entities dict to list of records
         geometric_records: list[ColorAnalysisRecord] = [
@@ -515,7 +523,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
     try:
         # Load DXF file
+        logger.debug(f"Loading DXF file: {file_path}")
         doc = ezdxf.readfile(file_path)
+        logger.debug(f"DXF file loaded successfully: {file_path}")
         msp = doc.modelspace()
 
         # Initialize result dictionaries
@@ -553,6 +563,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             if block_name.startswith("*"):
                 continue
 
+            logger.debug(f"Analyzing block definition: {block_name}")
             entity_count = sum(1 for _ in block_def)
             block_entities[block_name] = entity_count
 
@@ -606,6 +617,12 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                     else:  # MTEXT
                         contents = _clean_mtext_content(entity)
 
+                    # Log annotation content (truncated to 50 chars)
+                    preview = contents[:50] + "..." if len(contents) > 50 else contents
+                    logger.debug(
+                        f"Processing {entity_type}: layer={layer_name}, content={preview!r}"
+                    )
+
                     # Resolve color to RGB
                     rgb_color = _resolve_entity_color_to_rgb(entity, doc)
 
@@ -643,6 +660,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             # Count INSERT entities (block insertions)
             if entity_type == "INSERT":
                 block_name = entity.dxf.name
+                logger.debug(f"Processing INSERT: block={block_name}, layer={layer_name}")
                 block_counts[block_name] = block_counts.get(block_name, 0) + 1
                 layer_block_insertion_counts[layer_name] = (
                     layer_block_insertion_counts.get(layer_name, 0) + 1
@@ -658,6 +676,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 # Track block rotation counts
                 rotation = entity.dxf.rotation
                 rotation_category = _categorize_rotation(rotation)
+                logger.debug(
+                    f"Rotation data: block={block_name}, rotation={rotation:.2f}°, category={rotation_category}"
+                )
                 rotation_key = BlockRotationKey(
                     block_name=block_name,
                     layer_name=layer_name,
@@ -675,6 +696,10 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                     # Default to 1.0 if scale attributes are missing
                     x_scale = 1.0
                     y_scale = 1.0
+
+                logger.debug(
+                    f"Scale data: block={block_name}, x_scale={x_scale}, y_scale={y_scale}"
+                )
 
                 # Store all unique scale combinations per block (across all layers)
                 if block_name not in block_scale_data:

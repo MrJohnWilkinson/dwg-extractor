@@ -14,6 +14,11 @@ Usage:
 
 from ezdxf.layouts import BlockLayout
 
+from .logger import setup_logger
+
+
+logger = setup_logger(__name__)
+
 
 def _get_block_bounding_box(
     block_def: BlockLayout,
@@ -45,6 +50,7 @@ def _get_block_bounding_box(
 
     for entity in block_def:
         entity_type = entity.dxftype()
+        logger.debug(f"Bounding box: processing entity type {entity_type}")
 
         # Extract coordinates based on entity type
         if entity_type == "LINE":
@@ -97,8 +103,10 @@ def _get_block_bounding_box(
 
     # Return zeros if no geometry found
     if not has_geometry:
+        logger.debug("Bounding box: no geometry found, returning zeros")
         return (0.0, 0.0, 0.0, 0.0)
 
+    logger.debug(f"Bounding box result: ({min_x}, {min_y}, {max_x}, {max_y})")
     return (min_x, min_y, max_x, max_y)
 
 
@@ -183,8 +191,14 @@ def _get_intersection_points(block_def: BlockLayout) -> tuple[list[float], list[
                 result.append(coord)
         return result
 
+    logger.debug(
+        f"Intersection points: {len(x_coords)} x-coords, {len(y_coords)} y-coords before deduplication"
+    )
     vertical_points = deduplicate_with_tolerance(x_coords, epsilon)
     horizontal_points = deduplicate_with_tolerance(y_coords, epsilon)
+    logger.debug(
+        f"Intersection points: {len(vertical_points)} vertical, {len(horizontal_points)} horizontal after deduplication"
+    )
 
     return (vertical_points, horizontal_points)
 
@@ -213,6 +227,7 @@ def _calculate_segments(intersection_points: list[float]) -> list[float]:
         []
     """
     if len(intersection_points) < 2:
+        logger.debug("Calculate segments: fewer than 2 points, returning empty list")
         return []
 
     segments = []
@@ -220,6 +235,7 @@ def _calculate_segments(intersection_points: list[float]) -> list[float]:
         segment_size = intersection_points[i + 1] - intersection_points[i]
         segments.append(round(segment_size, 2))
 
+    logger.debug(f"Calculate segments: {len(intersection_points)} points -> {len(segments)} segments: {segments}")
     return segments
 
 
@@ -255,12 +271,15 @@ def _categorize_rotation(angle: float) -> str:
 
     # Check for standard angles with ±1° tolerance
     if abs(normalized - 0) <= 1 or abs(normalized - 360) <= 1:
-        return "0"
+        result = "0"
     elif abs(normalized - 90) <= 1:
-        return "90"
+        result = "90"
     elif abs(normalized - 180) <= 1:
-        return "180"
+        result = "180"
     elif abs(normalized - 270) <= 1:
-        return "270"
+        result = "270"
     else:
-        return "other"
+        result = "other"
+
+    logger.debug(f"Categorize rotation: {angle}° -> normalized={normalized}° -> category={result}")
+    return result
