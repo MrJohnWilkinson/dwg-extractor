@@ -1414,7 +1414,9 @@ class TestMtextFormatting:
             assert "pxqc" not in key[0].lower()
 
         # Check left aligned
-        left_entries = [key for key in annotation_data.keys() if "LEFT ALIGNED" in key[0]]
+        left_entries = [
+            key for key in annotation_data.keys() if "LEFT ALIGNED" in key[0]
+        ]
         assert len(left_entries) >= 1
         for key in left_entries:
             assert "\\pxql" not in key[0]
@@ -1472,7 +1474,9 @@ class TestMtextFormatting:
             assert "\\l" not in contents
 
         # Find overlined text entry
-        overline_entries = [key for key in annotation_data.keys() if "OVERLINED" in key[0]]
+        overline_entries = [
+            key for key in annotation_data.keys() if "OVERLINED" in key[0]
+        ]
         assert len(overline_entries) >= 1
 
         for key in overline_entries:
@@ -1488,7 +1492,9 @@ class TestMtextFormatting:
 
         # Find the color test entry - should have "NORMAL RED WHITE"
         color_entries = [
-            key for key in annotation_data.keys() if "RED" in key[0] and "WHITE" in key[0]
+            key
+            for key in annotation_data.keys()
+            if "RED" in key[0] and "WHITE" in key[0]
         ]
 
         for key in color_entries:
@@ -1503,7 +1509,9 @@ class TestMtextFormatting:
         annotation_data = result["annotation_data"]
 
         # Find MENS CASUAL entry
-        mens_entries = [key for key in annotation_data.keys() if "MENS CASUAL" in key[0]]
+        mens_entries = [
+            key for key in annotation_data.keys() if "MENS CASUAL" in key[0]
+        ]
         assert len(mens_entries) >= 1
 
         for key in mens_entries:
@@ -1758,9 +1766,7 @@ class TestTrueColorExtraction:
         custom_green_lines = [
             r
             for r in color_data
-            if r["color_r"] == 100
-            and r["color_g"] == 200
-            and r["color_b"] == 150
+            if r["color_r"] == 100 and r["color_g"] == 200 and r["color_b"] == 150
         ]
         assert len(custom_green_lines) >= 1
 
@@ -1907,7 +1913,8 @@ class TestHatchExtraction:
 
         # Find Hatches on HATCH_LAYER_A with ACI red (255, 0, 0)
         red_hatches = [
-            r for r in color_data
+            r
+            for r in color_data
             if r["entity_type"] == "Hatches"
             and r["layer_name"] == "HATCH_LAYER_A"
             and r["color_r"] == 255
@@ -1917,7 +1924,9 @@ class TestHatchExtraction:
 
         # Should have exactly one aggregated record with count=3
         assert len(red_hatches) == 1, "Same color/layer hatches should be aggregated"
-        assert red_hatches[0]["entity_count"] == 3, "Three red hatches should be counted"
+        assert red_hatches[0]["entity_count"] == 3, (
+            "Three red hatches should be counted"
+        )
 
     def test_color_analysis_hatch_entity_type_name(self) -> None:
         """Verify that entity_type is 'Hatches' (plural)."""
@@ -1929,7 +1938,9 @@ class TestHatchExtraction:
 
         assert len(hatch_records) >= 1, "Should have Hatches records"
         for record in hatch_records:
-            assert record["entity_type"] == "Hatches", "Entity type should be 'Hatches' (plural)"
+            assert record["entity_type"] == "Hatches", (
+                "Entity type should be 'Hatches' (plural)"
+            )
 
     def test_color_analysis_hatch_with_true_color(self) -> None:
         """Verify True Color hatches work correctly and have color_aci=None."""
@@ -1938,7 +1949,8 @@ class TestHatchExtraction:
 
         # Find Hatches with True Color (124, 82, 165)
         purple_hatches = [
-            r for r in color_data
+            r
+            for r in color_data
             if r["entity_type"] == "Hatches"
             and r["color_r"] == 124
             and r["color_g"] == 82
@@ -1947,8 +1959,12 @@ class TestHatchExtraction:
 
         assert len(purple_hatches) >= 1, "True Color hatches should be extracted"
         for record in purple_hatches:
-            assert record["color_aci"] is None, "True Color hatches should have color_aci=None"
-            assert record["entity_count"] == 2, "Two purple hatches should be aggregated"
+            assert record["color_aci"] is None, (
+                "True Color hatches should have color_aci=None"
+            )
+            assert record["entity_count"] == 2, (
+                "Two purple hatches should be aggregated"
+            )
 
     def test_color_analysis_hatch_mixed_entities(self) -> None:
         """Verify HATCHes work alongside Lines/Polylines/Text."""
@@ -1973,7 +1989,9 @@ class TestHatchExtraction:
         hatch_records = [r for r in color_data if r["entity_type"] == "Hatches"]
 
         for record in hatch_records:
-            assert record["annotation_contents"] == "", "HATCH annotation_contents should be empty"
+            assert record["annotation_contents"] == "", (
+                "HATCH annotation_contents should be empty"
+            )
 
     def test_color_analysis_hatch_aci_colors(self) -> None:
         """Verify ACI color HATCH entities have correct color_aci value."""
@@ -1982,7 +2000,8 @@ class TestHatchExtraction:
 
         # Find Hatches on HATCH_LAYER_A with ACI red
         red_hatches = [
-            r for r in color_data
+            r
+            for r in color_data
             if r["entity_type"] == "Hatches"
             and r["layer_name"] == "HATCH_LAYER_A"
             and r["color_r"] == 255
@@ -1999,9 +2018,9 @@ class TestHatchExtraction:
 
         # Find Hatches with ByBlock color (white fallback)
         byblock_hatches = [
-            r for r in color_data
-            if r["entity_type"] == "Hatches"
-            and r["color_aci"] == 0
+            r
+            for r in color_data
+            if r["entity_type"] == "Hatches" and r["color_aci"] == 0
         ]
 
         # Should have at least one ByBlock hatch
@@ -2018,7 +2037,8 @@ class TestHatchExtraction:
 
         # Find Hatches on HATCH_LAYER_B with ByLayer (should resolve to layer's ACI 3)
         bylayer_hatches = [
-            r for r in color_data
+            r
+            for r in color_data
             if r["entity_type"] == "Hatches"
             and r["layer_name"] == "HATCH_LAYER_B"
             and r["color_aci"] == 256
@@ -2074,7 +2094,9 @@ class TestAciExtraction:
         doc.layers.add("TEST_LAYER", color=3)
 
         # Create line with ByLayer color (color=256)
-        line = msp.add_line((0, 0), (100, 0), dxfattribs={"color": 256, "layer": "TEST_LAYER"})
+        line = msp.add_line(
+            (0, 0), (100, 0), dxfattribs={"color": 256, "layer": "TEST_LAYER"}
+        )
 
         result = _resolve_entity_color_with_aci(line, doc)
 
@@ -2103,7 +2125,11 @@ class TestAciExtraction:
         }
 
         for aci_value, name in named_colors.items():
-            line = msp.add_line((0, aci_value * 10), (100, aci_value * 10), dxfattribs={"color": aci_value})
+            line = msp.add_line(
+                (0, aci_value * 10),
+                (100, aci_value * 10),
+                dxfattribs={"color": aci_value},
+            )
 
             result = _resolve_entity_color_with_aci(line, doc)
 
@@ -2141,7 +2167,9 @@ class TestAciExtraction:
             assert "color_aci" in record, "Record missing color_aci field"
             # color_aci should be int or None
             aci = record["color_aci"]
-            assert aci is None or isinstance(aci, int), f"Invalid color_aci type: {type(aci)}"
+            assert aci is None or isinstance(aci, int), (
+                f"Invalid color_aci type: {type(aci)}"
+            )
             if aci is not None:
                 assert 0 <= aci <= 256, f"Invalid ACI value: {aci}"
 
@@ -2153,7 +2181,8 @@ class TestAciExtraction:
         # Find records with True Color RGB values (not standard ACI colors)
         # True Color (124, 82, 165) - purple
         purple_records = [
-            r for r in color_data
+            r
+            for r in color_data
             if r["color_r"] == 124 and r["color_g"] == 82 and r["color_b"] == 165
         ]
 
@@ -2168,7 +2197,8 @@ class TestAciExtraction:
 
         # Find records with ACI red (255, 0, 0) - should have ACI 1
         red_records = [
-            r for r in color_data
+            r
+            for r in color_data
             if r["color_r"] == 255 and r["color_g"] == 0 and r["color_b"] == 0
         ]
 
@@ -2176,4 +2206,6 @@ class TestAciExtraction:
         aci_red_records = [r for r in red_records if r["color_aci"] is not None]
         if aci_red_records:
             for record in aci_red_records:
-                assert record["color_aci"] == 1, f"Red should be ACI 1, got {record['color_aci']}"
+                assert record["color_aci"] == 1, (
+                    f"Red should be ACI 1, got {record['color_aci']}"
+                )

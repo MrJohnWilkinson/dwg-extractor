@@ -28,7 +28,21 @@ from .geometry import (
     _get_intersection_points,
 )
 from .logger import setup_logger
-from .types import BlockTrimmingData, ColorAnalysisRecord
+from .types import (
+    AnnotationDataDict,
+    BlockCountsDict,
+    BlockEntitiesDict,
+    BlockLayerPairsDict,
+    BlockRotationCountsDict,
+    BlockScaleDataDict,
+    BlockTrimmingDataDict,
+    BlockXdataAppsDict,
+    ColorAnalysisRecord,
+    EntityTypeCountsDict,
+    GeometricEntitiesDict,
+    LayerColorsDict,
+    LayerCountsDict,
+)
 
 
 logger = setup_logger(__name__)
@@ -64,7 +78,9 @@ def _clean_mtext_content(entity: Any) -> str:
         # Use ezdxf's plain_text() to strip formatting codes
         # split=False returns a single string (cast needed for type checker)
         plain_result = entity.plain_text(split=False)
-        plain: str = plain_result if isinstance(plain_result, str) else "\n".join(plain_result)
+        plain: str = (
+            plain_result if isinstance(plain_result, str) else "\n".join(plain_result)
+        )
 
         # Replace newlines with spaces (plain_text converts \P to newline)
         text = plain.replace("\n", " ")
@@ -248,7 +264,7 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
         logger.info("Starting color analysis extraction...")
 
         # Dictionary for grouping geometric entities: (R, G, B, ACI, layer_name, entity_type) -> count
-        geometric_entities: dict[tuple[int, int, int, int | None, str, str], int] = {}
+        geometric_entities: GeometricEntitiesDict = {}
 
         # List for text annotations (each is individual)
         text_annotations: list[ColorAnalysisRecord] = []
@@ -260,7 +276,14 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
             entity_type = entity.dxftype()
 
             # Filter for relevant entity types
-            if entity_type not in ("LINE", "LWPOLYLINE", "POLYLINE", "HATCH", "TEXT", "MTEXT"):
+            if entity_type not in (
+                "LINE",
+                "LWPOLYLINE",
+                "POLYLINE",
+                "HATCH",
+                "TEXT",
+                "MTEXT",
+            ):
                 continue
 
             # Resolve entity color to RGB and ACI
@@ -416,19 +439,19 @@ class ExtractionResult(TypedDict):
                                              'horizontal_segments': [25.0, 550.0, 25.0]}}
     """
 
-    block_counts: dict[str, int]
-    block_entities: dict[str, int]
-    block_layer_pairs: dict[tuple[str, str], int]
-    block_rotation_counts: dict[tuple[str, str, str], int]
-    block_scale_data: dict[str, set[tuple[float, float]]]
-    block_xdata_apps: dict[tuple[str, str], set[str]]
-    layer_block_insertion_counts: dict[str, int]
-    layer_entity_counts: dict[str, int]
-    layer_unique_color_counts: dict[str, int]
-    layer_annotation_counts: dict[str, int]
-    annotation_data: dict[tuple[str, str, str, int, int, int], int]
-    entity_type_counts: dict[str, int]
-    block_trimming_data: dict[str, BlockTrimmingData]
+    block_counts: BlockCountsDict
+    block_entities: BlockEntitiesDict
+    block_layer_pairs: BlockLayerPairsDict
+    block_rotation_counts: BlockRotationCountsDict
+    block_scale_data: BlockScaleDataDict
+    block_xdata_apps: BlockXdataAppsDict
+    layer_block_insertion_counts: LayerCountsDict
+    layer_entity_counts: LayerCountsDict
+    layer_unique_color_counts: LayerCountsDict
+    layer_annotation_counts: LayerCountsDict
+    annotation_data: AnnotationDataDict
+    entity_type_counts: EntityTypeCountsDict
+    block_trimming_data: BlockTrimmingDataDict
     color_analysis_data: list[ColorAnalysisRecord]
 
 
@@ -483,9 +506,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         logger.error(
             f"Unsupported file extension: {path.suffix}. Supported: {SUPPORTED_EXTENSIONS}"
         )
-        raise ValueError(
-            f"Unsupported file extension: {path.suffix}. Must be .dxf"
-        )
+        raise ValueError(f"Unsupported file extension: {path.suffix}. Must be .dxf")
 
     try:
         # Load DXF file
@@ -493,19 +514,19 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         msp = doc.modelspace()
 
         # Initialize result dictionaries
-        block_counts: dict[str, int] = {}
-        block_entities: dict[str, int] = {}
-        block_layer_pairs: dict[tuple[str, str], int] = {}
-        block_rotation_counts: dict[tuple[str, str, str], int] = {}
-        block_scale_data: dict[str, set[tuple[float, float]]] = {}
-        block_xdata_apps: dict[tuple[str, str], set[str]] = {}
-        layer_block_insertion_counts: dict[str, int] = {}
-        layer_entity_counts: dict[str, int] = {}
-        layer_unique_colors: dict[str, set[tuple[int, int, int]]] = {}
-        layer_annotation_counts: dict[str, int] = {}
-        annotation_data: dict[tuple[str, str, str, int, int, int], int] = {}
-        entity_type_counts: dict[str, int] = {}
-        block_trimming_data: dict[str, BlockTrimmingData] = {}
+        block_counts: BlockCountsDict = {}
+        block_entities: BlockEntitiesDict = {}
+        block_layer_pairs: BlockLayerPairsDict = {}
+        block_rotation_counts: BlockRotationCountsDict = {}
+        block_scale_data: BlockScaleDataDict = {}
+        block_xdata_apps: BlockXdataAppsDict = {}
+        layer_block_insertion_counts: LayerCountsDict = {}
+        layer_entity_counts: LayerCountsDict = {}
+        layer_unique_colors: LayerColorsDict = {}
+        layer_annotation_counts: LayerCountsDict = {}
+        annotation_data: AnnotationDataDict = {}
+        entity_type_counts: EntityTypeCountsDict = {}
+        block_trimming_data: BlockTrimmingDataDict = {}
 
         # Initialize all layers from layer table with 0 counts
         logger.info("Initializing layers from layer table...")

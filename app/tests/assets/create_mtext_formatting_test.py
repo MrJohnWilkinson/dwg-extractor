@@ -216,7 +216,9 @@ mtext15 = msp.add_mtext(
 
 # Save DXF file
 doc.saveas("app/tests/assets/mtext_formatting_test.dxf")
-print("Created app/tests/assets/mtext_formatting_test.dxf with MTEXT formatting scenarios")
+print(
+    "Created app/tests/assets/mtext_formatting_test.dxf with MTEXT formatting scenarios"
+)
 print("\nExpected cleaned text for each MTEXT entity:")
 print("1. '\\pxqc;CENTERED TEXT' -> 'CENTERED TEXT'")
 print("2. 'LINE ONE\\PLINE TWO' -> 'LINE ONE LINE TWO'")
