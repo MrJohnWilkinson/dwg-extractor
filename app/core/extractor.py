@@ -29,19 +29,8 @@ from .geometry import (
 )
 from .logger import setup_logger
 from .types import (
-    AnnotationDataDict,
-    BlockCountsDict,
-    BlockEntitiesDict,
-    BlockLayerPairsDict,
-    BlockRotationCountsDict,
-    BlockScaleDataDict,
-    BlockTrimmingDataDict,
-    BlockXdataAppsDict,
+    BlockTrimmingData,
     ColorAnalysisRecord,
-    EntityTypeCountsDict,
-    GeometricEntitiesDict,
-    LayerColorsDict,
-    LayerCountsDict,
 )
 
 
@@ -264,7 +253,7 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
         logger.info("Starting color analysis extraction...")
 
         # Dictionary for grouping geometric entities: (R, G, B, ACI, layer_name, entity_type) -> count
-        geometric_entities: GeometricEntitiesDict = {}
+        geometric_entities: dict[tuple[int, int, int, int | None, str, str], int] = {}
 
         # List for text annotations (each is individual)
         text_annotations: list[ColorAnalysisRecord] = []
@@ -439,19 +428,19 @@ class ExtractionResult(TypedDict):
                                              'horizontal_segments': [25.0, 550.0, 25.0]}}
     """
 
-    block_counts: BlockCountsDict
-    block_entities: BlockEntitiesDict
-    block_layer_pairs: BlockLayerPairsDict
-    block_rotation_counts: BlockRotationCountsDict
-    block_scale_data: BlockScaleDataDict
-    block_xdata_apps: BlockXdataAppsDict
-    layer_block_insertion_counts: LayerCountsDict
-    layer_entity_counts: LayerCountsDict
-    layer_unique_color_counts: LayerCountsDict
-    layer_annotation_counts: LayerCountsDict
-    annotation_data: AnnotationDataDict
-    entity_type_counts: EntityTypeCountsDict
-    block_trimming_data: BlockTrimmingDataDict
+    block_counts: dict[str, int]
+    block_entities: dict[str, int]
+    block_layer_pairs: dict[tuple[str, str], int]
+    block_rotation_counts: dict[tuple[str, str, str], int]
+    block_scale_data: dict[str, set[tuple[float, float]]]
+    block_xdata_apps: dict[tuple[str, str], set[str]]
+    layer_block_insertion_counts: dict[str, int]
+    layer_entity_counts: dict[str, int]
+    layer_unique_color_counts: dict[str, int]
+    layer_annotation_counts: dict[str, int]
+    annotation_data: dict[tuple[str, str, str, int, int, int], int]
+    entity_type_counts: dict[str, int]
+    block_trimming_data: dict[str, BlockTrimmingData]
     color_analysis_data: list[ColorAnalysisRecord]
 
 
@@ -514,19 +503,19 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         msp = doc.modelspace()
 
         # Initialize result dictionaries
-        block_counts: BlockCountsDict = {}
-        block_entities: BlockEntitiesDict = {}
-        block_layer_pairs: BlockLayerPairsDict = {}
-        block_rotation_counts: BlockRotationCountsDict = {}
-        block_scale_data: BlockScaleDataDict = {}
-        block_xdata_apps: BlockXdataAppsDict = {}
-        layer_block_insertion_counts: LayerCountsDict = {}
-        layer_entity_counts: LayerCountsDict = {}
-        layer_unique_colors: LayerColorsDict = {}
-        layer_annotation_counts: LayerCountsDict = {}
-        annotation_data: AnnotationDataDict = {}
-        entity_type_counts: EntityTypeCountsDict = {}
-        block_trimming_data: BlockTrimmingDataDict = {}
+        block_counts: dict[str, int] = {}
+        block_entities: dict[str, int] = {}
+        block_layer_pairs: dict[tuple[str, str], int] = {}
+        block_rotation_counts: dict[tuple[str, str, str], int] = {}
+        block_scale_data: dict[str, set[tuple[float, float]]] = {}
+        block_xdata_apps: dict[tuple[str, str], set[str]] = {}
+        layer_block_insertion_counts: dict[str, int] = {}
+        layer_entity_counts: dict[str, int] = {}
+        layer_unique_colors: dict[str, set[tuple[int, int, int]]] = {}
+        layer_annotation_counts: dict[str, int] = {}
+        annotation_data: dict[tuple[str, str, str, int, int, int], int] = {}
+        entity_type_counts: dict[str, int] = {}
+        block_trimming_data: dict[str, BlockTrimmingData] = {}
 
         # Initialize all layers from layer table with 0 counts
         logger.info("Initializing layers from layer table...")
