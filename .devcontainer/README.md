@@ -31,6 +31,7 @@ In a new repo, these can be left as they are in many cases.  If the devcontainer
 | devcontainer.json | extensions | 4 (base set) | 8 (adds Python, Ruff, Markdown) | Enhanced Python dev |
 | devcontainer.json | python.defaultInterpreterPath | Not present | `${workspaceFolder}/.venv/bin/python` | Python venv integration |
 | devcontainer.json | mounts (claude config) | `type=volume` (isolated) | `type=bind` (host ~/.claude) | **Config sharing vs isolation** |
+| devcontainer.json | mounts (.venv) | Not present | `type=volume` (shadows .venv) | **WSL/container venv isolation** |
 | devcontainer.json | containerEnv | 3 vars | 6 vars (adds UV_*, VIRTUAL_ENV, PATH) | Python/uv tooling |
 | devcontainer.json | forwardPorts | Not present | `[5173, 8001, 8002]` | App-specific ports |
 | devcontainer.json | portsAttributes | Not present | 3 port configs with labels | Port labeling |
@@ -101,7 +102,8 @@ In a new repo, these can be left as they are in many cases.  If the devcontainer
   "remoteUser": "node",
   "mounts": [
     "source=claude-code-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
-    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind"
+    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind",
+    "source=${localWorkspaceFolderBasename}-venv,target=/workspace/.venv,type=volume"
   ],
   "containerEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
