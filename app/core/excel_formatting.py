@@ -17,6 +17,7 @@ from openpyxl.styles import Alignment, PatternFill
 from openpyxl.workbook.workbook import Workbook
 
 from .constants import (
+    EXCEL_FILL_COLOR_EXTRACTION_ISSUE,
     EXCEL_FILL_COLOR_SCALE_NEGATIVE,
     EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
     EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
@@ -25,6 +26,7 @@ from .constants import (
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
     EXCEL_SHEET_COLOR_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
+    EXCEL_SHEET_EXTRACTION_ISSUES,
     EXCEL_SHEET_LAYER_ANALYSIS,
 )
 from .logger import setup_logger
@@ -433,4 +435,58 @@ def _format_color_analysis_sheet(wb: Workbook) -> None:
 
     logger.info(
         f"Color Analysis sheet formatted with {color_fills_applied} color sample cells filled"
+    )
+
+
+def _format_extraction_issues_sheet(wb: Workbook) -> None:
+    """Apply formatting to the Extraction Issues sheet with yellow highlighting."""
+    ws = wb[EXCEL_SHEET_EXTRACTION_ISSUES]
+
+    # Apply auto-filter
+    if ws.dimensions:
+        ws.auto_filter.ref = ws.dimensions
+
+    # Freeze header row
+    ws.freeze_panes = "A2"
+    logger.info("Frozen panes applied to Extraction Issues sheet")
+
+    # Set column widths (5 columns: A-E)
+    ws.column_dimensions["A"].width = 30  # issue_type
+    ws.column_dimensions["B"].width = 30  # issue_block_name
+    ws.column_dimensions["C"].width = 25  # issue_layer_name
+    ws.column_dimensions["D"].width = 20  # issue_insertion_count
+    ws.column_dimensions["E"].width = 50  # issue_details
+
+    # Enable text wrapping on header row
+    header_alignment = Alignment(wrap_text=True, vertical="top")
+    for cell in ws[1]:
+        cell.alignment = header_alignment
+
+    # Define yellow fill for issue rows
+    yellow_fill = PatternFill(
+        start_color=EXCEL_FILL_COLOR_EXTRACTION_ISSUE,
+        end_color=EXCEL_FILL_COLOR_EXTRACTION_ISSUE,
+        fill_type="solid",
+    )
+
+    # Apply yellow background fill to all data rows to highlight issues
+    rows_highlighted = 0
+    for row_idx in range(2, ws.max_row + 1):
+        # Apply fill to entire row (columns A-E)
+        for col_idx in range(1, 6):
+            ws.cell(row=row_idx, column=col_idx).fill = yellow_fill
+        rows_highlighted += 1
+
+    # Apply right-alignment to insertion_count column (D)
+    right_alignment = Alignment(horizontal="right")
+    for row_idx in range(2, ws.max_row + 1):
+        ws.cell(row=row_idx, column=4).alignment = right_alignment
+
+    # Enable text wrapping on details column (E) for all data rows
+    details_alignment = Alignment(wrap_text=True, vertical="top")
+    for row_idx in range(2, ws.max_row + 1):
+        ws.cell(row=row_idx, column=5).alignment = details_alignment
+
+    logger.info(
+        f"Extraction Issues sheet formatted with {rows_highlighted} rows highlighted"
     )

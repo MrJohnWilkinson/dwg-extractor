@@ -35,6 +35,7 @@ from .types import (
     BlockTrimmingData,
     ColorAnalysisRecord,
     ColorEntityKey,
+    ExtractionIssue,
 )
 
 
@@ -407,6 +408,64 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
         return []
 
 
+def _resolve_dynamic_block_name(block_record: Any) -> str | None:
+    """
+    Resolve the original name for a dynamic block from XDATA.
+
+    AutoCAD stores the original block name in XDATA under the
+    'AcDbBlockRepBTag' application ID when converting dynamic blocks
+    from DWG to DXF format.
+
+    Args:
+        block_record: The ezdxf block table record to check for XDATA
+
+    Returns:
+        The original block name if found in XDATA, None otherwise
+
+    Examples:
+        >>> block_record = doc.blocks.get('*U1').block_record
+        >>> _resolve_dynamic_block_name(block_record)
+        'DOOR_DYNAMIC'  # Original name from XDATA
+
+        >>> block_record_no_xdata = doc.blocks.get('*U5').block_record
+        >>> _resolve_dynamic_block_name(block_record_no_xdata)
+        None  # No AcDbBlockRepBTag XDATA found
+    """
+    try:
+        # Access the block record's XDATA
+        # The block_record.xdata is a dictionary-like object mapping appids to tag data
+        if not hasattr(block_record, "xdata") or block_record.xdata is None:
+            return None
+
+        # Check for AcDbBlockRepBTag application ID
+        xdata = block_record.xdata
+        if not hasattr(xdata, "get"):
+            return None
+
+        # Try to get the AcDbBlockRepBTag XDATA
+        rep_btag_data = xdata.get("AcDbBlockRepBTag")
+        if rep_btag_data is None:
+            return None
+
+        # The XDATA typically contains group code 1000 with the original block name
+        # rep_btag_data is a list of DXFTag objects
+        for tag in rep_btag_data:
+            # Group code 1000 contains string data (the original block name)
+            if hasattr(tag, "code") and tag.code == 1000:
+                original_name = tag.value
+                if isinstance(original_name, str) and original_name:
+                    logger.debug(
+                        f"Resolved dynamic block name from XDATA: {original_name}"
+                    )
+                    return original_name
+
+        return None
+
+    except (AttributeError, TypeError, KeyError) as e:
+        logger.debug(f"Error resolving dynamic block name: {e}")
+        return None
+
+
 class ExtractionResult(TypedDict):
     """
     Comprehensive extraction result containing all CAD analysis data.
@@ -440,6 +499,11 @@ class ExtractionResult(TypedDict):
                             entity_type (str: 'Lines', 'Polylines', 'Hatches', 'TEXT', 'MTEXT'), entity_count (int)
                             Example: [{'annotation_contents': '', 'layer_name': 'WALLS', 'color_r': 255, 'color_g': 0, 'color_b': 0,
                                       'entity_type': 'Lines', 'entity_count': 45}, ...]
+        extraction_issues: List of extraction issue records for unresolved anonymous blocks and other issues.
+                          Each record contains issue_type, block_name, layer_name, insertion_count, details.
+                          Example: [{'issue_type': 'Unresolved Anonymous Block', 'block_name': '*U3',
+                                    'layer_name': 'FIXTURES', 'insertion_count': 5,
+                                    'details': 'No AcDbBlockRepBTag XDATA found'}]
 
     Examples:
         block_layer_pairs: {BlockLayerKey('DOOR', 'WALLS'): 5, BlockLayerKey('WINDOW', 'WALLS'): 8}
@@ -466,6 +530,7 @@ class ExtractionResult(TypedDict):
     entity_type_counts: dict[str, int]
     block_trimming_data: dict[str, BlockTrimmingData]
     color_analysis_data: list[ColorAnalysisRecord]
+    extraction_issues: list[ExtractionIssue]
 
 
 def extract_blocks(file_path: str) -> ExtractionResult:
@@ -542,6 +607,12 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         annotation_data: dict[AnnotationKey, int] = {}
         entity_type_counts: dict[str, int] = {}
         block_trimming_data: dict[str, BlockTrimmingData] = {}
+        extraction_issues: list[ExtractionIssue] = []
+
+        # Mapping from anonymous block names (*U1, *U2, etc.) to resolved original names
+        anonymous_to_resolved: dict[str, str] = {}
+        # Track unresolved anonymous blocks: {(anon_name, layer_name): count}
+        unresolved_anonymous_blocks: dict[tuple[str, str], int] = {}
 
         # Initialize all layers from layer table with 0 counts
         logger.info("Initializing layers from layer table...")
@@ -559,13 +630,45 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         logger.info("Analyzing block definitions...")
         for block_def in doc.blocks:
             block_name = block_def.name
-            # Skip anonymous blocks and modelspace/paperspace
-            if block_name.startswith("*"):
+
+            # Skip modelspace/paperspace blocks
+            if block_name in ("*Model_Space", "*Paper_Space") or block_name.startswith(
+                "*Paper_Space"
+            ):
                 continue
 
-            logger.debug(f"Analyzing block definition: {block_name}")
+            # Handle anonymous blocks starting with *U (dynamic block instances)
+            if block_name.startswith("*U"):
+                # Try to resolve original name from XDATA on block record
+                try:
+                    block_record = block_def.block_record
+                    resolved_name = _resolve_dynamic_block_name(block_record)
+                    if resolved_name:
+                        # Store mapping for INSERT processing
+                        anonymous_to_resolved[block_name] = resolved_name
+                        logger.debug(
+                            f"Resolved anonymous block {block_name} to {resolved_name}"
+                        )
+                        # Use the resolved name for all processing
+                        effective_name = resolved_name
+                    else:
+                        # Track as unresolved - will be counted during INSERT processing
+                        logger.debug(
+                            f"Anonymous block {block_name} has no resolvable XDATA"
+                        )
+                        continue  # Skip geometry analysis for unresolved anonymous blocks
+                except (AttributeError, TypeError) as e:
+                    logger.debug(f"Error accessing block record for {block_name}: {e}")
+                    continue
+            # Skip other anonymous blocks (dimension blocks, hatch patterns, etc.)
+            elif block_name.startswith("*"):
+                continue
+            else:
+                effective_name = block_name
+
+            logger.debug(f"Analyzing block definition: {effective_name}")
             entity_count = sum(1 for _ in block_def)
-            block_entities[block_name] = entity_count
+            block_entities[effective_name] = entity_count
 
             # Analyze block geometry for trimming assistance
             bbox = _get_block_bounding_box(block_def)
@@ -576,7 +679,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             vertical_segments = _calculate_segments(vertical_points)
             horizontal_segments = _calculate_segments(horizontal_points)
 
-            block_trimming_data[block_name] = {
+            block_trimming_data[effective_name] = {
                 "native_width": native_width,
                 "native_height": native_height,
                 "vertical_segments": vertical_segments,
@@ -586,6 +689,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         logger.info(f"Analyzed {len(block_entities)} block definitions")
         logger.info(
             f"Analyzed geometry for {len(block_trimming_data)} block definitions"
+        )
+        logger.info(
+            f"Resolved {len(anonymous_to_resolved)} anonymous blocks to original names"
         )
 
         # Iterate through modelspace entities
@@ -659,7 +765,34 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
             # Count INSERT entities (block insertions)
             if entity_type == "INSERT":
-                block_name = entity.dxf.name
+                original_block_name = entity.dxf.name
+
+                # Handle anonymous blocks (*U blocks - dynamic block instances)
+                if original_block_name.startswith("*U"):
+                    if original_block_name in anonymous_to_resolved:
+                        # Use the resolved original name
+                        block_name = anonymous_to_resolved[original_block_name]
+                        logger.debug(
+                            f"Processing INSERT: anonymous block {original_block_name} resolved to {block_name}, layer={layer_name}"
+                        )
+                    else:
+                        # Track unresolved anonymous block for extraction issues
+                        anon_key = (original_block_name, layer_name)
+                        unresolved_anonymous_blocks[anon_key] = (
+                            unresolved_anonymous_blocks.get(anon_key, 0) + 1
+                        )
+                        logger.debug(
+                            f"Processing INSERT: unresolved anonymous block {original_block_name}, layer={layer_name}"
+                        )
+                        # Skip further processing for unresolved anonymous blocks
+                        # Still count as INSERT entity type and layer count
+                        layer_block_insertion_counts[layer_name] = (
+                            layer_block_insertion_counts.get(layer_name, 0) + 1
+                        )
+                        continue
+                else:
+                    block_name = original_block_name
+
                 logger.debug(f"Processing INSERT: block={block_name}, layer={layer_name}")
                 block_counts[block_name] = block_counts.get(block_name, 0) + 1
                 layer_block_insertion_counts[layer_name] = (
@@ -772,6 +905,26 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         color_analysis_data = extract_color_analysis(doc)
         logger.info(f"Extracted {len(color_analysis_data)} color analysis records")
 
+        # Convert unresolved anonymous blocks to extraction issues
+        for (anon_name, issue_layer_name), count in unresolved_anonymous_blocks.items():
+            extraction_issues.append(
+                ExtractionIssue(
+                    issue_type="Unresolved Anonymous Block",
+                    block_name=anon_name,
+                    layer_name=issue_layer_name,
+                    insertion_count=count,
+                    details="No AcDbBlockRepBTag XDATA found",
+                )
+            )
+
+        # Sort extraction issues by insertion count descending
+        extraction_issues.sort(key=lambda x: x["insertion_count"], reverse=True)
+
+        if extraction_issues:
+            logger.info(
+                f"Found {len(extraction_issues)} extraction issues ({sum(i['insertion_count'] for i in extraction_issues)} total insertions)"
+            )
+
         # Return comprehensive result
         result: ExtractionResult = {
             "block_counts": block_counts,
@@ -788,6 +941,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             "entity_type_counts": entity_type_counts,
             "block_trimming_data": block_trimming_data,
             "color_analysis_data": color_analysis_data,
+            "extraction_issues": extraction_issues,
         }
 
         return result

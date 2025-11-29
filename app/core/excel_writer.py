@@ -55,6 +55,11 @@ from .constants import (
     EXCEL_COLUMN_COLOR_SAMPLE,
     EXCEL_COLUMN_ENTITY_TYPE_COUNT,
     EXCEL_COLUMN_ENTITY_TYPE_NAME,
+    EXCEL_COLUMN_ISSUE_BLOCK_NAME,
+    EXCEL_COLUMN_ISSUE_DETAILS,
+    EXCEL_COLUMN_ISSUE_INSERTION_COUNT,
+    EXCEL_COLUMN_ISSUE_LAYER_NAME,
+    EXCEL_COLUMN_ISSUE_TYPE,
     EXCEL_COLUMN_LAYER_ANNOTATION_COUNT,
     EXCEL_COLUMN_LAYER_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
@@ -65,6 +70,7 @@ from .constants import (
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
     EXCEL_SHEET_COLOR_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
+    EXCEL_SHEET_EXTRACTION_ISSUES,
     EXCEL_SHEET_LAYER_ANALYSIS,
 )
 from .excel_formatting import (
@@ -73,6 +79,7 @@ from .excel_formatting import (
     _format_block_geometry_analysis_sheet,
     _format_color_analysis_sheet,
     _format_entity_summary_sheet,
+    _format_extraction_issues_sheet,
     _format_layer_analysis_sheet,
     format_header,
 )
@@ -328,6 +335,9 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
             # Sheet 6: Color Analysis
             _create_color_analysis_sheet(extraction_data, writer)
 
+            # Sheet 7: Extraction Issues
+            _create_extraction_issues_sheet(extraction_data, writer)
+
         # Load workbook for post-processing (formatting)
         logger.debug("Loading workbook for formatting stage...")
         wb = load_workbook(full_path)
@@ -345,6 +355,8 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         _format_annotations_analysis_sheet(wb)
         logger.debug("Applying formatting to Color Analysis sheet...")
         _format_color_analysis_sheet(wb)
+        logger.debug("Applying formatting to Extraction Issues sheet...")
+        _format_extraction_issues_sheet(wb)
 
         # Save workbook with formatting
         logger.debug("Saving workbook with formatting applied...")
@@ -777,3 +789,48 @@ def _create_color_analysis_sheet(
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_COLOR_ANALYSIS, index=False)
     logger.info(f"Color Analysis sheet created with {len(df)} rows")
+
+
+def _create_extraction_issues_sheet(
+    data: ExtractionResult, writer: pd.ExcelWriter
+) -> None:
+    """Create the Extraction Issues sheet with unresolved anonymous blocks."""
+    logger.info("Creating Extraction Issues sheet...")
+
+    extraction_issues = data["extraction_issues"]
+
+    logger.debug(f"Extraction Issues: {len(extraction_issues)} issues to process")
+
+    if extraction_issues:
+        # Build DataFrame rows from extraction issues
+        rows = []
+        for issue in extraction_issues:
+            rows.append(
+                {
+                    EXCEL_COLUMN_ISSUE_TYPE: issue["issue_type"],
+                    EXCEL_COLUMN_ISSUE_BLOCK_NAME: issue["block_name"],
+                    EXCEL_COLUMN_ISSUE_LAYER_NAME: issue["layer_name"],
+                    EXCEL_COLUMN_ISSUE_INSERTION_COUNT: issue["insertion_count"],
+                    EXCEL_COLUMN_ISSUE_DETAILS: issue["details"],
+                }
+            )
+
+        df = pd.DataFrame(rows)
+        # Data is already sorted by insertion count descending from extractor
+    else:
+        # Create empty DataFrame with headers only
+        df = pd.DataFrame(
+            columns=[
+                EXCEL_COLUMN_ISSUE_TYPE,
+                EXCEL_COLUMN_ISSUE_BLOCK_NAME,
+                EXCEL_COLUMN_ISSUE_LAYER_NAME,
+                EXCEL_COLUMN_ISSUE_INSERTION_COUNT,
+                EXCEL_COLUMN_ISSUE_DETAILS,
+            ]
+        )
+
+    # Format column headers for Excel display
+    df.columns = [format_header(col) for col in df.columns]
+
+    df.to_excel(writer, sheet_name=EXCEL_SHEET_EXTRACTION_ISSUES, index=False)
+    logger.info(f"Extraction Issues sheet created with {len(df)} rows")

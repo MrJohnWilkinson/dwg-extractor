@@ -159,3 +159,25 @@ class ColorAnalysisRecord(TypedDict):
     color_aci: int | None
     entity_type: str
     entity_count: int
+
+
+class ExtractionIssue(TypedDict):
+    """
+    Record for tracking extraction issues such as unresolved anonymous blocks.
+
+    Used in the extraction_issues field of ExtractionResult to report blocks
+    that could not be fully processed during extraction.
+
+    Attributes:
+        issue_type: Type of issue (e.g., "Unresolved Anonymous Block")
+        block_name: The anonymous block name (e.g., "*U1")
+        layer_name: Layer where the block was inserted
+        insertion_count: Number of times this block was inserted
+        details: Additional context (e.g., "No AcDbBlockRepBTag XDATA found")
+    """
+
+    issue_type: str
+    block_name: str
+    layer_name: str
+    insertion_count: int
+    details: str

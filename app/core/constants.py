@@ -20,6 +20,7 @@ EXCEL_SHEET_ENTITY_SUMMARY: str = "Entity Summary"
 EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS: str = "Block Geometry Analysis"
 EXCEL_SHEET_ANNOTATIONS_ANALYSIS: str = "Annotations Analysis"
 EXCEL_SHEET_COLOR_ANALYSIS: str = "Color Analysis"
+EXCEL_SHEET_EXTRACTION_ISSUES: str = "Extraction Issues"
 
 # Excel configuration - Block Counts sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
@@ -92,6 +93,14 @@ EXCEL_COLUMN_COLOR_AUTOCAD_NAME: str = "color_autocad_name"
 EXCEL_COLUMN_COLOR_ENTITY_TYPE: str = "color_entity_type"
 EXCEL_COLUMN_COLOR_ENTITY_COUNT: str = "color_entity_count"
 
+# Excel configuration - Extraction Issues sheet columns
+# See app_docs/005-field-naming-convention.md for naming conventions
+EXCEL_COLUMN_ISSUE_TYPE: str = "issue_type"
+EXCEL_COLUMN_ISSUE_BLOCK_NAME: str = "issue_block_name"
+EXCEL_COLUMN_ISSUE_LAYER_NAME: str = "issue_layer_name"
+EXCEL_COLUMN_ISSUE_INSERTION_COUNT: str = "issue_insertion_count"
+EXCEL_COLUMN_ISSUE_DETAILS: str = "issue_details"
+
 # Excel configuration - Fill colors for scale highlighting
 # Yellow: Warning color for scale variance with all positive values
 EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE: str = "FFFFFF00"
@@ -99,6 +108,8 @@ EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE: str = "FFFFFF00"
 EXCEL_FILL_COLOR_SCALE_NEGATIVE: str = "FFA500FF"
 # Red: High priority alert for scale variance with negative values (mixed positive/negative)
 EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE: str = "FFFF0000"
+# Yellow: Warning color for extraction issues
+EXCEL_FILL_COLOR_EXTRACTION_ISSUE: str = "FFFFFF00"
 
 # UI messages
 MSG_SELECT_FILE: str = "Please select a DXF file"

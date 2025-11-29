@@ -113,6 +113,7 @@ class TestExcelWriter:
             "annotation_data": {},
             "entity_type_counts": {"INSERT": 18, "LINE": 15, "CIRCLE": 8},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {
                 "VALVE": {
                     "native_width": 100.0,
@@ -135,11 +136,14 @@ class TestExcelWriter:
             },
         }
 
-    def test_write_excel_four_sheets(
+    def test_write_excel_seven_sheets(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that six sheets are created with correct names."""
-        from core.constants import EXCEL_SHEET_COLOR_ANALYSIS
+        """Test that seven sheets are created with correct names."""
+        from core.constants import (
+            EXCEL_SHEET_COLOR_ANALYSIS,
+            EXCEL_SHEET_EXTRACTION_ISSUES,
+        )
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
@@ -155,7 +159,8 @@ class TestExcelWriter:
         assert EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_ANNOTATIONS_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_COLOR_ANALYSIS in wb.sheetnames
-        assert len(wb.sheetnames) == 6
+        assert EXCEL_SHEET_EXTRACTION_ISSUES in wb.sheetnames
+        assert len(wb.sheetnames) == 7
 
     def test_block_analysis_sheet_simplified(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -337,6 +342,7 @@ class TestExcelWriter:
             "annotation_data": {},
             "entity_type_counts": {},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {},
         }
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -549,6 +555,7 @@ class TestExcelWriter:
             "annotation_data": {},
             "entity_type_counts": {},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {},
         }
 
@@ -734,6 +741,7 @@ class TestExcelWriter:
             "annotation_data": {},
             "entity_type_counts": {},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {},
         }
 
@@ -785,6 +793,7 @@ class TestExcelWriter:
             "annotation_data": {},
             "entity_type_counts": {"INSERT": 15},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {
                 "VALVE": {
                     "native_width": 100.0,
@@ -1185,6 +1194,7 @@ class TestExcelWriter:
                 "annotation_data": {},
                 "entity_type_counts": {"INSERT": 5, "LINE": 10},
                 "color_analysis_data": [],
+            "extraction_issues": [],
                 "block_trimming_data": {
                     "BLOCK_A": {
                         "native_width": 10.0,
@@ -1282,6 +1292,7 @@ class TestExcelWriter:
             "annotation_data": {},
             "entity_type_counts": {},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {},
         }
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -1402,6 +1413,7 @@ class TestNegativeScaleTextGeneration:
             "annotation_data": {},
             "entity_type_counts": {},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1438,6 +1450,7 @@ class TestNegativeScaleTextGeneration:
             "annotation_data": {},
             "entity_type_counts": {},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1472,6 +1485,7 @@ class TestNegativeScaleTextGeneration:
             "annotation_data": {},
             "entity_type_counts": {},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1506,6 +1520,7 @@ class TestNegativeScaleTextGeneration:
             "annotation_data": {},
             "entity_type_counts": {},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1542,6 +1557,7 @@ class TestNegativeScaleTextGeneration:
             "annotation_data": {},
             "entity_type_counts": {},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1579,6 +1595,7 @@ class TestNegativeScaleTextGeneration:
             "annotation_data": {},
             "entity_type_counts": {},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {
                 "TEST": {
                     "native_width": 10.0,
@@ -1773,6 +1790,7 @@ class TestAnnotationsAnalysisSheet:
             },
             "entity_type_counts": {"INSERT": 5, "LINE": 20},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {
                 "VALVE": {
                     "native_width": 10.0,
@@ -1889,6 +1907,7 @@ class TestAnnotationsAnalysisSheet:
             "annotation_data": {},  # Empty annotations
             "entity_type_counts": {},
             "color_analysis_data": [],
+            "extraction_issues": [],
             "block_trimming_data": {},
         }
 
@@ -1944,19 +1963,22 @@ class TestAnnotationsAnalysisSheet:
         counts = df[format_header(EXCEL_COLUMN_ANNOTATION_COUNT)].tolist()
         assert counts == sorted(counts, reverse=True)
 
-    def test_five_sheets_created(
+    def test_seven_sheets_created(
         self, temp_dir: str, annotation_extraction_data: ExtractionResult
     ) -> None:
-        """Test that exactly 6 sheets are created including Color Analysis."""
-        from core.constants import EXCEL_SHEET_COLOR_ANALYSIS
+        """Test that exactly 7 sheets are created including Color Analysis and Extraction Issues."""
+        from core.constants import (
+            EXCEL_SHEET_COLOR_ANALYSIS,
+            EXCEL_SHEET_EXTRACTION_ISSUES,
+        )
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(annotation_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
 
-        # Verify exactly 6 sheets
-        assert len(wb.sheetnames) == 6
+        # Verify exactly 7 sheets
+        assert len(wb.sheetnames) == 7
 
         # Verify all expected sheet names
         assert EXCEL_SHEET_BLOCK_ANALYSIS in wb.sheetnames
@@ -1965,6 +1987,7 @@ class TestAnnotationsAnalysisSheet:
         assert EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_ANNOTATIONS_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_COLOR_ANALYSIS in wb.sheetnames
+        assert EXCEL_SHEET_EXTRACTION_ISSUES in wb.sheetnames
 
 
 class TestAciDisplayNameMapping:
@@ -2087,6 +2110,7 @@ class TestColorAnalysisExcelOutput:
                     "entity_count": 1,
                 },
             ],
+            "extraction_issues": [],
             "block_trimming_data": {},
         }
 
@@ -2166,3 +2190,246 @@ class TestColorAnalysisExcelOutput:
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_COLOR_ANALYSIS)
 
         assert len(df.columns) == 9
+
+
+class TestExtractionIssuesSheet:
+    """Test suite for the Extraction Issues Excel sheet."""
+
+    @pytest.fixture
+    def temp_dir(self) -> Iterator[str]:
+        """Create a temporary directory for test outputs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield tmpdir
+
+    @pytest.fixture
+    def extraction_issues_data(self) -> ExtractionResult:
+        """Provide sample extraction data with extraction issues."""
+        return {
+            "block_counts": {"VALVE": 10},
+            "block_entities": {"VALVE": 8},
+            "block_layer_pairs": {
+                BlockLayerKey(block_name="VALVE", layer_name="Layer1"): 10,
+            },
+            "block_rotation_counts": {
+                BlockRotationKey(
+                    block_name="VALVE", layer_name="Layer1", rotation_category="0"
+                ): 10,
+            },
+            "block_scale_data": {"VALVE": {(1.0, 1.0)}},
+            "block_xdata_apps": {},
+            "layer_block_insertion_counts": {"Layer1": 10},
+            "layer_entity_counts": {"Layer1": 15},
+            "layer_unique_color_counts": {"Layer1": 1},
+            "layer_annotation_counts": {"Layer1": 0},
+            "annotation_data": {},
+            "entity_type_counts": {"INSERT": 10},
+            "color_analysis_data": [],
+            "extraction_issues": [
+                {
+                    "issue_type": "Unresolved Anonymous Block",
+                    "block_name": "*U1",
+                    "layer_name": "Layer1",
+                    "insertion_count": 5,
+                    "details": "No AcDbBlockRepBTag XDATA found",
+                },
+                {
+                    "issue_type": "Unresolved Anonymous Block",
+                    "block_name": "*U2",
+                    "layer_name": "Layer2",
+                    "insertion_count": 3,
+                    "details": "No AcDbBlockRepBTag XDATA found",
+                },
+            ],
+            "block_trimming_data": {
+                "VALVE": {
+                    "native_width": 100.0,
+                    "native_height": 50.0,
+                    "vertical_segments": [10.0, 80.0, 10.0],
+                    "horizontal_segments": [5.0, 40.0, 5.0],
+                },
+            },
+        }
+
+    @pytest.fixture
+    def no_issues_data(self) -> ExtractionResult:
+        """Provide sample extraction data with no extraction issues."""
+        return {
+            "block_counts": {"VALVE": 10},
+            "block_entities": {"VALVE": 8},
+            "block_layer_pairs": {
+                BlockLayerKey(block_name="VALVE", layer_name="Layer1"): 10,
+            },
+            "block_rotation_counts": {
+                BlockRotationKey(
+                    block_name="VALVE", layer_name="Layer1", rotation_category="0"
+                ): 10,
+            },
+            "block_scale_data": {"VALVE": {(1.0, 1.0)}},
+            "block_xdata_apps": {},
+            "layer_block_insertion_counts": {"Layer1": 10},
+            "layer_entity_counts": {"Layer1": 15},
+            "layer_unique_color_counts": {"Layer1": 1},
+            "layer_annotation_counts": {"Layer1": 0},
+            "annotation_data": {},
+            "entity_type_counts": {"INSERT": 10},
+            "color_analysis_data": [],
+            "extraction_issues": [],
+            "block_trimming_data": {
+                "VALVE": {
+                    "native_width": 100.0,
+                    "native_height": 50.0,
+                    "vertical_segments": [10.0, 80.0, 10.0],
+                    "horizontal_segments": [5.0, 40.0, 5.0],
+                },
+            },
+        }
+
+    def test_extraction_issues_sheet_exists(
+        self, temp_dir: str, extraction_issues_data: ExtractionResult
+    ) -> None:
+        """Test that Extraction Issues sheet exists in the workbook."""
+        from core.constants import EXCEL_SHEET_EXTRACTION_ISSUES
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(extraction_issues_data, output_path)
+
+        wb = load_workbook(excel_path)
+        assert EXCEL_SHEET_EXTRACTION_ISSUES in wb.sheetnames
+
+    def test_extraction_issues_sheet_headers(
+        self, temp_dir: str, extraction_issues_data: ExtractionResult
+    ) -> None:
+        """Test that Extraction Issues sheet has correct headers."""
+        from core.constants import EXCEL_SHEET_EXTRACTION_ISSUES
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(extraction_issues_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_EXTRACTION_ISSUES)
+
+        expected_columns = [
+            "Issue Type",
+            "Issue Block Name",
+            "Issue Layer Name",
+            "Issue Insertion Count",
+            "Issue Details",
+        ]
+        assert list(df.columns) == expected_columns
+
+    def test_extraction_issues_sheet_contains_data(
+        self, temp_dir: str, extraction_issues_data: ExtractionResult
+    ) -> None:
+        """Test that Extraction Issues sheet contains unresolved blocks."""
+        from core.constants import EXCEL_SHEET_EXTRACTION_ISSUES
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(extraction_issues_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_EXTRACTION_ISSUES)
+
+        # Should have 2 rows of data
+        assert len(df) == 2
+
+        # Verify first row data
+        assert df.iloc[0]["Issue Type"] == "Unresolved Anonymous Block"
+        assert df.iloc[0]["Issue Block Name"] == "*U1"
+        assert df.iloc[0]["Issue Layer Name"] == "Layer1"
+        assert df.iloc[0]["Issue Insertion Count"] == 5
+        assert "AcDbBlockRepBTag" in df.iloc[0]["Issue Details"]
+
+    def test_extraction_issues_sheet_empty_when_no_issues(
+        self, temp_dir: str, no_issues_data: ExtractionResult
+    ) -> None:
+        """Test that Extraction Issues sheet is empty when no issues."""
+        from core.constants import EXCEL_SHEET_EXTRACTION_ISSUES
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(no_issues_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_EXTRACTION_ISSUES)
+
+        # Should have headers but no data rows
+        assert len(df) == 0
+        # Headers should still be present
+        assert "Issue Type" in df.columns
+
+    def test_extraction_issues_sheet_has_autofilter(
+        self, temp_dir: str, extraction_issues_data: ExtractionResult
+    ) -> None:
+        """Test that Extraction Issues sheet has auto-filter enabled."""
+        from core.constants import EXCEL_SHEET_EXTRACTION_ISSUES
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(extraction_issues_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_EXTRACTION_ISSUES]
+
+        # Verify auto-filter is applied
+        assert ws.auto_filter.ref is not None
+
+    def test_extraction_issues_sheet_has_frozen_panes(
+        self, temp_dir: str, extraction_issues_data: ExtractionResult
+    ) -> None:
+        """Test that Extraction Issues sheet has frozen header row."""
+        from core.constants import EXCEL_SHEET_EXTRACTION_ISSUES
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(extraction_issues_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_EXTRACTION_ISSUES]
+
+        # Verify frozen panes at A2
+        assert ws.freeze_panes == "A2"
+
+    def test_extraction_issues_sheet_column_widths(
+        self, temp_dir: str, extraction_issues_data: ExtractionResult
+    ) -> None:
+        """Test that Extraction Issues sheet has appropriate column widths."""
+        from core.constants import EXCEL_SHEET_EXTRACTION_ISSUES
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(extraction_issues_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_EXTRACTION_ISSUES]
+
+        # Verify column widths are set
+        assert ws.column_dimensions["A"].width == 30  # issue_type
+        assert ws.column_dimensions["B"].width == 30  # issue_block_name
+        assert ws.column_dimensions["C"].width == 25  # issue_layer_name
+        assert ws.column_dimensions["D"].width == 20  # issue_insertion_count
+        assert ws.column_dimensions["E"].width == 50  # issue_details
+
+    def test_extraction_issues_sheet_has_yellow_highlighting(
+        self, temp_dir: str, extraction_issues_data: ExtractionResult
+    ) -> None:
+        """Test that Extraction Issues sheet data rows have yellow highlighting."""
+        from core.constants import EXCEL_SHEET_EXTRACTION_ISSUES
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(extraction_issues_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_EXTRACTION_ISSUES]
+
+        # Check that row 2 (first data row) has yellow fill
+        # Yellow color is FFFFFF00
+        cell_a2 = ws.cell(row=2, column=1)
+        assert cell_a2.fill.fgColor is not None
+
+    def test_extraction_issues_sheet_is_last_sheet(
+        self, temp_dir: str, extraction_issues_data: ExtractionResult
+    ) -> None:
+        """Test that Extraction Issues sheet is the last sheet (Sheet 7)."""
+        from core.constants import EXCEL_SHEET_EXTRACTION_ISSUES
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(extraction_issues_data, output_path)
+
+        wb = load_workbook(excel_path)
+
+        # Extraction Issues should be the last sheet
+        assert wb.sheetnames[-1] == EXCEL_SHEET_EXTRACTION_ISSUES
+        assert wb.sheetnames.index(EXCEL_SHEET_EXTRACTION_ISSUES) == 6
