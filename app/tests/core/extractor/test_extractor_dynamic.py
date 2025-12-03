@@ -1,13 +1,42 @@
 """
 Unit tests for the extractor module - dynamic block extraction functionality.
 
-This module contains tests for dynamic block extraction and anonymous block resolution.
+This module contains tests for dynamic block extraction and anonymous block resolution,
+including both *U (standard) and A$C (alternate) anonymous block naming conventions.
 """
 
 import ezdxf
 import pytest
 
-from core.extractor import extract_blocks
+from core.extractor import _is_anonymous_block, extract_blocks
+
+
+class TestIsAnonymousBlock:
+    """Test suite for the _is_anonymous_block helper function."""
+
+    def test_star_u_blocks_detected(self) -> None:
+        """Test that *U blocks are detected as anonymous."""
+        assert _is_anonymous_block("*U1") is True
+        assert _is_anonymous_block("*U25") is True
+        assert _is_anonymous_block("*U999") is True
+
+    def test_a_dollar_c_blocks_detected(self) -> None:
+        """Test that A$C blocks are detected as anonymous."""
+        assert _is_anonymous_block("A$C7F63364D") is True
+        assert _is_anonymous_block("A$C25B30886") is True
+        assert _is_anonymous_block("A$CABC12345") is True
+
+    def test_regular_blocks_not_detected(self) -> None:
+        """Test that regular blocks are not detected as anonymous."""
+        assert _is_anonymous_block("DOOR") is False
+        assert _is_anonymous_block("WINDOW_UNIT") is False
+        assert _is_anonymous_block("MY_BLOCK_123") is False
+
+    def test_system_blocks_not_detected(self) -> None:
+        """Test that system blocks are not detected as anonymous dynamic blocks."""
+        assert _is_anonymous_block("*Model_Space") is False
+        assert _is_anonymous_block("*Paper_Space") is False
+        assert _is_anonymous_block("*D1") is False  # Dimension blocks
 
 
 class TestDynamicBlockExtraction:
@@ -198,3 +227,179 @@ class TestDynamicBlockExtraction:
         # Total should equal 15 (3 REGULAR + 4 *U1 + 3 *U2 + 5 *U3)
         total = resolved_count + unresolved_count
         assert total == 15
+
+
+class TestADollarCBlockExtraction:
+    """Test suite for A$C anonymous block extraction and resolution."""
+
+    def test_a_dollar_c_block_resolution_with_xdata(self) -> None:
+        """Test that A$C blocks with AcDbBlockRepBTag XDATA are resolved."""
+        result = extract_blocks("app/tests/assets/a_dollar_c_block_test.dxf")
+
+        # SHELF_UNIT should appear from resolved A$C7F63364D blocks
+        assert "SHELF_UNIT" in result["block_counts"]
+        # A$C7F63364D insertions = 3 (2 on LAYER_A, 1 on LAYER_B)
+        assert result["block_counts"]["SHELF_UNIT"] == 3
+
+    def test_a_dollar_c_block_unresolved_uses_raw_name(self) -> None:
+        """Test that unresolved A$C blocks appear in block_counts with raw name."""
+        result = extract_blocks("app/tests/assets/a_dollar_c_block_test.dxf")
+
+        # Unresolved A$C blocks should appear with raw names
+        # A$C25B30886 (self-referencing XDATA) = 2 insertions
+        assert "A$C25B30886" in result["block_counts"]
+        assert result["block_counts"]["A$C25B30886"] == 2
+
+        # A$C0c1c4685 (no XDATA) = 4 insertions
+        assert "A$C0c1c4685" in result["block_counts"]
+        assert result["block_counts"]["A$C0c1c4685"] == 4
+
+        # A$CABC12345 (GUID-only XDATA) = 3 insertions
+        assert "A$CABC12345" in result["block_counts"]
+        assert result["block_counts"]["A$CABC12345"] == 3
+
+    def test_a_dollar_c_block_unresolved_in_extraction_issues(self) -> None:
+        """Test that unresolved A$C blocks are tracked in extraction_issues."""
+        result = extract_blocks("app/tests/assets/a_dollar_c_block_test.dxf")
+
+        extraction_issues = result["extraction_issues"]
+
+        # Find issues for unresolved A$C blocks
+        a_dollar_c_issues = [
+            issue
+            for issue in extraction_issues
+            if issue["block_name"].startswith("A$C")
+        ]
+
+        # Should have issues for A$C25B30886, A$C0c1c4685, and A$CABC12345
+        issue_block_names = {issue["block_name"] for issue in a_dollar_c_issues}
+        assert "A$C25B30886" in issue_block_names
+        assert "A$C0c1c4685" in issue_block_names
+        assert "A$CABC12345" in issue_block_names
+
+        # Verify A$C-specific detail message
+        for issue in a_dollar_c_issues:
+            assert "A$C name" in issue["details"]
+            assert issue["issue_type"] == "Unresolved Anonymous Block"
+
+    def test_a_dollar_c_resolved_not_in_extraction_issues(self) -> None:
+        """Test that resolved A$C blocks don't appear in extraction_issues."""
+        result = extract_blocks("app/tests/assets/a_dollar_c_block_test.dxf")
+
+        extraction_issues = result["extraction_issues"]
+        issue_block_names = {issue["block_name"] for issue in extraction_issues}
+
+        # A$C7F63364D was resolved to SHELF_UNIT, should not be in issues
+        assert "A$C7F63364D" not in issue_block_names
+
+    def test_a_dollar_c_block_in_block_layer_pairs(self) -> None:
+        """Test that A$C blocks appear in block_layer_pairs correctly."""
+        result = extract_blocks("app/tests/assets/a_dollar_c_block_test.dxf")
+
+        # Find SHELF_UNIT (resolved from A$C7F63364D) entries
+        shelf_pairs = [
+            key
+            for key in result["block_layer_pairs"].keys()
+            if key.block_name == "SHELF_UNIT"
+        ]
+        assert len(shelf_pairs) >= 1
+
+        # Verify both layers have SHELF_UNIT entries
+        shelf_layers = {key.layer_name for key in shelf_pairs}
+        assert "LAYER_A" in shelf_layers
+        assert "LAYER_B" in shelf_layers
+
+        # Unresolved A$C blocks should also appear in block_layer_pairs with raw name
+        a_dollar_c_pairs = [
+            key
+            for key in result["block_layer_pairs"].keys()
+            if key.block_name == "A$C0c1c4685"
+        ]
+        assert len(a_dollar_c_pairs) >= 1
+
+    def test_a_dollar_c_block_in_rotations(self) -> None:
+        """Test that A$C blocks appear in rotation data."""
+        result = extract_blocks("app/tests/assets/a_dollar_c_block_test.dxf")
+
+        # Find rotation entries for SHELF_UNIT (resolved A$C)
+        shelf_rotations = [
+            key
+            for key in result["block_rotation_counts"].keys()
+            if key.block_name == "SHELF_UNIT"
+        ]
+        assert len(shelf_rotations) >= 1
+
+        # Find rotation entries for unresolved A$C block with different rotations
+        a_dollar_c_rotations = [
+            key
+            for key in result["block_rotation_counts"].keys()
+            if key.block_name == "A$C0c1c4685"
+        ]
+        # A$C0c1c4685 has rotation 0 and 180 insertions
+        rotation_categories = {key.rotation_category for key in a_dollar_c_rotations}
+        assert "0" in rotation_categories
+        assert "180" in rotation_categories
+
+    def test_a_dollar_c_block_in_scales(self) -> None:
+        """Test that A$C blocks appear in scale data."""
+        result = extract_blocks("app/tests/assets/a_dollar_c_block_test.dxf")
+
+        # SHELF_UNIT should have scale data (resolved from A$C7F63364D with xscale=2.0)
+        assert "SHELF_UNIT" in result["block_scale_data"]
+        shelf_scales = result["block_scale_data"]["SHELF_UNIT"]
+        # Should have both (1.0, 1.0) and (2.0, 1.0) scale combinations
+        assert (1.0, 1.0) in shelf_scales
+        assert (2.0, 1.0) in shelf_scales
+
+        # A$C0c1c4685 should have scale data (with xscale=-1.0)
+        assert "A$C0c1c4685" in result["block_scale_data"]
+        a_dollar_c_scales = result["block_scale_data"]["A$C0c1c4685"]
+        assert (-1.0, 1.0) in a_dollar_c_scales
+
+    def test_a_dollar_c_block_in_trimming_data(self) -> None:
+        """Test that A$C blocks have geometry/trimming data."""
+        result = extract_blocks("app/tests/assets/a_dollar_c_block_test.dxf")
+
+        # Resolved A$C block should have geometry data
+        assert "SHELF_UNIT" in result["block_trimming_data"]
+        shelf_geometry = result["block_trimming_data"]["SHELF_UNIT"]
+        assert "native_width" in shelf_geometry
+        assert "native_height" in shelf_geometry
+        assert shelf_geometry["native_width"] > 0
+
+        # Unresolved A$C blocks should also have geometry data (unlike *U)
+        assert "A$C0c1c4685" in result["block_trimming_data"]
+        assert "A$C25B30886" in result["block_trimming_data"]
+        assert "A$CABC12345" in result["block_trimming_data"]
+
+    def test_a_dollar_c_preserves_regular_blocks(self) -> None:
+        """Test that regular blocks are still extracted correctly with A$C file."""
+        result = extract_blocks("app/tests/assets/a_dollar_c_block_test.dxf")
+
+        # REGULAR_BLOCK should still be counted normally
+        assert "REGULAR_BLOCK" in result["block_counts"]
+        assert result["block_counts"]["REGULAR_BLOCK"] == 3
+
+    def test_a_dollar_c_total_insertions_conservation(self) -> None:
+        """Test that total block insertions include both resolved and unresolved A$C blocks."""
+        result = extract_blocks("app/tests/assets/a_dollar_c_block_test.dxf")
+
+        # Count all tracked insertions (includes unresolved A$C blocks)
+        total_block_insertions = sum(result["block_counts"].values())
+
+        # Expected: 3 REGULAR + 3 SHELF_UNIT + 2 A$C25B30886 + 4 A$C0c1c4685 + 3 A$CABC12345 = 15
+        assert total_block_insertions == 15
+
+    def test_a_dollar_c_vs_star_u_handling_difference(self) -> None:
+        """Test the key difference: A$C unresolved appear in block_counts, *U unresolved don't."""
+        # Test *U behavior
+        u_result = extract_blocks("app/tests/assets/dynamic_block_test.dxf")
+        # *U3 is unresolved and should NOT be in block_counts
+        assert "*U3" not in u_result["block_counts"]
+
+        # Test A$C behavior
+        a_result = extract_blocks("app/tests/assets/a_dollar_c_block_test.dxf")
+        # Unresolved A$C blocks SHOULD be in block_counts
+        assert "A$C25B30886" in a_result["block_counts"]
+        assert "A$C0c1c4685" in a_result["block_counts"]
+        assert "A$CABC12345" in a_result["block_counts"]

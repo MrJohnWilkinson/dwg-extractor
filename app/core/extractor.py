@@ -408,19 +408,50 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
         return []
 
 
-def _resolve_dynamic_block_name(block_record: Any) -> str | None:
+def _is_anonymous_block(block_name: str) -> bool:
+    """
+    Check if a block name represents an anonymous (dynamic) block instance.
+
+    AutoCAD creates anonymous blocks for dynamic block instances using two
+    naming conventions:
+    - *U* pattern (e.g., *U1, *U25) - standard dynamic block instances
+    - A$C* pattern (e.g., A$C7F63364D, A$C25B30886) - alternate naming with hex suffix
+
+    Args:
+        block_name: The block name to check
+
+    Returns:
+        True if the block is an anonymous dynamic block instance, False otherwise
+
+    Examples:
+        >>> _is_anonymous_block('*U1')
+        True
+        >>> _is_anonymous_block('A$C7F63364D')
+        True
+        >>> _is_anonymous_block('DOOR')
+        False
+        >>> _is_anonymous_block('*Model_Space')
+        False  # System block, not dynamic block
+    """
+    return block_name.startswith("*U") or block_name.startswith("A$C")
+
+
+def _resolve_dynamic_block_name(
+    block_record: Any, block_name: str | None = None
+) -> str | None:
     """
     Resolve the original name for a dynamic block from XDATA.
 
-    AutoCAD stores the original block name in XDATA under the
-    'AcDbBlockRepBTag' application ID when converting dynamic blocks
-    from DWG to DXF format.
+    AutoCAD stores the original block name in XDATA under:
+    - 'AcDbBlockRepBTag' - primary application ID for both *U and A$C blocks
+    - 'AcDbDynamicBlockTrueName' - fallback for A$C blocks (but may self-reference)
 
     Args:
         block_record: The ezdxf block table record to check for XDATA
+        block_name: Optional original block name (used to detect self-referencing XDATA)
 
     Returns:
-        The original block name if found in XDATA, None otherwise
+        The resolved block name if found in XDATA and not self-referencing, None otherwise
 
     Examples:
         >>> block_record = doc.blocks.get('*U1').block_record
@@ -430,6 +461,10 @@ def _resolve_dynamic_block_name(block_record: Any) -> str | None:
         >>> block_record_no_xdata = doc.blocks.get('*U5').block_record
         >>> _resolve_dynamic_block_name(block_record_no_xdata)
         None  # No AcDbBlockRepBTag XDATA found
+
+        >>> block_record_self_ref = doc.blocks.get('A$C25B30886').block_record
+        >>> _resolve_dynamic_block_name(block_record_self_ref, 'A$C25B30886')
+        None  # Self-referencing XDATA is treated as unresolved
     """
     try:
         # Access the block record's XDATA
@@ -442,22 +477,51 @@ def _resolve_dynamic_block_name(block_record: Any) -> str | None:
         if not hasattr(xdata, "get"):
             return None
 
-        # Try to get the AcDbBlockRepBTag XDATA
-        rep_btag_data = xdata.get("AcDbBlockRepBTag")
-        if rep_btag_data is None:
-            return None
+        # Try AcDbBlockRepBTag first (primary resolution method)
+        # Note: ezdxf's XData.get() raises DXFValueError if appid not found
+        try:
+            rep_btag_data = xdata.get("AcDbBlockRepBTag")
+            if rep_btag_data is not None:
+                for tag in rep_btag_data:
+                    # Group code 1000 contains string data (the original block name)
+                    if hasattr(tag, "code") and tag.code == 1000:
+                        original_name = tag.value
+                        if isinstance(original_name, str) and original_name:
+                            # Check for self-reference (e.g., A$C25B30886 -> A$C25B30886)
+                            if block_name and original_name == block_name:
+                                logger.debug(
+                                    f"Self-referencing AcDbBlockRepBTag for {block_name}, treating as unresolved"
+                                )
+                                continue
+                            logger.debug(
+                                f"Resolved dynamic block name from AcDbBlockRepBTag: {original_name}"
+                            )
+                            return original_name
+        except (DXFError, KeyError):
+            # AcDbBlockRepBTag not found in XDATA
+            pass
 
-        # The XDATA typically contains group code 1000 with the original block name
-        # rep_btag_data is a list of DXFTag objects
-        for tag in rep_btag_data:
-            # Group code 1000 contains string data (the original block name)
-            if hasattr(tag, "code") and tag.code == 1000:
-                original_name = tag.value
-                if isinstance(original_name, str) and original_name:
-                    logger.debug(
-                        f"Resolved dynamic block name from XDATA: {original_name}"
-                    )
-                    return original_name
+        # Fallback: Try AcDbDynamicBlockTrueName (used by some A$C blocks)
+        try:
+            true_name_data = xdata.get("AcDbDynamicBlockTrueName")
+            if true_name_data is not None:
+                for tag in true_name_data:
+                    if hasattr(tag, "code") and tag.code == 1000:
+                        original_name = tag.value
+                        if isinstance(original_name, str) and original_name:
+                            # Check for self-reference
+                            if block_name and original_name == block_name:
+                                logger.debug(
+                                    f"Self-referencing AcDbDynamicBlockTrueName for {block_name}, treating as unresolved"
+                                )
+                                continue
+                            logger.debug(
+                                f"Resolved dynamic block name from AcDbDynamicBlockTrueName: {original_name}"
+                            )
+                            return original_name
+        except (DXFError, KeyError):
+            # AcDbDynamicBlockTrueName not found in XDATA
+            pass
 
         return None
 
@@ -642,7 +706,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 # Try to resolve original name from XDATA on block record
                 try:
                     block_record = block_def.block_record
-                    resolved_name = _resolve_dynamic_block_name(block_record)
+                    resolved_name = _resolve_dynamic_block_name(block_record, block_name)
                     if resolved_name:
                         # Store mapping for INSERT processing
                         anonymous_to_resolved[block_name] = resolved_name
@@ -656,10 +720,37 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                         logger.debug(
                             f"Anonymous block {block_name} has no resolvable XDATA"
                         )
-                        continue  # Skip geometry analysis for unresolved anonymous blocks
+                        continue  # Skip geometry analysis for unresolved *U blocks
                 except (AttributeError, TypeError) as e:
                     logger.debug(f"Error accessing block record for {block_name}: {e}")
                     continue
+            # Handle A$C blocks (alternate anonymous block naming convention)
+            elif block_name.startswith("A$C"):
+                # Try to resolve original name from XDATA on block record
+                try:
+                    block_record = block_def.block_record
+                    resolved_name = _resolve_dynamic_block_name(block_record, block_name)
+                    if resolved_name:
+                        # Store mapping for INSERT processing
+                        anonymous_to_resolved[block_name] = resolved_name
+                        logger.debug(
+                            f"Resolved A$C block {block_name} to {resolved_name}"
+                        )
+                        # Use the resolved name for all processing
+                        effective_name = resolved_name
+                    else:
+                        # Unlike *U, unresolved A$C blocks ARE processed with raw name
+                        # Store identity mapping for INSERT processing (to track in issues)
+                        anonymous_to_resolved[block_name] = block_name
+                        logger.debug(
+                            f"A$C block {block_name} has no resolvable XDATA, using raw name"
+                        )
+                        effective_name = block_name
+                except (AttributeError, TypeError) as e:
+                    logger.debug(f"Error accessing block record for {block_name}: {e}")
+                    # Still process with raw name
+                    anonymous_to_resolved[block_name] = block_name
+                    effective_name = block_name
             # Skip other anonymous blocks (dimension blocks, hatch patterns, etc.)
             elif block_name.startswith("*"):
                 continue
@@ -766,6 +857,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             # Count INSERT entities (block insertions)
             if entity_type == "INSERT":
                 original_block_name = entity.dxf.name
+                is_unresolved_a_dollar_c = False
 
                 # Handle anonymous blocks (*U blocks - dynamic block instances)
                 if original_block_name.startswith("*U"):
@@ -784,14 +876,48 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                         logger.debug(
                             f"Processing INSERT: unresolved anonymous block {original_block_name}, layer={layer_name}"
                         )
-                        # Skip further processing for unresolved anonymous blocks
+                        # Skip further processing for unresolved *U blocks
                         # Still count as INSERT entity type and layer count
                         layer_block_insertion_counts[layer_name] = (
                             layer_block_insertion_counts.get(layer_name, 0) + 1
                         )
                         continue
+                # Handle A$C blocks (alternate anonymous block naming convention)
+                elif original_block_name.startswith("A$C"):
+                    if original_block_name in anonymous_to_resolved:
+                        resolved = anonymous_to_resolved[original_block_name]
+                        # Check if it's an identity mapping (unresolved A$C block)
+                        if resolved == original_block_name:
+                            # Unresolved A$C block - use raw name but track in issues
+                            block_name = original_block_name
+                            is_unresolved_a_dollar_c = True
+                            logger.debug(
+                                f"Processing INSERT: unresolved A$C block {original_block_name}, layer={layer_name}"
+                            )
+                        else:
+                            # Resolved A$C block - use resolved name
+                            block_name = resolved
+                            logger.debug(
+                                f"Processing INSERT: A$C block {original_block_name} resolved to {block_name}, layer={layer_name}"
+                            )
+                    else:
+                        # Not in mapping (shouldn't happen if block def was processed)
+                        # Treat as unresolved and use raw name
+                        block_name = original_block_name
+                        is_unresolved_a_dollar_c = True
+                        logger.debug(
+                            f"Processing INSERT: A$C block {original_block_name} not in mapping, using raw name"
+                        )
                 else:
                     block_name = original_block_name
+
+                # Track unresolved A$C blocks in extraction issues
+                # (but still continue with full processing unlike *U)
+                if is_unresolved_a_dollar_c:
+                    anon_key = (original_block_name, layer_name)
+                    unresolved_anonymous_blocks[anon_key] = (
+                        unresolved_anonymous_blocks.get(anon_key, 0) + 1
+                    )
 
                 logger.debug(f"Processing INSERT: block={block_name}, layer={layer_name}")
                 block_counts[block_name] = block_counts.get(block_name, 0) + 1
@@ -907,13 +1033,18 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
         # Convert unresolved anonymous blocks to extraction issues
         for (anon_name, issue_layer_name), count in unresolved_anonymous_blocks.items():
+            # Provide different detail messages based on block type
+            if anon_name.startswith("A$C"):
+                details = "No AcDbBlockRepBTag or AcDbDynamicBlockTrueName XDATA found (using raw A$C name)"
+            else:
+                details = "No AcDbBlockRepBTag XDATA found"
             extraction_issues.append(
                 ExtractionIssue(
                     issue_type="Unresolved Anonymous Block",
                     block_name=anon_name,
                     layer_name=issue_layer_name,
                     insertion_count=count,
-                    details="No AcDbBlockRepBTag XDATA found",
+                    details=details,
                 )
             )
 
