@@ -22,6 +22,7 @@ import pytest
 from openpyxl import load_workbook
 
 from core.constants import (
+    EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
@@ -36,6 +37,10 @@ from core.constants import (
     EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
     EXCEL_COLUMN_BLOCK_SCALE_X,
     EXCEL_COLUMN_BLOCK_SCALE_Y,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP,
     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_XDATA_APPS,
     EXCEL_COLUMN_ENTITY_TYPE_COUNT,
@@ -367,7 +372,7 @@ class TestExcelWriter:
     def test_block_geometry_analysis_sheet_consolidated(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test Block Geometry Analysis sheet has all 13 columns consolidated."""
+        """Test Block Geometry Analysis sheet has all 18 columns consolidated."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -388,12 +393,17 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT),
             format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS),
             format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED),
         ]
 
         assert list(df.columns) == expected_columns
 
-        # Verify exactly 13 columns
-        assert len(df.columns) == 13
+        # Verify exactly 18 columns
+        assert len(df.columns) == 18
 
         # Verify sort by block_name alphabetical
         block_names = df[format_header(EXCEL_COLUMN_BLOCK_NAME)].tolist()
@@ -491,7 +501,7 @@ class TestExcelWriter:
 
         # Should have headers but no data rows
         assert len(df) == 0
-        assert len(df.columns) == 13
+        assert len(df.columns) == 18
 
     def test_block_trimming_analysis_auto_filter(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -651,7 +661,7 @@ class TestExcelWriter:
         assert ws.column_dimensions["M"].width == 40  # block_horizontal_segments
 
     def test_block_geometry_analysis_empty_data(self, temp_dir: str) -> None:
-        """Test that empty block_layer_pairs creates sheet with all 13 column headers."""
+        """Test that empty block_layer_pairs creates sheet with all 18 column headers."""
         empty_data: ExtractionResult = {
             "block_counts": {},
             "block_entities": {},
@@ -678,7 +688,7 @@ class TestExcelWriter:
         # Should have headers but no data rows
         assert len(df) == 0
 
-        # Verify all 13 column headers (formatted)
+        # Verify all 18 column headers (formatted)
         expected_columns = [
             format_header(EXCEL_COLUMN_BLOCK_NAME),
             format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
@@ -693,6 +703,11 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT),
             format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS),
             format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED),
         ]
         assert list(df.columns) == expected_columns
 
@@ -725,6 +740,11 @@ class TestExcelWriter:
                     "native_height": 50.0,
                     "vertical_segments": [10.0, 80.0, 10.0],
                     "horizontal_segments": [5.0, 40.0, 5.0],
+                    "suggested_trim_left": None,
+                    "suggested_trim_right": None,
+                    "suggested_trim_top": None,
+                    "suggested_trim_bottom": None,
+                    "content_zone_detected": False,
                 }
                 # ANONYMOUS block intentionally missing from block_trimming_data
             },
@@ -806,7 +826,7 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT),
         ]
 
-        # Block Geometry Analysis sheet - 13 columns
+        # Block Geometry Analysis sheet - 18 columns
         df_geometry = pd.read_excel(
             excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
         )
@@ -824,12 +844,17 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT),
             format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS),
             format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED),
         ]
 
     def test_spec_010_consolidated_geometry_sheet(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test spec 010: Block Geometry Analysis sheet has consolidated 13 columns with scales and rotations."""
+        """Test spec 010: Block Geometry Analysis sheet has consolidated 18 columns with scales and rotations."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -838,8 +863,8 @@ class TestExcelWriter:
         )
         df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
 
-        # Verify Block Geometry Analysis has exactly 13 columns
-        assert len(df_geometry.columns) == 13
+        # Verify Block Geometry Analysis has exactly 18 columns
+        assert len(df_geometry.columns) == 18
 
         # Verify scale columns present (formatted)
         assert format_header(EXCEL_COLUMN_BLOCK_SCALE_X) in df_geometry.columns
@@ -1126,12 +1151,22 @@ class TestExcelWriter:
                         "native_height": 5.0,
                         "vertical_segments": [10.0],
                         "horizontal_segments": [5.0],
+                        "suggested_trim_left": None,
+                        "suggested_trim_right": None,
+                        "suggested_trim_top": None,
+                        "suggested_trim_bottom": None,
+                        "content_zone_detected": False,
                     },
                     "BLOCK_B": {
                         "native_width": 8.0,
                         "native_height": 4.0,
                         "vertical_segments": [8.0],
                         "horizontal_segments": [4.0],
+                        "suggested_trim_left": None,
+                        "suggested_trim_right": None,
+                        "suggested_trim_top": None,
+                        "suggested_trim_bottom": None,
+                        "content_zone_detected": False,
                     },
                 },
             }

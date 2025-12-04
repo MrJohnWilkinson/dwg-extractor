@@ -9,7 +9,6 @@ This test suite validates:
 
 import os
 from pathlib import Path
-from typing import Iterator
 
 import pandas as pd
 import pytest
@@ -112,6 +111,11 @@ class TestNegativeScaleTextGeneration:
                     "native_height": 10.0,
                     "vertical_segments": [],
                     "horizontal_segments": [],
+                    "suggested_trim_left": None,
+                    "suggested_trim_right": None,
+                    "suggested_trim_top": None,
+                    "suggested_trim_bottom": None,
+                    "content_zone_detected": False,
                 }
             },
         }
@@ -149,6 +153,11 @@ class TestNegativeScaleTextGeneration:
                     "native_height": 10.0,
                     "vertical_segments": [],
                     "horizontal_segments": [],
+                    "suggested_trim_left": None,
+                    "suggested_trim_right": None,
+                    "suggested_trim_top": None,
+                    "suggested_trim_bottom": None,
+                    "content_zone_detected": False,
                 }
             },
         }
@@ -184,6 +193,11 @@ class TestNegativeScaleTextGeneration:
                     "native_height": 10.0,
                     "vertical_segments": [],
                     "horizontal_segments": [],
+                    "suggested_trim_left": None,
+                    "suggested_trim_right": None,
+                    "suggested_trim_top": None,
+                    "suggested_trim_bottom": None,
+                    "content_zone_detected": False,
                 }
             },
         }
@@ -219,6 +233,11 @@ class TestNegativeScaleTextGeneration:
                     "native_height": 10.0,
                     "vertical_segments": [],
                     "horizontal_segments": [],
+                    "suggested_trim_left": None,
+                    "suggested_trim_right": None,
+                    "suggested_trim_top": None,
+                    "suggested_trim_bottom": None,
+                    "content_zone_detected": False,
                 }
             },
         }
@@ -256,6 +275,11 @@ class TestNegativeScaleTextGeneration:
                     "native_height": 10.0,
                     "vertical_segments": [],
                     "horizontal_segments": [],
+                    "suggested_trim_left": None,
+                    "suggested_trim_right": None,
+                    "suggested_trim_top": None,
+                    "suggested_trim_bottom": None,
+                    "content_zone_detected": False,
                 }
             },
         }
@@ -294,6 +318,11 @@ class TestNegativeScaleTextGeneration:
                     "native_height": 10.0,
                     "vertical_segments": [],
                     "horizontal_segments": [],
+                    "suggested_trim_left": None,
+                    "suggested_trim_right": None,
+                    "suggested_trim_top": None,
+                    "suggested_trim_bottom": None,
+                    "content_zone_detected": False,
                 }
             },
         }

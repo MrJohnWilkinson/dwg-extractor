@@ -308,14 +308,14 @@ class TestNegativeScaleHighlighting:
         )
 
     def test_entire_row_highlighted(self) -> None:
-        """Test that all 13 columns get the same fill when highlighting."""
+        """Test that all 18 columns get the same fill when highlighting."""
         from core.constants import EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE
 
         wb = Workbook()
         ws = cast(Worksheet, wb.active)
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
-        # Add headers
+        # Add headers (18 columns)
         headers = [
             "Block Name",
             "Layer",
@@ -330,6 +330,11 @@ class TestNegativeScaleHighlighting:
             "Height",
             "V Segs",
             "H Segs",
+            "Trim L",
+            "Trim R",
+            "Trim T",
+            "Trim B",
+            "CZ Detected",
         ]
         for col_idx, header in enumerate(headers, start=1):
             ws.cell(row=1, column=col_idx, value=header)
@@ -341,12 +346,12 @@ class TestNegativeScaleHighlighting:
 
         _format_block_geometry_analysis_sheet(wb)
 
-        # Verify all 13 columns have red fill
-        for col_idx in range(1, 14):
+        # Verify all 18 columns have red fill
+        for col_idx in range(1, 19):
             cell_fill = ws.cell(row=2, column=col_idx).fill
             assert (
                 cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE
-            ), f"All 13 columns should have red fill, but column {col_idx} doesn't"
+            ), f"All 18 columns should have red fill, but column {col_idx} doesn't"
 
     def test_x_scale_triggers_highlight(self) -> None:
         """Test that only X scale having condition triggers row highlighting."""

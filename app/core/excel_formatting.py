@@ -188,7 +188,7 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "A2"
     logger.info("Frozen panes applied to Block Geometry Analysis sheet")
 
-    # Set column widths (13 columns)
+    # Set column widths (18 columns)
     ws.column_dimensions["A"].width = 30  # block_name
     ws.column_dimensions["B"].width = 25  # block_layer_name
     ws.column_dimensions["C"].width = 12  # block_rotation_0
@@ -202,6 +202,11 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     ws.column_dimensions["K"].width = 20  # block_native_height
     ws.column_dimensions["L"].width = 40  # block_vertical_segments
     ws.column_dimensions["M"].width = 40  # block_horizontal_segments
+    ws.column_dimensions["N"].width = 20  # block_suggested_trim_left
+    ws.column_dimensions["O"].width = 20  # block_suggested_trim_right
+    ws.column_dimensions["P"].width = 20  # block_suggested_trim_top
+    ws.column_dimensions["Q"].width = 20  # block_suggested_trim_bottom
+    ws.column_dimensions["R"].width = 22  # block_content_zone_detected
 
     # Enable text wrapping on header row
     alignment = Alignment(wrap_text=True, vertical="top")
@@ -277,12 +282,12 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
             fill_to_apply = yellow_fill
             yellow_highlighted += 1
 
-        # Apply fill to entire row (columns A-M) if highlighting is needed
+        # Apply fill to entire row (columns A-R) if highlighting is needed
         if fill_to_apply is not None:
-            for col_idx in range(1, 14):  # Columns A through M
+            for col_idx in range(1, 19):  # Columns A through R
                 ws.cell(row=row_idx, column=col_idx).fill = fill_to_apply
 
-    # Apply right-alignment to segment columns (L and M)
+    # Apply right-alignment to segment columns (L and M) and trim columns (N, O, P, Q)
     right_alignment = Alignment(horizontal="right")
     for row_idx in range(2, ws.max_row + 1):
         # Column L (12) - block_vertical_segments
@@ -293,11 +298,27 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
         m_cell = ws.cell(row=row_idx, column=13)
         m_cell.alignment = right_alignment
 
+        # Column N (14) - block_suggested_trim_left
+        n_cell = ws.cell(row=row_idx, column=14)
+        n_cell.alignment = right_alignment
+
+        # Column O (15) - block_suggested_trim_right
+        o_cell = ws.cell(row=row_idx, column=15)
+        o_cell.alignment = right_alignment
+
+        # Column P (16) - block_suggested_trim_top
+        p_cell = ws.cell(row=row_idx, column=16)
+        p_cell.alignment = right_alignment
+
+        # Column Q (17) - block_suggested_trim_bottom
+        q_cell = ws.cell(row=row_idx, column=17)
+        q_cell.alignment = right_alignment
+
     total_highlighted = red_highlighted + orange_highlighted + yellow_highlighted
     logger.info(
         f"Block Geometry Analysis sheet formatted with {total_highlighted} rows highlighted "
         f"(red: {red_highlighted}, orange: {orange_highlighted}, yellow: {yellow_highlighted}) "
-        f"and segment columns right-aligned"
+        f"and segment/trim columns right-aligned"
     )
 
 

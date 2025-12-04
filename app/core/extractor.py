@@ -24,6 +24,7 @@ from .constants import SUPPORTED_EXTENSIONS
 from .geometry import (
     _calculate_segments,
     _categorize_rotation,
+    _detect_content_zone,
     _get_block_bounding_box,
     _get_intersection_points,
 )
@@ -843,11 +844,19 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             vertical_segments = _calculate_segments(vertical_points)
             horizontal_segments = _calculate_segments(horizontal_points)
 
+            # Detect content zone and derive suggested trim values
+            content_zone_data = _detect_content_zone(block_def, bbox)
+
             block_trimming_data[effective_name] = {
                 "native_width": native_width,
                 "native_height": native_height,
                 "vertical_segments": vertical_segments,
                 "horizontal_segments": horizontal_segments,
+                "suggested_trim_left": content_zone_data["suggested_trim_left"],
+                "suggested_trim_right": content_zone_data["suggested_trim_right"],
+                "suggested_trim_top": content_zone_data["suggested_trim_top"],
+                "suggested_trim_bottom": content_zone_data["suggested_trim_bottom"],
+                "content_zone_detected": content_zone_data["content_zone_detected"],
             }
 
         logger.info(f"Analyzed {len(block_entities)} block definitions")

@@ -116,20 +116,30 @@ class BlockTrimmingData(TypedDict):
     """
     Block geometry analysis data for trimming assistance.
 
-    Contains native dimensions and geometric segment data for a block definition.
-    Used in the block_trimming_data field of ExtractionResult.
+    Contains native dimensions, geometric segment data, and content zone detection
+    results for a block definition. Used in the block_trimming_data field of ExtractionResult.
 
     Attributes:
         native_width: Block width in drawing units (absolute bounding box width)
         native_height: Block height in drawing units (absolute bounding box height)
         vertical_segments: List of vertical segment lengths from left to right
         horizontal_segments: List of horizontal segment lengths from bottom to top
+        suggested_trim_left: Distance from block left edge to content zone left edge (None if not detected)
+        suggested_trim_right: Distance from content zone right edge to block right edge (None if not detected)
+        suggested_trim_top: Distance from content zone top edge to block top edge (None if not detected)
+        suggested_trim_bottom: Distance from block bottom edge to content zone bottom edge (None if not detected)
+        content_zone_detected: True if a valid content zone was identified, False otherwise
     """
 
     native_width: float
     native_height: float
     vertical_segments: list[float]
     horizontal_segments: list[float]
+    suggested_trim_left: float | None
+    suggested_trim_right: float | None
+    suggested_trim_top: float | None
+    suggested_trim_bottom: float | None
+    content_zone_detected: bool
 
 
 class ColorAnalysisRecord(TypedDict):
@@ -181,3 +191,30 @@ class ExtractionIssue(TypedDict):
     layer_name: str
     insertion_count: int
     details: str
+
+
+# Type alias for polygon vertex lists
+Polygon = list[tuple[float, float]]
+
+
+class ContentZoneData(TypedDict):
+    """
+    Content zone detection results for automatic trim value derivation.
+
+    Contains suggested trim values derived from the content zone's bounding box
+    relative to the block's bounding box. The content zone is the shape with
+    the largest net area (own area minus contained shapes' areas).
+
+    Attributes:
+        suggested_trim_left: Distance from block left edge to content zone left edge (None if not detected)
+        suggested_trim_right: Distance from content zone right edge to block right edge (None if not detected)
+        suggested_trim_top: Distance from content zone top edge to block top edge (None if not detected)
+        suggested_trim_bottom: Distance from block bottom edge to content zone bottom edge (None if not detected)
+        content_zone_detected: True if a valid content zone was identified, False otherwise
+    """
+
+    suggested_trim_left: float | None
+    suggested_trim_right: float | None
+    suggested_trim_top: float | None
+    suggested_trim_bottom: float | None
+    content_zone_detected: bool

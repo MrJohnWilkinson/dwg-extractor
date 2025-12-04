@@ -233,7 +233,7 @@ class TestBlockGeometryAnalysisFormatting:
         ws = cast(Worksheet, wb.active)
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
-        # Add headers and sample data (13 columns)
+        # Add headers and sample data (18 columns)
         ws.append(
             [
                 "block_name",
@@ -249,6 +249,11 @@ class TestBlockGeometryAnalysisFormatting:
                 "block_native_height",
                 "block_vertical_segments",
                 "block_horizontal_segments",
+                "block_suggested_trim_left",
+                "block_suggested_trim_right",
+                "block_suggested_trim_top",
+                "block_suggested_trim_bottom",
+                "block_content_zone_detected",
             ]
         )
         ws.append(
@@ -266,6 +271,11 @@ class TestBlockGeometryAnalysisFormatting:
                 50.0,
                 "10, 80, 10",
                 "5, 40, 5",
+                None,
+                None,
+                None,
+                None,
+                False,
             ]
         )
 
@@ -274,10 +284,10 @@ class TestBlockGeometryAnalysisFormatting:
 
         # Verify auto-filter is applied
         assert ws.auto_filter.ref is not None
-        assert ws.auto_filter.ref == "A1:M2"
+        assert ws.auto_filter.ref == "A1:R2"
 
     def test_format_geometry_analysis_column_widths(self, temp_dir: str) -> None:
-        """Test that all 13 column widths are set correctly on Block Geometry Analysis sheet."""
+        """Test that all 18 column widths are set correctly on Block Geometry Analysis sheet."""
         # Create test workbook
         wb = Workbook()
         ws = cast(Worksheet, wb.active)
@@ -297,13 +307,18 @@ class TestBlockGeometryAnalysisFormatting:
                 "block_native_height",
                 "block_vertical_segments",
                 "block_horizontal_segments",
+                "block_suggested_trim_left",
+                "block_suggested_trim_right",
+                "block_suggested_trim_top",
+                "block_suggested_trim_bottom",
+                "block_content_zone_detected",
             ]
         )
 
         # Apply formatting
         _format_block_geometry_analysis_sheet(wb)
 
-        # Verify column widths (13 columns)
+        # Verify column widths (18 columns)
         assert ws.column_dimensions["A"].width == 30  # block_name
         assert ws.column_dimensions["B"].width == 25  # block_layer_name
         assert ws.column_dimensions["C"].width == 12  # block_rotation_0
@@ -317,6 +332,11 @@ class TestBlockGeometryAnalysisFormatting:
         assert ws.column_dimensions["K"].width == 20  # block_native_height
         assert ws.column_dimensions["L"].width == 40  # block_vertical_segments
         assert ws.column_dimensions["M"].width == 40  # block_horizontal_segments
+        assert ws.column_dimensions["N"].width == 20  # block_suggested_trim_left
+        assert ws.column_dimensions["O"].width == 20  # block_suggested_trim_right
+        assert ws.column_dimensions["P"].width == 20  # block_suggested_trim_top
+        assert ws.column_dimensions["Q"].width == 20  # block_suggested_trim_bottom
+        assert ws.column_dimensions["R"].width == 22  # block_content_zone_detected
 
     def test_format_geometry_analysis_yellow_highlighting_varies_x_scale(
         self, temp_dir: str
@@ -653,7 +673,7 @@ class TestBlockGeometryAnalysisFormatting:
         ws = cast(Worksheet, wb.active)
         ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
 
-        # Add headers and sample data rows (13 columns)
+        # Add headers and sample data rows (18 columns)
         ws.append(
             [
                 "block_name",
@@ -669,6 +689,11 @@ class TestBlockGeometryAnalysisFormatting:
                 "block_native_height",
                 "block_vertical_segments",
                 "block_horizontal_segments",
+                "block_suggested_trim_left",
+                "block_suggested_trim_right",
+                "block_suggested_trim_top",
+                "block_suggested_trim_bottom",
+                "block_content_zone_detected",
             ]
         )
         ws.append(
@@ -686,6 +711,11 @@ class TestBlockGeometryAnalysisFormatting:
                 50.0,
                 "10, 80, 10",
                 "5, 40, 5",
+                None,
+                None,
+                None,
+                None,
+                False,
             ]
         )
         ws.append(
@@ -703,6 +733,11 @@ class TestBlockGeometryAnalysisFormatting:
                 100.0,
                 "20, 160, 20",
                 "10, 80, 10",
+                None,
+                None,
+                None,
+                None,
+                False,
             ]
         )
         ws.append(
@@ -720,6 +755,11 @@ class TestBlockGeometryAnalysisFormatting:
                 75.0,
                 "15, 120, 15",
                 "7, 60, 7",
+                None,
+                None,
+                None,
+                None,
+                False,
             ]
         )
 

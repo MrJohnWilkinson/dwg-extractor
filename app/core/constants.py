@@ -67,6 +67,13 @@ EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: str = "block_native_height"
 # Domain: block, Attribute: vertical/horizontal, Qualifier: segments (collection)
 EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS: str = "block_vertical_segments"
 EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS: str = "block_horizontal_segments"
+# Domain: block, Attribute: suggested_trim, Qualifier: left/right/top/bottom (content zone derived)
+EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT: str = "block_suggested_trim_left"
+EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT: str = "block_suggested_trim_right"
+EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP: str = "block_suggested_trim_top"
+EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM: str = "block_suggested_trim_bottom"
+# Domain: block, Attribute: content_zone, Qualifier: detected (boolean flag)
+EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED: str = "block_content_zone_detected"
 
 # Excel configuration - Annotations Analysis sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions

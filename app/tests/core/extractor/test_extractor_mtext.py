@@ -5,7 +5,6 @@ This module contains tests for MTEXT formatting code cleanup and text extraction
 """
 
 import ezdxf
-import pytest
 
 from core.extractor import (
     _clean_mtext_content,
