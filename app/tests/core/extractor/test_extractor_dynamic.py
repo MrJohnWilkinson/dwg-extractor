@@ -3,10 +3,14 @@ Unit tests for the extractor module - dynamic block extraction functionality.
 
 This module contains tests for dynamic block extraction and anonymous block resolution,
 including both *U (standard) and A$C (alternate) anonymous block naming conventions,
-and handle-based XDATA resolution (tag code 1005).
+handle-based XDATA resolution (tag code 1005), and orphaned handle detection.
 """
 
-from core.extractor import _is_anonymous_block, extract_blocks
+from core.extractor import (
+    _is_anonymous_block,
+    _resolve_dynamic_block_name,
+    extract_blocks,
+)
 
 
 class TestIsAnonymousBlock:
@@ -96,7 +100,8 @@ class TestDynamicBlockExtraction:
             assert issue["block_name"] == "*U3"
             assert issue["layer_name"] in ("LAYER_A", "LAYER_B")
             assert issue["insertion_count"] > 0
-            assert "AcDbBlockRepBTag" in issue["details"]
+            # *U3 has no XDATA, so should report "No XDATA found" or similar
+            assert "XDATA" in issue["details"] or "No" in issue["details"]
 
     def test_unresolved_anonymous_blocks_by_layer(self) -> None:
         """Test that unresolved anonymous blocks are tracked per layer."""
@@ -275,9 +280,10 @@ class TestADollarCBlockExtraction:
         assert "A$C0c1c4685" in issue_block_names
         assert "A$CABC12345" in issue_block_names
 
-        # Verify A$C-specific detail message
+        # Verify each issue has meaningful details and correct issue type
         for issue in a_dollar_c_issues:
-            assert "A$C name" in issue["details"]
+            # Details should explain why resolution failed (XDATA-related message)
+            assert "XDATA" in issue["details"] or "Self-referencing" in issue["details"]
             assert issue["issue_type"] == "Unresolved Anonymous Block"
 
     def test_a_dollar_c_resolved_not_in_extraction_issues(self) -> None:
@@ -538,3 +544,216 @@ class TestDynamicBlockHandleResolution:
         # No *U blocks should be in block_counts
         for block_name in result["block_counts"].keys():
             assert not block_name.startswith("*U"), f"Found *U block in counts: {block_name}"
+
+
+class TestOrphanedHandleResolution:
+    """Test suite for orphaned handle detection and accurate reporting."""
+
+    def test_orphaned_handle_reported_accurately(self) -> None:
+        """Test that orphaned handles report accurate detail message with handle value."""
+        result = extract_blocks("app/tests/assets/orphaned_handle_test.dxf")
+
+        extraction_issues = result["extraction_issues"]
+
+        # Find issues for *U999 (orphaned handle B0DE5)
+        u999_issues = [
+            issue for issue in extraction_issues if issue["block_name"] == "*U999"
+        ]
+        assert len(u999_issues) >= 1
+
+        # All *U999 issues should mention the orphaned handle, NOT "No XDATA found"
+        for issue in u999_issues:
+            assert "B0DE5" in issue["details"], f"Expected handle B0DE5 in details: {issue['details']}"
+            assert "orphaned" in issue["details"].lower(), f"Expected 'orphaned' in details: {issue['details']}"
+            assert "No XDATA found" not in issue["details"], f"Should not say 'No XDATA found': {issue['details']}"
+
+    def test_orphaned_handle_different_from_no_xdata(self) -> None:
+        """Test that orphaned handles have different messages than blocks with no XDATA."""
+        result = extract_blocks("app/tests/assets/orphaned_handle_test.dxf")
+
+        extraction_issues = result["extraction_issues"]
+
+        # Find issues for *U999 (orphaned handle) and *U777 (no XDATA)
+        u999_issues = [
+            issue for issue in extraction_issues if issue["block_name"] == "*U999"
+        ]
+        u777_issues = [
+            issue for issue in extraction_issues if issue["block_name"] == "*U777"
+        ]
+
+        assert len(u999_issues) >= 1
+        assert len(u777_issues) >= 1
+
+        # *U999 should mention orphaned handle
+        assert any("Handle" in issue["details"] and "orphaned" in issue["details"].lower()
+                   for issue in u999_issues)
+
+        # *U777 should mention no XDATA (different message)
+        assert any("No XDATA found" in issue["details"] or "No AcDbBlockRepBTag" in issue["details"]
+                   for issue in u777_issues)
+
+    def test_orphaned_handle_in_extraction_issues(self) -> None:
+        """Test that blocks with orphaned handles appear in extraction_issues."""
+        result = extract_blocks("app/tests/assets/orphaned_handle_test.dxf")
+
+        extraction_issues = result["extraction_issues"]
+        issue_block_names = {issue["block_name"] for issue in extraction_issues}
+
+        # Both orphaned handle blocks should be in issues
+        assert "*U999" in issue_block_names  # orphaned handle B0DE5
+        assert "*U888" in issue_block_names  # orphaned handle DEADBEEF
+
+    def test_orphaned_handle_not_in_block_counts(self) -> None:
+        """Test that blocks with orphaned handles don't appear in block_counts."""
+        result = extract_blocks("app/tests/assets/orphaned_handle_test.dxf")
+
+        # Orphaned blocks should NOT be in block_counts
+        assert "*U999" not in result["block_counts"]
+        assert "*U888" not in result["block_counts"]
+        assert "*U777" not in result["block_counts"]
+
+    def test_orphaned_handle_with_different_handles(self) -> None:
+        """Test that different orphaned handles report their specific handle values."""
+        result = extract_blocks("app/tests/assets/orphaned_handle_test.dxf")
+
+        extraction_issues = result["extraction_issues"]
+
+        # Find issues for *U888 (orphaned handle DEADBEEF)
+        u888_issues = [
+            issue for issue in extraction_issues if issue["block_name"] == "*U888"
+        ]
+        assert len(u888_issues) >= 1
+
+        # Should mention the specific handle DEADBEEF
+        for issue in u888_issues:
+            assert "DEADBEEF" in issue["details"], f"Expected handle DEADBEEF in details: {issue['details']}"
+
+    def test_valid_blocks_still_resolve_correctly(self) -> None:
+        """Test that valid blocks still resolve correctly alongside orphaned ones."""
+        result = extract_blocks("app/tests/assets/orphaned_handle_test.dxf")
+
+        # VALID_ORIGINAL should appear from resolved *U1 blocks
+        assert "VALID_ORIGINAL" in result["block_counts"]
+        assert result["block_counts"]["VALID_ORIGINAL"] == 2
+
+        # REGULAR_BLOCK should still be counted normally
+        assert "REGULAR_BLOCK" in result["block_counts"]
+        assert result["block_counts"]["REGULAR_BLOCK"] == 2
+
+    def test_orphaned_handle_counted_by_layer(self) -> None:
+        """Test that orphaned blocks are tracked per layer in extraction_issues."""
+        result = extract_blocks("app/tests/assets/orphaned_handle_test.dxf")
+
+        extraction_issues = result["extraction_issues"]
+        u999_issues = [
+            issue for issue in extraction_issues if issue["block_name"] == "*U999"
+        ]
+
+        # Should have separate entries for each layer
+        layers_with_issues = {issue["layer_name"] for issue in u999_issues}
+        assert "LAYER_A" in layers_with_issues
+        assert "LAYER_B" in layers_with_issues
+
+        # Verify counts per layer
+        layer_a_issue = next(
+            (i for i in u999_issues if i["layer_name"] == "LAYER_A"), None
+        )
+        layer_b_issue = next(
+            (i for i in u999_issues if i["layer_name"] == "LAYER_B"), None
+        )
+
+        assert layer_a_issue is not None
+        assert layer_b_issue is not None
+        # *U999 has 2 insertions on LAYER_A, 1 on LAYER_B
+        assert layer_a_issue["insertion_count"] == 2
+        assert layer_b_issue["insertion_count"] == 1
+
+    def test_total_insertions_conservation_with_orphaned(self) -> None:
+        """Test that total block insertions are conserved with orphaned handles."""
+        result = extract_blocks("app/tests/assets/orphaned_handle_test.dxf")
+
+        # Count all tracked insertions
+        resolved_count = sum(result["block_counts"].values())
+
+        # Count unresolved insertions
+        unresolved_count = sum(
+            issue["insertion_count"] for issue in result["extraction_issues"]
+        )
+
+        # Total should equal:
+        # 2 REGULAR + 2 VALID_ORIGINAL (from *U1) + 3 *U999 + 2 *U888 + 3 *U777 = 12
+        total = resolved_count + unresolved_count
+        assert total == 12
+
+    def test_resolve_function_returns_tuple(self) -> None:
+        """Test that _resolve_dynamic_block_name returns a tuple with details."""
+        import ezdxf
+
+        # Create a simple doc to test with
+        doc = ezdxf.new("R2010")
+
+        # Create a block without XDATA
+        block = doc.blocks.new(name="TEST_BLOCK")
+        block_record = block.block_record
+
+        # Call the function
+        result = _resolve_dynamic_block_name(block_record, doc, "TEST_BLOCK")
+
+        # Should return a tuple
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+
+        # First element is resolved name (None for no XDATA)
+        assert result[0] is None
+
+        # Second element is details string
+        assert isinstance(result[1], str)
+        assert "No XDATA found" in result[1] or "No AcDbBlockRepBTag" in result[1]
+
+    def test_resolve_function_with_orphaned_handle(self) -> None:
+        """Test that _resolve_dynamic_block_name reports orphaned handle accurately."""
+        import ezdxf
+
+        # Create a doc with orphaned handle scenario
+        doc = ezdxf.new("R2010")
+        if "AcDbBlockRepBTag" not in doc.appids:
+            doc.appids.new("AcDbBlockRepBTag")
+
+        # Create an anonymous block with XDATA pointing to non-existent handle
+        anon_block = doc.blocks.new(name="*U999")
+        block_record = anon_block.block_record
+        block_record.set_xdata("AcDbBlockRepBTag", [(1005, "NONEXISTENT")])
+
+        # Call the function
+        result = _resolve_dynamic_block_name(block_record, doc, "*U999")
+
+        # Should return tuple with None and orphaned handle message
+        assert result[0] is None
+        assert "NONEXISTENT" in result[1]
+        assert "orphaned" in result[1].lower()
+
+    def test_resolve_function_with_valid_handle(self) -> None:
+        """Test that _resolve_dynamic_block_name resolves valid handles correctly."""
+        import ezdxf
+
+        # Create a doc with valid handle scenario
+        doc = ezdxf.new("R2010")
+        if "AcDbBlockRepBTag" not in doc.appids:
+            doc.appids.new("AcDbBlockRepBTag")
+
+        # Create the original block
+        original_block = doc.blocks.new(name="ORIGINAL_BLOCK")
+        original_handle = original_block.block_record.dxf.handle
+
+        # Create an anonymous block with XDATA pointing to valid handle
+        anon_block = doc.blocks.new(name="*U1")
+        block_record = anon_block.block_record
+        block_record.set_xdata("AcDbBlockRepBTag", [(1005, original_handle)])
+
+        # Call the function
+        result = _resolve_dynamic_block_name(block_record, doc, "*U1")
+
+        # Should return tuple with resolved name and success message
+        assert result[0] == "ORIGINAL_BLOCK"
+        assert "Resolved" in result[1]
+        assert original_handle in result[1]

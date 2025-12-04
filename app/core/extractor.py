@@ -438,7 +438,7 @@ def _is_anonymous_block(block_name: str) -> bool:
 
 def _resolve_dynamic_block_name(
     block_record: Any, doc: Drawing, block_name: str | None = None
-) -> str | None:
+) -> tuple[str | None, str]:
     """
     Resolve the original name for a dynamic block from XDATA.
 
@@ -456,37 +456,55 @@ def _resolve_dynamic_block_name(
         block_name: Optional original block name (used to detect self-referencing XDATA)
 
     Returns:
-        The resolved block name if found in XDATA and not self-referencing, None otherwise
+        A tuple of (resolved_name, resolution_details):
+        - resolved_name: The resolved block name if found, None if unresolved
+        - resolution_details: String describing what was found/attempted:
+            - "No XDATA found" - block_record has no xdata
+            - "Resolved from AcDbBlockRepBTag tag 1000" - direct name resolution
+            - "Resolved from AcDbBlockRepBTag handle {handle}" - handle resolution success
+            - "Handle {handle} not found in document (orphaned dynamic block)" - handle missing
+            - "Resolved from AcDbDynamicBlockTrueName" - fallback resolution
+            - "Self-referencing XDATA" - when resolved name equals block_name
+            - "AcDbBlockRepBTag XDATA present but no resolvable data" - XDATA exists but no 1000/1005
 
     Examples:
         >>> block_record = doc.blocks.get('*U1').block_record
         >>> _resolve_dynamic_block_name(block_record, doc)
-        'DOOR_DYNAMIC'  # Original name from XDATA
+        ('DOOR_DYNAMIC', 'Resolved from AcDbBlockRepBTag tag 1000')
 
         >>> block_record_no_xdata = doc.blocks.get('*U5').block_record
         >>> _resolve_dynamic_block_name(block_record_no_xdata, doc)
-        None  # No AcDbBlockRepBTag XDATA found
+        (None, 'No XDATA found')
+
+        >>> block_record_orphan = doc.blocks.get('*U999').block_record
+        >>> _resolve_dynamic_block_name(block_record_orphan, doc)
+        (None, 'Handle B0DE5 not found in document (orphaned dynamic block)')
 
         >>> block_record_self_ref = doc.blocks.get('A$C25B30886').block_record
         >>> _resolve_dynamic_block_name(block_record_self_ref, doc, 'A$C25B30886')
-        None  # Self-referencing XDATA is treated as unresolved
+        (None, 'Self-referencing XDATA')
     """
     try:
         # Access the block record's XDATA
         # The block_record.xdata is a dictionary-like object mapping appids to tag data
         if not hasattr(block_record, "xdata") or block_record.xdata is None:
-            return None
+            return (None, "No XDATA found")
 
         # Check for AcDbBlockRepBTag application ID
         xdata = block_record.xdata
         if not hasattr(xdata, "get"):
-            return None
+            return (None, "No XDATA found")
+
+        # Track if we found AcDbBlockRepBTag but couldn't resolve
+        found_rep_btag = False
+        orphaned_handle: str | None = None
 
         # Try AcDbBlockRepBTag first (primary resolution method)
         # Note: ezdxf's XData.get() raises DXFValueError if appid not found
         try:
             rep_btag_data = xdata.get("AcDbBlockRepBTag")
             if rep_btag_data is not None:
+                found_rep_btag = True
                 for tag in rep_btag_data:
                     # Group code 1000 contains string data (the original block name)
                     if hasattr(tag, "code") and tag.code == 1000:
@@ -497,11 +515,11 @@ def _resolve_dynamic_block_name(
                                 logger.debug(
                                     f"Self-referencing AcDbBlockRepBTag for {block_name}, treating as unresolved"
                                 )
-                                continue
+                                return (None, "Self-referencing XDATA")
                             logger.debug(
                                 f"Resolved dynamic block name from AcDbBlockRepBTag: {original_name}"
                             )
-                            return original_name
+                            return (original_name, "Resolved from AcDbBlockRepBTag tag 1000")
                     # Group code 1005 contains database handle pointing to original block
                     elif hasattr(tag, "code") and tag.code == 1005:
                         handle = tag.value
@@ -520,18 +538,29 @@ def _resolve_dynamic_block_name(
                                             logger.debug(
                                                 f"Self-referencing handle in AcDbBlockRepBTag for {block_name}, treating as unresolved"
                                             )
-                                            continue
+                                            return (None, "Self-referencing XDATA")
                                         logger.debug(
                                             f"Resolved dynamic block name from AcDbBlockRepBTag handle {handle}: {original_name}"
                                         )
-                                        return original_name
+                                        return (original_name, f"Resolved from AcDbBlockRepBTag handle {handle}")
+                            else:
+                                # Handle not found in document - this is an orphaned dynamic block
+                                logger.debug(
+                                    f"Handle {handle} not found in document entitydb (orphaned dynamic block)"
+                                )
+                                orphaned_handle = handle
                         except (KeyError, TypeError, AttributeError) as e:
                             logger.debug(
                                 f"Failed to resolve handle {handle} in AcDbBlockRepBTag: {e}"
                             )
+                            orphaned_handle = handle
         except (DXFError, KeyError):
             # AcDbBlockRepBTag not found in XDATA
             pass
+
+        # If we found an orphaned handle, report it specifically
+        if orphaned_handle is not None:
+            return (None, f"Handle {orphaned_handle} not found in document (orphaned dynamic block)")
 
         # Fallback: Try AcDbDynamicBlockTrueName (used by some A$C blocks)
         try:
@@ -546,20 +575,24 @@ def _resolve_dynamic_block_name(
                                 logger.debug(
                                     f"Self-referencing AcDbDynamicBlockTrueName for {block_name}, treating as unresolved"
                                 )
-                                continue
+                                return (None, "Self-referencing XDATA")
                             logger.debug(
                                 f"Resolved dynamic block name from AcDbDynamicBlockTrueName: {original_name}"
                             )
-                            return original_name
+                            return (original_name, "Resolved from AcDbDynamicBlockTrueName")
         except (DXFError, KeyError):
             # AcDbDynamicBlockTrueName not found in XDATA
             pass
 
-        return None
+        # If we found AcDbBlockRepBTag but couldn't extract a name, report that
+        if found_rep_btag:
+            return (None, "AcDbBlockRepBTag XDATA present but no resolvable data")
+
+        return (None, "No AcDbBlockRepBTag XDATA found")
 
     except (AttributeError, TypeError, KeyError) as e:
         logger.debug(f"Error resolving dynamic block name: {e}")
-        return None
+        return (None, f"Error resolving XDATA: {e}")
 
 
 class ExtractionResult(TypedDict):
@@ -709,6 +742,8 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         anonymous_to_resolved: dict[str, str] = {}
         # Track unresolved anonymous blocks: {(anon_name, layer_name): count}
         unresolved_anonymous_blocks: dict[tuple[str, str], int] = {}
+        # Store resolution details for each anonymous block (for accurate error messages)
+        anonymous_resolution_details: dict[str, str] = {}
 
         # Initialize all layers from layer table with 0 counts
         logger.info("Initializing layers from layer table...")
@@ -738,7 +773,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 # Try to resolve original name from XDATA on block record
                 try:
                     block_record = block_def.block_record
-                    resolved_name = _resolve_dynamic_block_name(block_record, doc, block_name)
+                    resolved_name, resolution_details = _resolve_dynamic_block_name(block_record, doc, block_name)
+                    # Store resolution details for accurate error reporting later
+                    anonymous_resolution_details[block_name] = resolution_details
                     if resolved_name:
                         # Store mapping for INSERT processing
                         anonymous_to_resolved[block_name] = resolved_name
@@ -750,18 +787,21 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                     else:
                         # Track as unresolved - will be counted during INSERT processing
                         logger.debug(
-                            f"Anonymous block {block_name} has no resolvable XDATA"
+                            f"Anonymous block {block_name} has no resolvable XDATA: {resolution_details}"
                         )
                         continue  # Skip geometry analysis for unresolved *U blocks
                 except (AttributeError, TypeError) as e:
                     logger.debug(f"Error accessing block record for {block_name}: {e}")
+                    anonymous_resolution_details[block_name] = f"Error accessing block record: {e}"
                     continue
             # Handle A$C blocks (alternate anonymous block naming convention)
             elif block_name.startswith("A$C"):
                 # Try to resolve original name from XDATA on block record
                 try:
                     block_record = block_def.block_record
-                    resolved_name = _resolve_dynamic_block_name(block_record, doc, block_name)
+                    resolved_name, resolution_details = _resolve_dynamic_block_name(block_record, doc, block_name)
+                    # Store resolution details for accurate error reporting later
+                    anonymous_resolution_details[block_name] = resolution_details
                     if resolved_name:
                         # Store mapping for INSERT processing
                         anonymous_to_resolved[block_name] = resolved_name
@@ -775,13 +815,14 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                         # Store identity mapping for INSERT processing (to track in issues)
                         anonymous_to_resolved[block_name] = block_name
                         logger.debug(
-                            f"A$C block {block_name} has no resolvable XDATA, using raw name"
+                            f"A$C block {block_name} has no resolvable XDATA, using raw name: {resolution_details}"
                         )
                         effective_name = block_name
                 except (AttributeError, TypeError) as e:
                     logger.debug(f"Error accessing block record for {block_name}: {e}")
                     # Still process with raw name
                     anonymous_to_resolved[block_name] = block_name
+                    anonymous_resolution_details[block_name] = f"Error accessing block record: {e}"
                     effective_name = block_name
             # Skip other anonymous blocks (dimension blocks, hatch patterns, etc.)
             elif block_name.startswith("*"):
@@ -1065,8 +1106,10 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
         # Convert unresolved anonymous blocks to extraction issues
         for (anon_name, issue_layer_name), count in unresolved_anonymous_blocks.items():
-            # Provide different detail messages based on block type
-            if anon_name.startswith("A$C"):
+            # Use stored resolution details for accurate error messages
+            if anon_name in anonymous_resolution_details:
+                details = anonymous_resolution_details[anon_name]
+            elif anon_name.startswith("A$C"):
                 details = "No AcDbBlockRepBTag or AcDbDynamicBlockTrueName XDATA found (using raw A$C name)"
             else:
                 details = "No AcDbBlockRepBTag XDATA found"
