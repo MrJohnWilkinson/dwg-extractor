@@ -497,7 +497,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2461013.9955439814
+2461013.9955324074
   9
 $TDUUPDATE
  40
@@ -549,7 +549,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-80
+73
   9
 $SURFTAB1
  70
@@ -929,11 +929,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{C2B21B32-A1B4-4E34-A79B-1109832864FC}
+{996DC779-5C70-4AF5-9965-471A22037284}
   9
 $VERSIONGUID
   2
-{F60428F1-C2D7-4D3A-8E72-92C590A4F061}
+{41F58012-873E-4786-9314-2CEE70DDF5D1}
   9
 $EXTNAMES
 290
@@ -1549,7 +1549,7 @@ LAYER
 100
 AcDbSymbolTable
  70
-61
+2
   0
 LAYER
   5
@@ -1594,1422 +1594,6 @@ Defpoints
 Continuous
 290
 0
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-2F
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Walls
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-30
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Furniture
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-31
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Electrical
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-32
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Plumbing
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-33
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Annotations
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-34
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Fixture Name
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-35
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-FPProfileCode
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-36
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-HVAC
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-37
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Fire Protection
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-38
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Mechanical
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-39
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Structural
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-3A
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Foundation
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-3B
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Roof
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-3C
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Windows
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-3D
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Doors
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-3E
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Ceiling
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-3F
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Flooring
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-40
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Lighting
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-41
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Controls
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-42
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Data
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-43
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Telecom
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-44
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Security
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-45
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-AV
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-46
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Casework
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-47
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Millwork
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-48
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Finishes
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-49
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Tile
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-4A
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Paint
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-4B
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Equipment
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-4C
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Appliances
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-4D
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Fixtures
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-4E
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Hardware
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-4F
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Accessories
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-50
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Signage
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-51
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Graphics
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-52
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Landscaping
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-53
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Site Work
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-54
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Grading
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-55
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Paving
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-56
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Curbs
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-57
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Sidewalks
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-58
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Parking
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-59
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Fencing
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-5A
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Gates
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-5B
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Irrigation
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-5C
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Drainage
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-5D
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Utilities
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-5E
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Gas
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-5F
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Water
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-60
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Sewer
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-61
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Storm
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-62
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Telecom Underground
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-63
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Power Underground
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-64
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Dimensions
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-65
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Text
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-66
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Hatching
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-67
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Reference
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-68
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Grid
- 70
-0
- 62
-7
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-69
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-Symbols
- 70
-0
- 62
-7
-  6
-Continuous
 370
 -3
 390
@@ -3099,7 +1683,7 @@ APPID
 100
 AcDbSymbolTable
  70
-3
+4
   0
 APPID
   5
@@ -3117,7 +1701,21 @@ ACAD
   0
 APPID
   5
-7D
+2F
+330
+3
+100
+AcDbSymbolTableRecord
+100
+AcDbRegAppTableRecord
+  2
+AcDbBlockRepBTag
+ 70
+0
+  0
+APPID
+  5
+70
 330
 3
 100
@@ -3131,7 +1729,7 @@ HATCHBACKGROUNDCOLOR
   0
 APPID
   5
-7E
+71
 330
 3
 100
@@ -3307,7 +1905,7 @@ BLOCK_RECORD
 100
 AcDbSymbolTable
  70
-3
+10
   0
 BLOCK_RECORD
   5
@@ -3351,7 +1949,7 @@ AcDbBlockTableRecord
   0
 BLOCK_RECORD
   5
-6A
+30
 330
 9
 100
@@ -3359,7 +1957,163 @@ AcDbSymbolTableRecord
 100
 AcDbBlockTableRecord
   2
-TestBlock
+REGULAR_BLOCK
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+34
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+DOOR_HANDLE_TEST
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+38
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+WINDOW_HANDLE_TEST
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+3C
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*U1
+340
+0
+ 70
+0
+280
+1
+281
+0
+1001
+AcDbBlockRepBTag
+1005
+34
+  0
+BLOCK_RECORD
+  5
+40
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*U2
+340
+0
+ 70
+0
+280
+1
+281
+0
+1001
+AcDbBlockRepBTag
+1005
+38
+  0
+BLOCK_RECORD
+  5
+44
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*U3
+340
+0
+ 70
+0
+280
+1
+281
+0
+1001
+AcDbBlockRepBTag
+1005
+DEADBEEF
+  0
+BLOCK_RECORD
+  5
+48
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*U4
+340
+0
+ 70
+0
+280
+1
+281
+0
+1001
+AcDbBlockRepBTag
+1000
+DIRECT_STRING_BLOCK
+  0
+BLOCK_RECORD
+  5
+4C
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+*U5
 340
 0
  70
@@ -3455,9 +2209,9 @@ AcDbBlockEnd
   0
 BLOCK
   5
-6B
+31
 330
-6A
+30
 100
 AcDbEntity
   8
@@ -3465,7 +2219,7 @@ AcDbEntity
 100
 AcDbBlockBegin
   2
-TestBlock
+REGULAR_BLOCK
  70
 0
  10
@@ -3475,15 +2229,15 @@ TestBlock
  30
 0.0
   3
-TestBlock
+REGULAR_BLOCK
   1
 
   0
 LWPOLYLINE
   5
-6D
+33
 330
-6A
+30
 100
 AcDbEntity
   8
@@ -3499,17 +2253,17 @@ AcDbPolyline
  20
 0.0
  10
-1.0
+10.0
  20
 0.0
  10
-1.0
+10.0
  20
-1.0
+5.0
  10
 0.0
  20
-1.0
+5.0
  10
 0.0
  20
@@ -3517,9 +2271,459 @@ AcDbPolyline
   0
 ENDBLK
   5
-6C
+32
 330
-6A
+30
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+35
+330
+34
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+DOOR_HANDLE_TEST
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+DOOR_HANDLE_TEST
+  1
+
+  0
+LWPOLYLINE
+  5
+37
+330
+34
+100
+AcDbEntity
+  8
+0
+100
+AcDbPolyline
+ 90
+5
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 10
+30.0
+ 20
+0.0
+ 10
+30.0
+ 20
+15.0
+ 10
+0.0
+ 20
+15.0
+ 10
+0.0
+ 20
+0.0
+  0
+ENDBLK
+  5
+36
+330
+34
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+39
+330
+38
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+WINDOW_HANDLE_TEST
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+WINDOW_HANDLE_TEST
+  1
+
+  0
+CIRCLE
+  5
+3B
+330
+38
+100
+AcDbEntity
+  8
+0
+100
+AcDbCircle
+ 10
+10.0
+ 20
+10.0
+ 30
+0.0
+ 40
+8.0
+  0
+ENDBLK
+  5
+3A
+330
+38
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+3D
+330
+3C
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*U1
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*U1
+  1
+
+  0
+LWPOLYLINE
+  5
+3F
+330
+3C
+100
+AcDbEntity
+  8
+0
+100
+AcDbPolyline
+ 90
+5
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 10
+30.0
+ 20
+0.0
+ 10
+30.0
+ 20
+15.0
+ 10
+0.0
+ 20
+15.0
+ 10
+0.0
+ 20
+0.0
+  0
+ENDBLK
+  5
+3E
+330
+3C
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+41
+330
+40
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*U2
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*U2
+  1
+
+  0
+CIRCLE
+  5
+43
+330
+40
+100
+AcDbEntity
+  8
+0
+100
+AcDbCircle
+ 10
+10.0
+ 20
+10.0
+ 30
+0.0
+ 40
+8.0
+  0
+ENDBLK
+  5
+42
+330
+40
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+45
+330
+44
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*U3
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*U3
+  1
+
+  0
+LINE
+  5
+47
+330
+44
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 11
+20.0
+ 21
+20.0
+ 31
+0.0
+  0
+ENDBLK
+  5
+46
+330
+44
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+49
+330
+48
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*U4
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*U4
+  1
+
+  0
+LINE
+  5
+4B
+330
+48
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 11
+25.0
+ 21
+25.0
+ 31
+0.0
+  0
+ENDBLK
+  5
+4A
+330
+48
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+4D
+330
+4C
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+*U5
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+*U5
+  1
+
+  0
+LINE
+  5
+4F
+330
+4C
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 11
+15.0
+ 21
+15.0
+ 31
+0.0
+  0
+ENDBLK
+  5
+4E
+330
+4C
 100
 AcDbEntity
   8
@@ -3533,7 +2737,307 @@ SECTION
   2
 ENTITIES
   0
-LINE
+INSERT
+  5
+50
+330
+17
+100
+AcDbEntity
+  8
+LAYER_A
+100
+AcDbBlockReference
+  2
+REGULAR_BLOCK
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+52
+330
+17
+100
+AcDbEntity
+  8
+LAYER_B
+100
+AcDbBlockReference
+  2
+REGULAR_BLOCK
+ 10
+20.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+54
+330
+17
+100
+AcDbEntity
+  8
+LAYER_A
+100
+AcDbBlockReference
+  2
+*U1
+ 10
+50.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+56
+330
+17
+100
+AcDbEntity
+  8
+LAYER_A
+100
+AcDbBlockReference
+  2
+*U1
+ 10
+70.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+58
+330
+17
+100
+AcDbEntity
+  8
+LAYER_B
+100
+AcDbBlockReference
+  2
+*U1
+ 10
+90.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+5A
+330
+17
+100
+AcDbEntity
+  8
+LAYER_A
+100
+AcDbBlockReference
+  2
+*U2
+ 10
+100.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+5C
+330
+17
+100
+AcDbEntity
+  8
+LAYER_B
+100
+AcDbBlockReference
+  2
+*U2
+ 10
+120.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+5E
+330
+17
+100
+AcDbEntity
+  8
+LAYER_A
+100
+AcDbBlockReference
+  2
+*U3
+ 10
+200.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+60
+330
+17
+100
+AcDbEntity
+  8
+LAYER_B
+100
+AcDbBlockReference
+  2
+*U3
+ 10
+220.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+62
+330
+17
+100
+AcDbEntity
+  8
+LAYER_B
+100
+AcDbBlockReference
+  2
+*U3
+ 10
+240.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+64
+330
+17
+100
+AcDbEntity
+  8
+LAYER_A
+100
+AcDbBlockReference
+  2
+*U4
+ 10
+300.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+66
+330
+17
+100
+AcDbEntity
+  8
+LAYER_A
+100
+AcDbBlockReference
+  2
+*U4
+ 10
+320.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+68
+330
+17
+100
+AcDbEntity
+  8
+LAYER_B
+100
+AcDbBlockReference
+  2
+*U4
+ 10
+340.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+6A
+330
+17
+100
+AcDbEntity
+  8
+LAYER_B
+100
+AcDbBlockReference
+  2
+*U4
+ 10
+360.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
+  5
+6C
+330
+17
+100
+AcDbEntity
+  8
+LAYER_A
+100
+AcDbBlockReference
+  2
+*U5
+ 10
+400.0
+ 20
+0.0
+ 30
+0.0
+  0
+INSERT
   5
 6E
 330
@@ -3541,274 +3045,16 @@ LINE
 100
 AcDbEntity
   8
-Walls
-100
-AcDbLine
- 10
-0.0
- 20
-0.0
- 30
-0.0
- 11
-10.0
- 21
-0.0
- 31
-0.0
-  0
-LINE
-  5
-6F
-330
-17
-100
-AcDbEntity
-  8
-Walls
-100
-AcDbLine
- 10
-10.0
- 20
-0.0
- 30
-0.0
- 11
-10.0
- 21
-10.0
- 31
-0.0
-  0
-LINE
-  5
-70
-330
-17
-100
-AcDbEntity
-  8
-Walls
-100
-AcDbLine
- 10
-10.0
- 20
-10.0
- 30
-0.0
- 11
-0.0
- 21
-10.0
- 31
-0.0
-  0
-LINE
-  5
-71
-330
-17
-100
-AcDbEntity
-  8
-Walls
-100
-AcDbLine
- 10
-0.0
- 20
-10.0
- 30
-0.0
- 11
-0.0
- 21
-0.0
- 31
-0.0
-  0
-INSERT
-  5
-72
-330
-17
-100
-AcDbEntity
-  8
-Furniture
+LAYER_B
 100
 AcDbBlockReference
   2
-TestBlock
+*U5
  10
-2.0
- 20
-2.0
- 30
-0.0
-  0
-INSERT
-  5
-74
-330
-17
-100
-AcDbEntity
-  8
-Furniture
-100
-AcDbBlockReference
-  2
-TestBlock
- 10
-5.0
- 20
-5.0
- 30
-0.0
-  0
-INSERT
-  5
-76
-330
-17
-100
-AcDbEntity
-  8
-Furniture
-100
-AcDbBlockReference
-  2
-TestBlock
- 10
-8.0
- 20
-2.0
- 30
-0.0
-  0
-LINE
-  5
-78
-330
-17
-100
-AcDbEntity
-  8
-Electrical
-100
-AcDbLine
- 10
-0.0
- 20
-5.0
- 30
-0.0
- 11
-10.0
- 21
-5.0
- 31
-0.0
-  0
-LINE
-  5
-79
-330
-17
-100
-AcDbEntity
-  8
-Electrical
-100
-AcDbLine
- 10
-5.0
+420.0
  20
 0.0
  30
-0.0
- 11
-5.0
- 21
-10.0
- 31
-0.0
-  0
-CIRCLE
-  5
-7A
-330
-17
-100
-AcDbEntity
-  8
-Plumbing
-100
-AcDbCircle
- 10
-5.0
- 20
-5.0
- 30
-0.0
- 40
-2.0
-  0
-TEXT
-  5
-7B
-330
-17
-100
-AcDbEntity
-  8
-Annotations
-100
-AcDbText
- 10
-5.0
- 20
-12.0
- 30
-0.0
- 40
-2.5
-  1
-Test Drawing
- 11
-5.0
- 21
-12.0
- 31
-0.0
-100
-AcDbText
-  0
-LINE
-  5
-7C
-330
-17
-100
-AcDbEntity
-  8
-0
-100
-AcDbLine
- 10
-0.0
- 20
-0.0
- 30
-0.0
- 11
-1.0
- 21
-1.0
- 31
 0.0
   0
 ENDSEC
@@ -4801,7 +4047,7 @@ CREATED_BY_EZDXF
   3
 WRITTEN_BY_EZDXF
 350
-7F
+72
   0
 DICTIONARYVAR
   5
@@ -4813,11 +4059,11 @@ DictionaryVariables
 280
 0
   1
-1.4.3 @ 2025-12-04T07:53:34.999176+00:00
+1.4.3 @ 2025-12-04T07:53:34.982817+00:00
   0
 DICTIONARYVAR
   5
-7F
+72
 330
 2D
 100
@@ -4825,7 +4071,7 @@ DictionaryVariables
 280
 0
   1
-1.4.3 @ 2025-12-04T07:53:35.002346+00:00
+1.4.3 @ 2025-12-04T07:53:34.984792+00:00
   0
 ENDSEC
   0

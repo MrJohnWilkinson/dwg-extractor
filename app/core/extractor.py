@@ -437,7 +437,7 @@ def _is_anonymous_block(block_name: str) -> bool:
 
 
 def _resolve_dynamic_block_name(
-    block_record: Any, block_name: str | None = None
+    block_record: Any, doc: Drawing, block_name: str | None = None
 ) -> str | None:
     """
     Resolve the original name for a dynamic block from XDATA.
@@ -446,8 +446,13 @@ def _resolve_dynamic_block_name(
     - 'AcDbBlockRepBTag' - primary application ID for both *U and A$C blocks
     - 'AcDbDynamicBlockTrueName' - fallback for A$C blocks (but may self-reference)
 
+    The original block name can be stored in XDATA as either:
+    - Tag code 1000: ASCII string containing the block name directly
+    - Tag code 1005: Database handle (hex string) pointing to the original block record
+
     Args:
         block_record: The ezdxf block table record to check for XDATA
+        doc: The ezdxf Drawing document for resolving handle references
         block_name: Optional original block name (used to detect self-referencing XDATA)
 
     Returns:
@@ -455,15 +460,15 @@ def _resolve_dynamic_block_name(
 
     Examples:
         >>> block_record = doc.blocks.get('*U1').block_record
-        >>> _resolve_dynamic_block_name(block_record)
+        >>> _resolve_dynamic_block_name(block_record, doc)
         'DOOR_DYNAMIC'  # Original name from XDATA
 
         >>> block_record_no_xdata = doc.blocks.get('*U5').block_record
-        >>> _resolve_dynamic_block_name(block_record_no_xdata)
+        >>> _resolve_dynamic_block_name(block_record_no_xdata, doc)
         None  # No AcDbBlockRepBTag XDATA found
 
         >>> block_record_self_ref = doc.blocks.get('A$C25B30886').block_record
-        >>> _resolve_dynamic_block_name(block_record_self_ref, 'A$C25B30886')
+        >>> _resolve_dynamic_block_name(block_record_self_ref, doc, 'A$C25B30886')
         None  # Self-referencing XDATA is treated as unresolved
     """
     try:
@@ -497,6 +502,33 @@ def _resolve_dynamic_block_name(
                                 f"Resolved dynamic block name from AcDbBlockRepBTag: {original_name}"
                             )
                             return original_name
+                    # Group code 1005 contains database handle pointing to original block
+                    elif hasattr(tag, "code") and tag.code == 1005:
+                        handle = tag.value
+                        try:
+                            # Resolve handle through document's entity database
+                            original_block_record = doc.entitydb.get(handle)
+                            if original_block_record is not None:
+                                # Get the name from the resolved block record
+                                if hasattr(original_block_record, "dxf") and hasattr(
+                                    original_block_record.dxf, "name"
+                                ):
+                                    original_name = original_block_record.dxf.name
+                                    if isinstance(original_name, str) and original_name:
+                                        # Check for self-reference
+                                        if block_name and original_name == block_name:
+                                            logger.debug(
+                                                f"Self-referencing handle in AcDbBlockRepBTag for {block_name}, treating as unresolved"
+                                            )
+                                            continue
+                                        logger.debug(
+                                            f"Resolved dynamic block name from AcDbBlockRepBTag handle {handle}: {original_name}"
+                                        )
+                                        return original_name
+                        except (KeyError, TypeError, AttributeError) as e:
+                            logger.debug(
+                                f"Failed to resolve handle {handle} in AcDbBlockRepBTag: {e}"
+                            )
         except (DXFError, KeyError):
             # AcDbBlockRepBTag not found in XDATA
             pass
@@ -706,7 +738,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 # Try to resolve original name from XDATA on block record
                 try:
                     block_record = block_def.block_record
-                    resolved_name = _resolve_dynamic_block_name(block_record, block_name)
+                    resolved_name = _resolve_dynamic_block_name(block_record, doc, block_name)
                     if resolved_name:
                         # Store mapping for INSERT processing
                         anonymous_to_resolved[block_name] = resolved_name
@@ -729,7 +761,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 # Try to resolve original name from XDATA on block record
                 try:
                     block_record = block_def.block_record
-                    resolved_name = _resolve_dynamic_block_name(block_record, block_name)
+                    resolved_name = _resolve_dynamic_block_name(block_record, doc, block_name)
                     if resolved_name:
                         # Store mapping for INSERT processing
                         anonymous_to_resolved[block_name] = resolved_name

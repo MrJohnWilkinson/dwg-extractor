@@ -2,11 +2,9 @@
 Unit tests for the extractor module - dynamic block extraction functionality.
 
 This module contains tests for dynamic block extraction and anonymous block resolution,
-including both *U (standard) and A$C (alternate) anonymous block naming conventions.
+including both *U (standard) and A$C (alternate) anonymous block naming conventions,
+and handle-based XDATA resolution (tag code 1005).
 """
-
-import ezdxf
-import pytest
 
 from core.extractor import _is_anonymous_block, extract_blocks
 
@@ -403,3 +401,140 @@ class TestADollarCBlockExtraction:
         assert "A$C25B30886" in a_result["block_counts"]
         assert "A$C0c1c4685" in a_result["block_counts"]
         assert "A$CABC12345" in a_result["block_counts"]
+
+
+class TestDynamicBlockHandleResolution:
+    """Test suite for dynamic block handle resolution via tag code 1005."""
+
+    def test_handle_resolution_with_tag_1005(self) -> None:
+        """Test that anonymous blocks with handle XDATA (tag 1005) are resolved."""
+        result = extract_blocks("app/tests/assets/dynamic_block_handle_test.dxf")
+
+        # DOOR_HANDLE_TEST should appear from resolved *U1 blocks via handle
+        assert "DOOR_HANDLE_TEST" in result["block_counts"]
+        # *U1 insertions = 3 (2 on LAYER_A, 1 on LAYER_B)
+        assert result["block_counts"]["DOOR_HANDLE_TEST"] == 3
+
+        # WINDOW_HANDLE_TEST should appear from resolved *U2 blocks via handle
+        assert "WINDOW_HANDLE_TEST" in result["block_counts"]
+        # *U2 insertions = 2 (1 on LAYER_A, 1 on LAYER_B)
+        assert result["block_counts"]["WINDOW_HANDLE_TEST"] == 2
+
+    def test_handle_resolution_invalid_handle(self) -> None:
+        """Test graceful handling of invalid handles in XDATA."""
+        result = extract_blocks("app/tests/assets/dynamic_block_handle_test.dxf")
+
+        # *U3 has invalid handle, should be in extraction_issues
+        extraction_issues = result["extraction_issues"]
+        u3_issues = [
+            issue for issue in extraction_issues if issue["block_name"] == "*U3"
+        ]
+        assert len(u3_issues) >= 1
+
+        # Verify issue structure
+        for issue in u3_issues:
+            assert issue["issue_type"] == "Unresolved Anonymous Block"
+            assert issue["block_name"] == "*U3"
+
+        # *U3 should NOT be in block_counts (unresolved)
+        assert "*U3" not in result["block_counts"]
+
+    def test_handle_resolution_fallback_to_tag_1000(self) -> None:
+        """Test that tag code 1000 (direct string) still works for backwards compatibility."""
+        result = extract_blocks("app/tests/assets/dynamic_block_handle_test.dxf")
+
+        # DIRECT_STRING_BLOCK should appear from *U4 which uses tag 1000
+        assert "DIRECT_STRING_BLOCK" in result["block_counts"]
+        # *U4 insertions = 4 (2 on LAYER_A, 2 on LAYER_B)
+        assert result["block_counts"]["DIRECT_STRING_BLOCK"] == 4
+
+    def test_handle_resolution_no_xdata(self) -> None:
+        """Test that blocks without XDATA are reported as unresolved."""
+        result = extract_blocks("app/tests/assets/dynamic_block_handle_test.dxf")
+
+        # *U5 has no XDATA, should be in extraction_issues
+        extraction_issues = result["extraction_issues"]
+        u5_issues = [
+            issue for issue in extraction_issues if issue["block_name"] == "*U5"
+        ]
+        assert len(u5_issues) >= 1
+
+        # *U5 should NOT be in block_counts
+        assert "*U5" not in result["block_counts"]
+
+    def test_handle_resolved_blocks_in_block_layer_pairs(self) -> None:
+        """Test that handle-resolved dynamic blocks appear in block_layer_pairs."""
+        result = extract_blocks("app/tests/assets/dynamic_block_handle_test.dxf")
+
+        # Find DOOR_HANDLE_TEST entries in block_layer_pairs
+        door_pairs = [
+            key
+            for key in result["block_layer_pairs"].keys()
+            if key.block_name == "DOOR_HANDLE_TEST"
+        ]
+        assert len(door_pairs) >= 1
+
+        # Verify both layers have DOOR_HANDLE_TEST entries
+        door_layers = {key.layer_name for key in door_pairs}
+        assert "LAYER_A" in door_layers
+        assert "LAYER_B" in door_layers
+
+    def test_handle_resolved_blocks_have_geometry_data(self) -> None:
+        """Test that handle-resolved dynamic blocks have geometry/trimming data."""
+        result = extract_blocks("app/tests/assets/dynamic_block_handle_test.dxf")
+
+        # Resolved blocks should have geometry data
+        assert "DOOR_HANDLE_TEST" in result["block_trimming_data"]
+        assert "WINDOW_HANDLE_TEST" in result["block_trimming_data"]
+
+        # Verify geometry data structure
+        door_geometry = result["block_trimming_data"]["DOOR_HANDLE_TEST"]
+        assert "native_width" in door_geometry
+        assert "native_height" in door_geometry
+        assert door_geometry["native_width"] > 0
+
+    def test_handle_resolution_total_insertions_conservation(self) -> None:
+        """Test that total block insertions are conserved after handle resolution."""
+        result = extract_blocks("app/tests/assets/dynamic_block_handle_test.dxf")
+
+        # Count all tracked insertions
+        resolved_count = sum(result["block_counts"].values())
+
+        # Count unresolved insertions
+        unresolved_count = sum(
+            issue["insertion_count"] for issue in result["extraction_issues"]
+        )
+
+        # Total should equal 16:
+        # 2 REGULAR + 3 DOOR_HANDLE_TEST + 2 WINDOW_HANDLE_TEST + 4 DIRECT_STRING_BLOCK
+        # + 3 *U3 (invalid handle) + 2 *U5 (no XDATA)
+        total = resolved_count + unresolved_count
+        assert total == 16
+
+    def test_handle_resolution_preserves_regular_blocks(self) -> None:
+        """Test that regular (non-anonymous) blocks are still extracted correctly."""
+        result = extract_blocks("app/tests/assets/dynamic_block_handle_test.dxf")
+
+        # REGULAR_BLOCK should still be counted normally
+        assert "REGULAR_BLOCK" in result["block_counts"]
+        assert result["block_counts"]["REGULAR_BLOCK"] == 2
+
+    def test_handle_resolved_not_in_extraction_issues(self) -> None:
+        """Test that successfully resolved blocks don't appear in extraction_issues."""
+        result = extract_blocks("app/tests/assets/dynamic_block_handle_test.dxf")
+
+        extraction_issues = result["extraction_issues"]
+        issue_block_names = {issue["block_name"] for issue in extraction_issues}
+
+        # *U1, *U2, *U4 were resolved, should not be in issues
+        assert "*U1" not in issue_block_names
+        assert "*U2" not in issue_block_names
+        assert "*U4" not in issue_block_names
+
+    def test_anonymous_block_names_not_in_block_counts(self) -> None:
+        """Test that anonymous block names (*U*) don't appear in block_counts."""
+        result = extract_blocks("app/tests/assets/dynamic_block_handle_test.dxf")
+
+        # No *U blocks should be in block_counts
+        for block_name in result["block_counts"].keys():
+            assert not block_name.startswith("*U"), f"Found *U block in counts: {block_name}"
