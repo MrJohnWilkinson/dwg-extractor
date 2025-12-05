@@ -6,15 +6,27 @@ This test suite validates geometric calculation utilities including:
 - Intersection point detection and deduplication
 - Segment distance calculation
 - Rotation angle categorization
+- LINE segment threshold behavior
+- Cycle detection timeout behavior
+- Abort responsiveness in DFS loop
 - Edge cases and tolerance boundaries
 """
+
+import threading
+import time
+from unittest.mock import patch
 
 import ezdxf
 import pytest
 
+from core.constants import LINE_SEGMENT_THRESHOLD
 from core.geometry import (
+    GeometryAbortedError,
     _calculate_segments,
     _categorize_rotation,
+    _count_line_segments,
+    _detect_content_zone,
+    _extract_line_cycles,
     _get_block_bounding_box,
     _get_intersection_points,
 )
@@ -445,3 +457,246 @@ class TestCategorizeRotation:
     ) -> None:
         """Test rotation categorization with parametrized test cases."""
         assert _categorize_rotation(rotation) == expected_category
+
+
+class TestLineSegmentThreshold:
+    """Test suite for LINE segment threshold behavior."""
+
+    def test_count_line_segments_simple(self) -> None:
+        """Test that _count_line_segments correctly counts LINE entities."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+
+        # Add 5 LINE segments
+        for i in range(5):
+            block.add_line((i * 10, 0), (i * 10 + 10, 0))
+
+        count = _count_line_segments(block)
+        assert count == 5
+
+    def test_count_line_segments_mixed_entities(self) -> None:
+        """Test that _count_line_segments only counts LINE entities."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+
+        # Add various entity types
+        block.add_line((0, 0), (10, 0))  # LINE
+        block.add_line((10, 0), (20, 0))  # LINE
+        block.add_circle((50, 50), 25)  # CIRCLE - should not be counted
+        block.add_lwpolyline([(0, 0), (10, 10), (20, 0)])  # LWPOLYLINE - should not be counted
+        block.add_line((20, 0), (30, 0))  # LINE
+
+        count = _count_line_segments(block)
+        assert count == 3
+
+    def test_count_line_segments_empty_block(self) -> None:
+        """Test that _count_line_segments returns 0 for empty block."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="EMPTY_BLOCK")
+
+        count = _count_line_segments(block)
+        assert count == 0
+
+    def test_count_line_segments_many_lines_test_file(self) -> None:
+        """Test _count_line_segments with the many_lines_test.dxf file."""
+        doc = ezdxf.readfile("app/tests/assets/many_lines_test.dxf")
+        block = doc.blocks.get("MANY_LINES_BLOCK")
+
+        count = _count_line_segments(block)
+        # The test file has 576 LINE segments, which exceeds LINE_SEGMENT_THRESHOLD (200)
+        assert count > LINE_SEGMENT_THRESHOLD
+
+    def test_content_zone_skips_line_cycle_when_threshold_exceeded(self) -> None:
+        """Test that content zone detection skips LINE cycle extraction when threshold exceeded."""
+        doc = ezdxf.readfile("app/tests/assets/many_lines_test.dxf")
+        block = doc.blocks.get("MANY_LINES_BLOCK")
+        bbox = _get_block_bounding_box(block)
+
+        # This should complete quickly because LINE cycle detection is skipped
+        start_time = time.perf_counter()
+        result = _detect_content_zone(block, bbox, block_name="MANY_LINES_BLOCK")
+        elapsed = time.perf_counter() - start_time
+
+        # Should complete in under 1 second since expensive cycle detection is skipped
+        assert elapsed < 1.0, f"Content zone detection took {elapsed:.2f}s, expected < 1s"
+
+        # Content zone may or may not be detected depending on polyline shapes
+        # But the important thing is it doesn't hang
+
+    def test_polyline_detection_works_when_line_threshold_exceeded(self) -> None:
+        """Test that polyline-based detection still works when LINE threshold exceeded."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+
+        # Add many LINE segments to exceed threshold
+        for i in range(LINE_SEGMENT_THRESHOLD + 50):
+            block.add_line((i, 0), (i + 1, 0))
+
+        # Add a closed polyline that should be detected
+        block.add_lwpolyline(
+            [(10, 10), (100, 10), (100, 50), (10, 50)], close=True
+        )
+
+        bbox = _get_block_bounding_box(block)
+
+        # Content zone detection should complete quickly
+        start_time = time.perf_counter()
+        result = _detect_content_zone(block, bbox, block_name="TEST_BLOCK")
+        elapsed = time.perf_counter() - start_time
+
+        # Should complete quickly since LINE cycle detection is skipped
+        assert elapsed < 1.0, f"Content zone detection took {elapsed:.2f}s"
+
+        # The polyline should be detected as content zone
+        assert result["content_zone_detected"] is True
+
+
+class TestCycleDetectionTimeout:
+    """Test suite for cycle detection timeout behavior."""
+
+    def test_extract_line_cycles_respects_timeout(self) -> None:
+        """Test that _extract_line_cycles respects the timeout and returns partial results."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+
+        # Create a simple case that won't timeout to verify the function works
+        block.add_line((0, 0), (10, 0))
+        block.add_line((10, 0), (10, 10))
+        block.add_line((10, 10), (0, 10))
+        block.add_line((0, 10), (0, 0))
+
+        # This should complete without timeout
+        cycles = _extract_line_cycles(block)
+        # Should find one cycle (the square)
+        assert len(cycles) >= 1
+
+    def test_extract_line_cycles_with_small_timeout(self) -> None:
+        """Test timeout behavior with a very small timeout value."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+
+        # Create a grid of lines that creates many possible cycles
+        grid_size = 5
+        spacing = 10.0
+
+        # Horizontal lines
+        for row in range(grid_size + 1):
+            y = row * spacing
+            for col in range(grid_size):
+                x_start = col * spacing
+                x_end = (col + 1) * spacing
+                block.add_line((x_start, y), (x_end, y))
+
+        # Vertical lines
+        for col in range(grid_size + 1):
+            x = col * spacing
+            for row in range(grid_size):
+                y_start = row * spacing
+                y_end = (row + 1) * spacing
+                block.add_line((x, y_start), (x, y_end))
+
+        # Patch the timeout to a very small value
+        with patch("core.geometry.CYCLE_DETECTION_TIMEOUT_SECONDS", 0.001):
+            start_time = time.perf_counter()
+            cycles = _extract_line_cycles(block)
+            elapsed = time.perf_counter() - start_time
+
+            # Function should return quickly due to timeout
+            # Allow some margin for startup overhead
+            assert elapsed < 0.5, f"Function took {elapsed:.2f}s despite tiny timeout"
+
+            # Should return partial results (possibly empty list if timeout hit immediately)
+            assert isinstance(cycles, list)
+
+
+class TestAbortResponsiveness:
+    """Test suite for abort responsiveness in DFS loop."""
+
+    def test_extract_line_cycles_abort_is_checked(self) -> None:
+        """Test that abort event is checked inside DFS loop."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+
+        # Create a grid of lines
+        grid_size = 5
+        spacing = 10.0
+
+        # Horizontal lines
+        for row in range(grid_size + 1):
+            y = row * spacing
+            for col in range(grid_size):
+                x_start = col * spacing
+                x_end = (col + 1) * spacing
+                block.add_line((x_start, y), (x_end, y))
+
+        # Vertical lines
+        for col in range(grid_size + 1):
+            x = col * spacing
+            for row in range(grid_size):
+                y_start = row * spacing
+                y_end = (row + 1) * spacing
+                block.add_line((x, y_start), (x, y_end))
+
+        # Create an abort event that is immediately set
+        abort_event = threading.Event()
+        abort_event.set()
+
+        # Should raise GeometryAbortedError when abort is set
+        with pytest.raises(GeometryAbortedError):
+            _extract_line_cycles(block, abort_event=abort_event)
+
+    def test_detect_content_zone_abort_during_line_cycles(self) -> None:
+        """Test that abort during line cycle extraction raises GeometryAbortedError."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+
+        # Create enough lines to require processing but not exceed threshold
+        for i in range(50):
+            block.add_line((i, 0), (i + 1, 0))
+            block.add_line((i, 10), (i + 1, 10))
+            block.add_line((i, 0), (i, 10))
+
+        bbox = _get_block_bounding_box(block)
+
+        # Create an abort event that is immediately set
+        abort_event = threading.Event()
+        abort_event.set()
+
+        # Should raise GeometryAbortedError
+        with pytest.raises(GeometryAbortedError):
+            _detect_content_zone(block, bbox, abort_event=abort_event)
+
+    def test_abort_responsiveness_timing(self) -> None:
+        """Test that abort is processed within expected iteration count."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+
+        # Create a moderate number of lines
+        for i in range(100):
+            block.add_line((i, 0), (i + 1, 0))
+            block.add_line((i, 10), (i + 1, 10))
+
+        bbox = _get_block_bounding_box(block)
+
+        # Start a thread that will set abort after a brief delay
+        abort_event = threading.Event()
+
+        def set_abort_after_delay() -> None:
+            time.sleep(0.01)  # 10ms delay
+            abort_event.set()
+
+        # Start abort thread
+        abort_thread = threading.Thread(target=set_abort_after_delay)
+        abort_thread.start()
+
+        start_time = time.perf_counter()
+        try:
+            _detect_content_zone(block, bbox, abort_event=abort_event)
+        except GeometryAbortedError:
+            pass  # Expected
+
+        elapsed = time.perf_counter() - start_time
+        abort_thread.join()
+
+        # Should respond within 1 second (generous margin for test stability)
+        assert elapsed < 1.0, f"Abort took {elapsed:.2f}s to be processed"

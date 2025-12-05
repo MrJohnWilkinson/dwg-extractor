@@ -19,12 +19,45 @@ from collections import defaultdict
 
 from ezdxf.layouts import BlockLayout
 
-from .constants import POLYGON_COUNT_THRESHOLD
+from .constants import (
+    CYCLE_DETECTION_TIMEOUT_SECONDS,
+    LINE_SEGMENT_THRESHOLD,
+    POLYGON_COUNT_THRESHOLD,
+)
 from .logger import setup_logger
 from .types import ContentZoneData, Polygon
 
 
 logger = setup_logger(__name__)
+
+
+def _count_line_segments(block_def: BlockLayout) -> int:
+    """
+    Count the number of LINE entities in a block definition.
+
+    Efficiently counts LINE entities with early exit optimization - stops counting
+    as soon as the count exceeds LINE_SEGMENT_THRESHOLD since we only need to know
+    if we're over the threshold.
+
+    Args:
+        block_def: ezdxf block definition object
+
+    Returns:
+        Number of LINE entities in the block. May return early once threshold is exceeded.
+
+    Examples:
+        >>> count = _count_line_segments(block_def)
+        >>> if count > LINE_SEGMENT_THRESHOLD:
+        ...     # Skip expensive cycle detection
+    """
+    count = 0
+    for entity in block_def:
+        if entity.dxftype() == "LINE":
+            count += 1
+            # Early exit optimization: once we exceed threshold, we don't need exact count
+            if count > LINE_SEGMENT_THRESHOLD:
+                return count
+    return count
 
 
 class GeometryAbortedError(Exception):
@@ -639,7 +672,9 @@ def _extract_line_cycles(
         """Create a canonical edge key (smaller point first)."""
         return (a, b) if a < b else (b, a)
 
-    def find_cycle_from(start: tuple[float, float]) -> Polygon | None:
+    def find_cycle_from(
+        start: tuple[float, float], abort_ev: threading.Event | None
+    ) -> Polygon | None:
         """Find a simple cycle starting from a given vertex using DFS."""
         stack: list[
             tuple[
@@ -647,7 +682,13 @@ def _extract_line_cycles(
             ]
         ] = [(start, [start], {start})]
 
+        iterations = 0
         while stack:
+            iterations += 1
+            # Check abort every 1000 DFS iterations for sub-second responsiveness
+            if iterations % 1000 == 0:
+                _check_geometry_abort(abort_ev)
+
             current, path, visited = stack.pop()
 
             for neighbor in adjacency[current]:
@@ -669,8 +710,21 @@ def _extract_line_cycles(
 
     # Try to find cycles starting from each vertex
     vertices_processed = 0
+    timed_out = False
     for vertex in list(adjacency.keys()):
         vertices_processed += 1
+
+        # Check timeout - safety net for edge cases
+        elapsed_cycle_time = time.perf_counter() - cycle_start_time
+        if elapsed_cycle_time > CYCLE_DETECTION_TIMEOUT_SECONDS:
+            logger.warning(
+                f"Cycle detection timeout after {elapsed_cycle_time:.1f}s "
+                f"(processed {vertices_processed}/{len(adjacency)} vertices, "
+                f"found {len(polygons)} cycles)"
+            )
+            timed_out = True
+            break
+
         # Check abort periodically during cycle detection
         if vertices_processed % 50 == 0:
             _check_geometry_abort(abort_event)
@@ -679,7 +733,7 @@ def _extract_line_cycles(
         if len(adjacency[vertex]) < 2:
             continue
 
-        cycle = find_cycle_from(vertex)
+        cycle = find_cycle_from(vertex, abort_event)
         if cycle and len(cycle) >= 3:
             # Mark all edges in this cycle as visited
             for i in range(len(cycle)):
@@ -692,9 +746,10 @@ def _extract_line_cycles(
 
     cycle_elapsed = time.perf_counter() - cycle_start_time
     total_elapsed = time.perf_counter() - start_time
+    timeout_suffix = " (timed out)" if timed_out else ""
     logger.debug(
         f"Line cycles: detected {len(polygons)} cycles in {cycle_elapsed:.3f}s "
-        f"(total {total_elapsed:.3f}s)"
+        f"(total {total_elapsed:.3f}s){timeout_suffix}"
     )
     return polygons
 
@@ -847,12 +902,21 @@ def _detect_content_zone(
     # Check abort after polyline extraction
     _check_geometry_abort(abort_event)
 
-    line_cycle_start = time.perf_counter()
-    line_cycle_shapes = _extract_line_cycles(block_def, abort_event=abort_event)
-    line_cycle_elapsed = time.perf_counter() - line_cycle_start
-    logger.debug(
-        f"Content zone: extracted {len(line_cycle_shapes)} line cycles in {line_cycle_elapsed:.3f}s"
-    )
+    # Check LINE segment count threshold before expensive cycle detection
+    line_segment_count = _count_line_segments(block_def)
+    if line_segment_count > LINE_SEGMENT_THRESHOLD:
+        logger.warning(
+            f"Skipping LINE cycle detection{block_context}: {line_segment_count} LINE segments "
+            f"exceeds threshold of {LINE_SEGMENT_THRESHOLD} (would cause exponential DFS complexity)"
+        )
+        line_cycle_shapes: list[Polygon] = []
+    else:
+        line_cycle_start = time.perf_counter()
+        line_cycle_shapes = _extract_line_cycles(block_def, abort_event=abort_event)
+        line_cycle_elapsed = time.perf_counter() - line_cycle_start
+        logger.debug(
+            f"Content zone: extracted {len(line_cycle_shapes)} line cycles in {line_cycle_elapsed:.3f}s"
+        )
 
     # Check abort after line cycle extraction
     _check_geometry_abort(abort_event)

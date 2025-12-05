@@ -126,6 +126,16 @@ LOG_POLL_INTERVAL_MS: int = 50
 # Blocks with more polygons than this threshold will skip content zone analysis
 POLYGON_COUNT_THRESHOLD: int = 30
 
+# Maximum LINE segment count before skipping cycle detection to avoid exponential DFS complexity
+# Blocks with many LINE segments create dense adjacency graphs that cause the DFS algorithm
+# to explore exponentially many paths. Value of 200 is based on analysis: typical blocks
+# have <50 LINE segments, and 200+ segments are rare and too complex for accurate cycle detection.
+LINE_SEGMENT_THRESHOLD: int = 200
+
+# Timeout for cycle detection phase in seconds (safety net for edge cases)
+# Most legitimate blocks complete cycle detection in <1 second; 5 seconds prevents hangs
+CYCLE_DETECTION_TIMEOUT_SECONDS: float = 5.0
+
 # UI messages
 MSG_SELECT_FILE: str = "Please select a DXF file"
 MSG_PROCESSING: str = "Processing..."
