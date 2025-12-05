@@ -121,6 +121,11 @@ EXCEL_FILL_COLOR_EXTRACTION_ISSUE: str = "FFFFFF00"
 # Log viewer configuration
 LOG_POLL_INTERVAL_MS: int = 50
 
+# Content zone detection thresholds
+# Maximum polygon count for content zone detection to avoid O(n³) complexity
+# Blocks with more polygons than this threshold will skip content zone analysis
+POLYGON_COUNT_THRESHOLD: int = 30
+
 # UI messages
 MSG_SELECT_FILE: str = "Please select a DXF file"
 MSG_PROCESSING: str = "Processing..."

@@ -17,6 +17,7 @@ from pathlib import Path
 import ezdxf
 import pytest
 
+from core.constants import POLYGON_COUNT_THRESHOLD
 from core.geometry import (
     _calculate_net_areas,
     _calculate_polygon_area,
@@ -526,3 +527,76 @@ class TestTiedNetAreaContentZone:
         assert result["suggested_trim_right"] == 0.0
         assert result["suggested_trim_top"] == 0.0
         assert result["suggested_trim_bottom"] == 0.0
+
+
+class TestPolygonCountThreshold:
+    """Test cases for polygon count threshold behavior."""
+
+    def test_threshold_exceeded_returns_empty_result(self) -> None:
+        """Test that blocks with more than threshold polygons skip content zone detection."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="MANY_POLYGONS")
+
+        # Create more polygons than the threshold
+        polygon_count = POLYGON_COUNT_THRESHOLD + 1
+        for i in range(polygon_count):
+            x_offset = i * 15
+            block.add_lwpolyline(
+                [(x_offset, 0), (x_offset + 10, 0), (x_offset + 10, 10), (x_offset, 10)],
+                close=True,
+            )
+
+        block_def = doc.blocks.get("MANY_POLYGONS")
+        bbox = (0, 0, polygon_count * 15, 10)
+
+        result = _detect_content_zone(block_def, bbox)
+
+        assert result["content_zone_detected"] is False
+        assert result["suggested_trim_left"] is None
+        assert result["suggested_trim_right"] is None
+        assert result["suggested_trim_top"] is None
+        assert result["suggested_trim_bottom"] is None
+
+    def test_threshold_exact_processes_normally(self) -> None:
+        """Test that blocks with exactly threshold polygons still process."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="EXACT_THRESHOLD")
+
+        # Create exactly threshold number of polygons
+        polygon_count = POLYGON_COUNT_THRESHOLD
+        for i in range(polygon_count):
+            x_offset = i * 15
+            block.add_lwpolyline(
+                [(x_offset, 0), (x_offset + 10, 0), (x_offset + 10, 10), (x_offset, 10)],
+                close=True,
+            )
+
+        block_def = doc.blocks.get("EXACT_THRESHOLD")
+        bbox = (0, 0, polygon_count * 15, 10)
+
+        result = _detect_content_zone(block_def, bbox)
+
+        # Should process and detect content zone (all same size, disjoint)
+        assert result["content_zone_detected"] is True
+
+    def test_threshold_below_processes_normally(self) -> None:
+        """Test that blocks below threshold continue to work normally."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="FEW_POLYGONS")
+
+        # Create fewer polygons than the threshold
+        polygon_count = 5
+        for i in range(polygon_count):
+            x_offset = i * 15
+            block.add_lwpolyline(
+                [(x_offset, 0), (x_offset + 10, 0), (x_offset + 10, 10), (x_offset, 10)],
+                close=True,
+            )
+
+        block_def = doc.blocks.get("FEW_POLYGONS")
+        bbox = (0, 0, polygon_count * 15, 10)
+
+        result = _detect_content_zone(block_def, bbox)
+
+        # Should process normally
+        assert result["content_zone_detected"] is True

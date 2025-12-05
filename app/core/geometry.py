@@ -19,6 +19,7 @@ from collections import defaultdict
 
 from ezdxf.layouts import BlockLayout
 
+from .constants import POLYGON_COUNT_THRESHOLD
 from .logger import setup_logger
 from .types import ContentZoneData, Polygon
 
@@ -862,6 +863,21 @@ def _detect_content_zone(
     logger.debug(
         f"Content zone detection: {len(lwpolyline_shapes)} polylines, {len(line_cycle_shapes)} line cycles"
     )
+
+    # Check polygon count threshold to avoid O(n³) containment analysis
+    polygon_count = len(all_shapes)
+    if polygon_count > POLYGON_COUNT_THRESHOLD:
+        logger.warning(
+            f"Skipping content zone detection{block_context}: {polygon_count} polygons "
+            f"exceeds threshold of {POLYGON_COUNT_THRESHOLD}"
+        )
+        return ContentZoneData(
+            suggested_trim_left=None,
+            suggested_trim_right=None,
+            suggested_trim_top=None,
+            suggested_trim_bottom=None,
+            content_zone_detected=False,
+        )
 
     # Return empty result if no shapes found
     if not all_shapes:
