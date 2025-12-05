@@ -40,6 +40,7 @@ from core.logger import (
     create_queue_handler,
     set_all_logger_levels,
     setup_logger,
+    timed_block,
 )
 
 
@@ -313,8 +314,13 @@ class DXFExtractorApp(ctk.CTk):
 
     def _extraction_worker(self) -> None:
         """Background worker thread for extraction process."""
+        import threading
+
+        self.logger.debug(f"Worker thread started: {threading.current_thread().name}")
+
         try:
             # Step 1: Initialize
+            self.logger.debug("Calling _update_progress for step 1 (Loading file)")
             self._update_progress(0.1, "Loading file...")
 
             # Validate file path exists
@@ -323,37 +329,72 @@ class DXFExtractorApp(ctk.CTk):
                 return
 
             # Step 2: Parse DXF structure
+            self.logger.debug("Calling _update_progress for step 2 (Parsing DXF)")
             self._update_progress(0.2, "Parsing DXF structure...")
 
             # Step 3: Extract comprehensive data
+            self.logger.debug(
+                "Calling _update_progress for step 3 (Analyzing block definitions)"
+            )
             self._update_progress(0.3, "Analyzing block definitions...")
 
+            self.logger.info("Calling extract_blocks()...")
             extraction_result = extract_blocks(
                 self.selected_file_path, abort_event=self.abort_event
             )
+            self.logger.info(
+                f"extract_blocks() returned, processing {len(extraction_result['block_counts'])} blocks"
+            )
+
+            # Check for abort after extraction completes
+            if self.abort_event and self.abort_event.is_set():
+                self.logger.info(
+                    "Abort detected after extraction, skipping Excel generation"
+                )
+                return
 
             # Step 4: Process results
+            self.logger.debug(
+                "Calling _update_progress for step 4 (Processing results)"
+            )
             self._update_progress(0.6, "Processing extraction results...")
 
             # Check for empty results
+            self.logger.debug("Checking for empty extraction results...")
             if not extraction_result["block_counts"]:
                 self.logger.warning(f"No blocks found in {self.selected_file_path}")
                 self._show_error(MSG_ERROR_NO_BLOCKS)
                 return
 
+            # Check for abort before Excel generation
+            if self.abort_event and self.abort_event.is_set():
+                self.logger.info(
+                    "Abort detected before Excel generation, skipping Excel generation"
+                )
+                return
+
             # Step 5: Generate Excel
+            self.logger.debug(
+                "Calling _update_progress for step 5 (Generating Excel)"
+            )
             self._update_progress(0.7, "Generating Excel report...")
 
-            excel_path = write_excel(extraction_result, self.selected_file_path)
+            self.logger.info("Starting Excel file generation...")
+            with timed_block("Excel generation", self.logger, logging.INFO):
+                excel_path = write_excel(extraction_result, self.selected_file_path)
+            self.logger.info(f"Excel file generated: {excel_path}")
             self.output_excel_path = excel_path
 
             # Step 6: Finalize
+            self.logger.debug("Calling _update_progress for step 6 (Finalizing)")
             self._update_progress(0.9, "Finalizing...")
 
             # Step 7: Complete
+            self.logger.debug("Calling _update_progress for step 7 (Complete)")
             self._update_progress(1.0, MSG_SUCCESS)
 
             # Show success and open file
+            self.logger.debug("Calling _show_success")
             self._show_success(excel_path)
 
         except ExtractionAbortedError as e:
@@ -412,6 +453,7 @@ class DXFExtractorApp(ctk.CTk):
 
     def _update_progress(self, value: float, message: str) -> None:
         """Update progress bar and status message (thread-safe)."""
+        self.logger.debug(f"Scheduling UI update via self.after(): {int(value * 100)}%")
         self.after(0, lambda: self._update_progress_ui(value, message))
 
     def _update_progress_ui(self, value: float, message: str) -> None:

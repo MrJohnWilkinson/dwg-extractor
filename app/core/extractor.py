@@ -1383,6 +1383,9 @@ def extract_blocks(
             "extraction_issues": extraction_issues,
         }
 
+        logger.info(
+            f"[TIMING] extraction complete, returning result with {len(block_counts)} blocks"
+        )
         return result
 
     except (DXFError, IOError, OSError) as e:

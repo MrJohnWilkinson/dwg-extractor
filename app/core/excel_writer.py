@@ -89,7 +89,7 @@ from .excel_formatting import (
     format_header,
 )
 from .extractor import ExtractionResult
-from .logger import setup_logger
+from .logger import setup_logger, timed_block
 from .types import BlockRotationKey
 
 
@@ -320,52 +320,86 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         filename = f"{input_path.stem}_blocks_{timestamp}.xlsx"
         full_path = input_path.parent / filename
 
+        logger.debug(f"Output file path: {full_path}")
+
         # Create Excel writer
+        logger.info("Creating Excel sheets (DataFrame stage)...")
         with pd.ExcelWriter(full_path, engine="openpyxl") as writer:
             # Sheet 1: Block Analysis
-            _create_block_analysis_sheet(extraction_data, writer)
+            logger.debug("Creating Block Analysis sheet...")
+            with timed_block("Block Analysis sheet creation", logger):
+                _create_block_analysis_sheet(extraction_data, writer)
 
             # Sheet 2: Layer Analysis
-            _create_layer_analysis_sheet(extraction_data, writer)
+            logger.debug("Creating Layer Analysis sheet...")
+            with timed_block("Layer Analysis sheet creation", logger):
+                _create_layer_analysis_sheet(extraction_data, writer)
 
             # Sheet 3: Entity Summary
-            _create_entity_summary_sheet(extraction_data, writer)
+            logger.debug("Creating Entity Summary sheet...")
+            with timed_block("Entity Summary sheet creation", logger):
+                _create_entity_summary_sheet(extraction_data, writer)
 
             # Sheet 4: Block Geometry Analysis
-            _create_block_geometry_analysis_sheet(extraction_data, writer)
+            logger.debug("Creating Block Geometry Analysis sheet...")
+            with timed_block("Block Geometry Analysis sheet creation", logger):
+                _create_block_geometry_analysis_sheet(extraction_data, writer)
 
             # Sheet 5: Annotations Analysis
-            _create_annotations_analysis_sheet(extraction_data, writer)
+            logger.debug("Creating Annotations Analysis sheet...")
+            with timed_block("Annotations Analysis sheet creation", logger):
+                _create_annotations_analysis_sheet(extraction_data, writer)
 
             # Sheet 6: Color Analysis
-            _create_color_analysis_sheet(extraction_data, writer)
+            logger.debug("Creating Color Analysis sheet...")
+            with timed_block("Color Analysis sheet creation", logger):
+                _create_color_analysis_sheet(extraction_data, writer)
 
             # Sheet 7: Extraction Issues
-            _create_extraction_issues_sheet(extraction_data, writer)
+            logger.debug("Creating Extraction Issues sheet...")
+            with timed_block("Extraction Issues sheet creation", logger):
+                _create_extraction_issues_sheet(extraction_data, writer)
+
+        logger.info("All sheets created, starting formatting stage...")
 
         # Load workbook for post-processing (formatting)
         logger.debug("Loading workbook for formatting stage...")
-        wb = load_workbook(full_path)
+        with timed_block("workbook loading for formatting", logger):
+            wb = load_workbook(full_path)
 
         # Apply formatting to all sheets
         logger.debug("Applying formatting to Block Analysis sheet...")
-        _format_block_analysis_sheet(wb)
+        with timed_block("Block Analysis formatting", logger):
+            _format_block_analysis_sheet(wb)
+
         logger.debug("Applying formatting to Layer Analysis sheet...")
-        _format_layer_analysis_sheet(wb)
+        with timed_block("Layer Analysis formatting", logger):
+            _format_layer_analysis_sheet(wb)
+
         logger.debug("Applying formatting to Entity Summary sheet...")
-        _format_entity_summary_sheet(wb)
+        with timed_block("Entity Summary formatting", logger):
+            _format_entity_summary_sheet(wb)
+
         logger.debug("Applying formatting to Block Geometry Analysis sheet...")
-        _format_block_geometry_analysis_sheet(wb)
+        with timed_block("Block Geometry Analysis formatting", logger):
+            _format_block_geometry_analysis_sheet(wb)
+
         logger.debug("Applying formatting to Annotations Analysis sheet...")
-        _format_annotations_analysis_sheet(wb)
+        with timed_block("Annotations Analysis formatting", logger):
+            _format_annotations_analysis_sheet(wb)
+
         logger.debug("Applying formatting to Color Analysis sheet...")
-        _format_color_analysis_sheet(wb)
+        with timed_block("Color Analysis formatting", logger):
+            _format_color_analysis_sheet(wb)
+
         logger.debug("Applying formatting to Extraction Issues sheet...")
-        _format_extraction_issues_sheet(wb)
+        with timed_block("Extraction Issues formatting", logger):
+            _format_extraction_issues_sheet(wb)
 
         # Save workbook with formatting
         logger.debug("Saving workbook with formatting applied...")
-        wb.save(full_path)
+        with timed_block("workbook final save", logger):
+            wb.save(full_path)
 
         logger.info(f"Multi-sheet Excel file created successfully at {full_path}")
         return str(full_path)
@@ -397,16 +431,17 @@ def _create_block_analysis_sheet(
     if block_layer_pairs:
         # Unpack block-layer pairs into DataFrame rows (simplified - no rotations)
         rows = []
-        for key, insertion_count in block_layer_pairs.items():
+        total_pairs = len(block_layer_pairs)
+        for idx, (key, insertion_count) in enumerate(block_layer_pairs.items(), 1):
+            # Progress logging every 100 items
+            if idx % 100 == 0:
+                logger.debug(f"Block Analysis: processed {idx}/{total_pairs} pairs")
+
             entity_count = block_entities.get(key.block_name, 0)
 
             # Get XDATA apps for this block-layer pair
             xdata_apps = block_xdata_apps.get(key, set())
             xdata_apps_str = ", ".join(sorted(xdata_apps)) if xdata_apps else "-"
-
-            logger.debug(
-                f"Processing block-layer pair: {key.block_name}/{key.layer_name}, count={insertion_count}"
-            )
 
             rows.append(
                 {
@@ -542,7 +577,16 @@ def _create_block_geometry_analysis_sheet(
     if block_layer_pairs:
         # Build DataFrame rows from block-layer pairs with all geometry data
         rows = []
+        total_pairs = len(block_layer_pairs)
+        processed_count = 0
         for key, _insertion_count in block_layer_pairs.items():
+            processed_count += 1
+            # Progress logging every 100 items
+            if processed_count % 100 == 0:
+                logger.debug(
+                    f"Block Geometry Analysis: processed {processed_count}/{total_pairs} pairs"
+                )
+
             # Look up geometry data for this block
             geometry_data = block_trimming_data.get(key.block_name)
 
@@ -728,7 +772,14 @@ def _create_annotations_analysis_sheet(
     if annotation_data:
         # Build DataFrame rows from annotation data
         rows = []
-        for key, count in annotation_data.items():
+        total_annotations = len(annotation_data)
+        for idx, (key, count) in enumerate(annotation_data.items(), 1):
+            # Progress logging every 100 items
+            if idx % 100 == 0:
+                logger.debug(
+                    f"Annotations Analysis: processed {idx}/{total_annotations} annotations"
+                )
+
             rows.append(
                 {
                     EXCEL_COLUMN_ANNOTATION_CONTENTS: key.annotation_contents,
@@ -780,7 +831,14 @@ def _create_color_analysis_sheet(
     if color_analysis_data:
         # Build DataFrame directly from color analysis data
         rows = []
-        for record in color_analysis_data:
+        total_records = len(color_analysis_data)
+        for idx, record in enumerate(color_analysis_data, 1):
+            # Progress logging every 100 items
+            if idx % 100 == 0:
+                logger.debug(
+                    f"Color Analysis: processed {idx}/{total_records} records"
+                )
+
             # Map ACI value to human-readable display name
             aci_display_name = _get_aci_display_name(record["color_aci"])
 

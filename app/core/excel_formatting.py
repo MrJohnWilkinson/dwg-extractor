@@ -84,17 +84,21 @@ def format_header(column_name: str) -> str:
 
 def _format_block_analysis_sheet(wb: Workbook) -> None:
     """Apply formatting to the Block Analysis sheet (simplified inventory)."""
+    logger.debug("Starting Block Analysis sheet formatting...")
     ws = wb[EXCEL_SHEET_BLOCK_ANALYSIS]
+    logger.debug(f"Block Analysis sheet: {ws.max_row} rows, {ws.max_column} columns")
 
     # Apply auto-filter
     if ws.dimensions:
+        logger.debug("Applying auto-filter...")
         ws.auto_filter.ref = ws.dimensions
 
     # Freeze header row
     ws.freeze_panes = "A2"
-    logger.info("Frozen panes applied to Block Analysis sheet")
+    logger.debug("Frozen panes applied")
 
     # Set column widths (5 columns)
+    logger.debug("Setting column widths...")
     ws.column_dimensions["A"].width = 30  # block_name
     ws.column_dimensions["B"].width = 25  # block_insertion_count
     ws.column_dimensions["C"].width = 25  # block_entity_count
@@ -102,6 +106,7 @@ def _format_block_analysis_sheet(wb: Workbook) -> None:
     ws.column_dimensions["E"].width = 30  # block_xdata_apps
 
     # Enable text wrapping on header row
+    logger.debug("Applying header alignment...")
     alignment = Alignment(wrap_text=True, vertical="top")
     for cell in ws[1]:
         cell.alignment = alignment
@@ -111,17 +116,21 @@ def _format_block_analysis_sheet(wb: Workbook) -> None:
 
 def _format_layer_analysis_sheet(wb: Workbook) -> None:
     """Apply formatting to the Layer Analysis sheet."""
+    logger.debug("Starting Layer Analysis sheet formatting...")
     ws = wb[EXCEL_SHEET_LAYER_ANALYSIS]
+    logger.debug(f"Layer Analysis sheet: {ws.max_row} rows, {ws.max_column} columns")
 
     # Apply auto-filter
     if ws.dimensions:
+        logger.debug("Applying auto-filter...")
         ws.auto_filter.ref = ws.dimensions
 
     # Freeze header row
     ws.freeze_panes = "A2"
-    logger.info("Frozen panes applied to Layer Analysis sheet")
+    logger.debug("Frozen panes applied")
 
     # Set column widths
+    logger.debug("Setting column widths...")
     ws.column_dimensions["A"].width = 30  # layer_name
     ws.column_dimensions["B"].width = 25  # layer_block_insertion_count
     ws.column_dimensions["C"].width = 25  # layer_entity_count
@@ -129,11 +138,13 @@ def _format_layer_analysis_sheet(wb: Workbook) -> None:
     ws.column_dimensions["E"].width = 25  # layer_text_mtext_count
 
     # Enable text wrapping on header row
+    logger.debug("Applying header alignment...")
     alignment = Alignment(wrap_text=True, vertical="top")
     for cell in ws[1]:
         cell.alignment = alignment
 
     # Apply right-alignment to numeric columns (columns B, C, D, E - all data rows)
+    logger.debug("Applying right-alignment to numeric columns...")
     right_alignment = Alignment(horizontal="right")
     for row_idx in range(2, ws.max_row + 1):
         ws.cell(
@@ -154,21 +165,26 @@ def _format_layer_analysis_sheet(wb: Workbook) -> None:
 
 def _format_entity_summary_sheet(wb: Workbook) -> None:
     """Apply formatting to the Entity Summary sheet."""
+    logger.debug("Starting Entity Summary sheet formatting...")
     ws = wb[EXCEL_SHEET_ENTITY_SUMMARY]
+    logger.debug(f"Entity Summary sheet: {ws.max_row} rows, {ws.max_column} columns")
 
     # Apply auto-filter
     if ws.dimensions:
+        logger.debug("Applying auto-filter...")
         ws.auto_filter.ref = ws.dimensions
 
     # Freeze header row
     ws.freeze_panes = "A2"
-    logger.info("Frozen panes applied to Entity Summary sheet")
+    logger.debug("Frozen panes applied")
 
     # Set column widths
+    logger.debug("Setting column widths...")
     ws.column_dimensions["A"].width = 25  # entity_type_name
     ws.column_dimensions["B"].width = 25  # entity_type_count
 
     # Enable text wrapping on header row
+    logger.debug("Applying header alignment...")
     alignment = Alignment(wrap_text=True, vertical="top")
     for cell in ws[1]:
         cell.alignment = alignment
@@ -178,17 +194,23 @@ def _format_entity_summary_sheet(wb: Workbook) -> None:
 
 def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     """Apply formatting to the Block Geometry Analysis sheet with three-tier scale highlighting."""
+    logger.debug("Starting Block Geometry Analysis sheet formatting...")
     ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+    logger.debug(
+        f"Block Geometry Analysis sheet: {ws.max_row} rows, {ws.max_column} columns"
+    )
 
     # Apply auto-filter
     if ws.dimensions:
+        logger.debug("Applying auto-filter...")
         ws.auto_filter.ref = ws.dimensions
 
     # Freeze header row
     ws.freeze_panes = "A2"
-    logger.info("Frozen panes applied to Block Geometry Analysis sheet")
+    logger.debug("Frozen panes applied")
 
     # Set column widths (18 columns)
+    logger.debug("Setting column widths...")
     ws.column_dimensions["A"].width = 30  # block_name
     ws.column_dimensions["B"].width = 25  # block_layer_name
     ws.column_dimensions["C"].width = 12  # block_rotation_0
@@ -209,11 +231,13 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     ws.column_dimensions["R"].width = 22  # block_content_zone_detected
 
     # Enable text wrapping on header row
+    logger.debug("Applying header alignment...")
     alignment = Alignment(wrap_text=True, vertical="top")
     for cell in ws[1]:
         cell.alignment = alignment
 
     # Define three-tier highlighting fills
+    logger.debug("Starting row highlighting analysis...")
     red_fill = PatternFill(
         start_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
         end_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
@@ -253,7 +277,12 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
         return False
 
     # Iterate through data rows (skip header at row 1)
+    total_data_rows = ws.max_row - 1
+    logger.debug(f"Processing {total_data_rows} data rows for highlighting...")
     for row_idx in range(2, ws.max_row + 1):
+        # Progress logging every 100 rows
+        if (row_idx - 1) % 100 == 0:
+            logger.debug(f"Highlighting row {row_idx - 1}/{total_data_rows}")
         # Get scale values from columns H (x_scale) and I (y_scale)
         x_scale_cell = ws.cell(row=row_idx, column=8)  # Column H
         y_scale_cell = ws.cell(row=row_idx, column=9)  # Column I
@@ -288,6 +317,7 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
                 ws.cell(row=row_idx, column=col_idx).fill = fill_to_apply
 
     # Apply right-alignment to segment columns (L and M) and trim columns (N, O, P, Q)
+    logger.debug("Applying right-alignment to segment and trim columns...")
     right_alignment = Alignment(horizontal="right")
     for row_idx in range(2, ws.max_row + 1):
         # Column L (12) - block_vertical_segments
@@ -324,17 +354,23 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
 
 def _format_annotations_analysis_sheet(wb: Workbook) -> None:
     """Apply formatting to the Annotations Analysis sheet with RGB color fills."""
+    logger.debug("Starting Annotations Analysis sheet formatting...")
     ws = wb[EXCEL_SHEET_ANNOTATIONS_ANALYSIS]
+    logger.debug(
+        f"Annotations Analysis sheet: {ws.max_row} rows, {ws.max_column} columns"
+    )
 
     # Apply auto-filter
     if ws.dimensions:
+        logger.debug("Applying auto-filter...")
         ws.auto_filter.ref = ws.dimensions
 
     # Freeze header row
     ws.freeze_panes = "A2"
-    logger.info("Frozen panes applied to Annotations Analysis sheet")
+    logger.debug("Frozen panes applied")
 
     # Set column widths (8 columns: A-H)
+    logger.debug("Setting column widths...")
     ws.column_dimensions["A"].width = 60  # annotation_contents
     ws.column_dimensions["B"].width = 15  # annotation_type
     ws.column_dimensions["C"].width = 25  # annotation_layer_name
@@ -345,18 +381,25 @@ def _format_annotations_analysis_sheet(wb: Workbook) -> None:
     ws.column_dimensions["H"].width = 20  # annotation_count
 
     # Enable text wrapping on header row
+    logger.debug("Applying header alignment...")
     header_alignment = Alignment(wrap_text=True, vertical="top")
     for cell in ws[1]:
         cell.alignment = header_alignment
 
     # Enable text wrapping on annotation_contents column (column A) for all data rows
+    logger.debug("Applying content column text wrapping...")
     content_alignment = Alignment(wrap_text=True, vertical="top")
     for row_idx in range(2, ws.max_row + 1):
         ws.cell(row=row_idx, column=1).alignment = content_alignment
 
     # Apply RGB color fills to annotation_color_sample column (column G)
+    logger.debug("Applying RGB color fills to color sample column...")
+    total_data_rows = ws.max_row - 1
     color_fills_applied = 0
     for row_idx in range(2, ws.max_row + 1):
+        # Progress logging every 100 rows
+        if (row_idx - 1) % 100 == 0:
+            logger.debug(f"Color fills: processing row {row_idx - 1}/{total_data_rows}")
         # Read RGB values from columns D, E, F
         r_value = ws.cell(row=row_idx, column=4).value
         g_value = ws.cell(row=row_idx, column=5).value
@@ -388,17 +431,21 @@ def _format_annotations_analysis_sheet(wb: Workbook) -> None:
 
 def _format_color_analysis_sheet(wb: Workbook) -> None:
     """Apply formatting to the Color Analysis sheet with RGB color fills."""
+    logger.debug("Starting Color Analysis sheet formatting...")
     ws = wb[EXCEL_SHEET_COLOR_ANALYSIS]
+    logger.debug(f"Color Analysis sheet: {ws.max_row} rows, {ws.max_column} columns")
 
     # Apply auto-filter
     if ws.dimensions:
+        logger.debug("Applying auto-filter...")
         ws.auto_filter.ref = ws.dimensions
 
     # Freeze header row
     ws.freeze_panes = "A2"
-    logger.info("Frozen panes applied to Color Analysis sheet")
+    logger.debug("Frozen panes applied")
 
     # Set column widths (9 columns: A-I)
+    logger.debug("Setting column widths...")
     ws.column_dimensions["A"].width = 50  # color_annotation_contents
     ws.column_dimensions["B"].width = 20  # color_layer_name
     ws.column_dimensions["C"].width = 10  # color_red
@@ -410,16 +457,19 @@ def _format_color_analysis_sheet(wb: Workbook) -> None:
     ws.column_dimensions["I"].width = 15  # color_entity_count
 
     # Enable text wrapping on header row
+    logger.debug("Applying header alignment...")
     header_alignment = Alignment(wrap_text=True, vertical="top")
     for cell in ws[1]:
         cell.alignment = header_alignment
 
     # Enable text wrapping on annotation_contents column (column A) for all data rows
+    logger.debug("Applying content column text wrapping...")
     content_alignment = Alignment(wrap_text=True, vertical="top")
     for row_idx in range(2, ws.max_row + 1):
         ws.cell(row=row_idx, column=1).alignment = content_alignment
 
     # Apply right-alignment to numeric columns (C, D, E, I)
+    logger.debug("Applying right-alignment to numeric columns...")
     right_alignment = Alignment(horizontal="right")
     for row_idx in range(2, ws.max_row + 1):
         ws.cell(row=row_idx, column=3).alignment = right_alignment  # color_red
@@ -428,8 +478,13 @@ def _format_color_analysis_sheet(wb: Workbook) -> None:
         ws.cell(row=row_idx, column=9).alignment = right_alignment  # color_entity_count
 
     # Apply RGB color fills to color_sample column (column F)
+    logger.debug("Applying RGB color fills to color sample column...")
+    total_data_rows = ws.max_row - 1
     color_fills_applied = 0
     for row_idx in range(2, ws.max_row + 1):
+        # Progress logging every 100 rows
+        if (row_idx - 1) % 100 == 0:
+            logger.debug(f"Color fills: processing row {row_idx - 1}/{total_data_rows}")
         # Read RGB values from columns C, D, E
         r_value = ws.cell(row=row_idx, column=3).value
         g_value = ws.cell(row=row_idx, column=4).value
@@ -461,17 +516,23 @@ def _format_color_analysis_sheet(wb: Workbook) -> None:
 
 def _format_extraction_issues_sheet(wb: Workbook) -> None:
     """Apply formatting to the Extraction Issues sheet with yellow highlighting."""
+    logger.debug("Starting Extraction Issues sheet formatting...")
     ws = wb[EXCEL_SHEET_EXTRACTION_ISSUES]
+    logger.debug(
+        f"Extraction Issues sheet: {ws.max_row} rows, {ws.max_column} columns"
+    )
 
     # Apply auto-filter
     if ws.dimensions:
+        logger.debug("Applying auto-filter...")
         ws.auto_filter.ref = ws.dimensions
 
     # Freeze header row
     ws.freeze_panes = "A2"
-    logger.info("Frozen panes applied to Extraction Issues sheet")
+    logger.debug("Frozen panes applied")
 
     # Set column widths (5 columns: A-E)
+    logger.debug("Setting column widths...")
     ws.column_dimensions["A"].width = 30  # issue_type
     ws.column_dimensions["B"].width = 30  # issue_block_name
     ws.column_dimensions["C"].width = 25  # issue_layer_name
@@ -479,6 +540,7 @@ def _format_extraction_issues_sheet(wb: Workbook) -> None:
     ws.column_dimensions["E"].width = 50  # issue_details
 
     # Enable text wrapping on header row
+    logger.debug("Applying header alignment...")
     header_alignment = Alignment(wrap_text=True, vertical="top")
     for cell in ws[1]:
         cell.alignment = header_alignment
@@ -491,6 +553,7 @@ def _format_extraction_issues_sheet(wb: Workbook) -> None:
     )
 
     # Apply yellow background fill to all data rows to highlight issues
+    logger.debug("Applying yellow background fill to issue rows...")
     rows_highlighted = 0
     for row_idx in range(2, ws.max_row + 1):
         # Apply fill to entire row (columns A-E)
@@ -499,11 +562,13 @@ def _format_extraction_issues_sheet(wb: Workbook) -> None:
         rows_highlighted += 1
 
     # Apply right-alignment to insertion_count column (D)
+    logger.debug("Applying right-alignment to insertion count column...")
     right_alignment = Alignment(horizontal="right")
     for row_idx in range(2, ws.max_row + 1):
         ws.cell(row=row_idx, column=4).alignment = right_alignment
 
     # Enable text wrapping on details column (E) for all data rows
+    logger.debug("Applying text wrapping to details column...")
     details_alignment = Alignment(wrap_text=True, vertical="top")
     for row_idx in range(2, ws.max_row + 1):
         ws.cell(row=row_idx, column=5).alignment = details_alignment
