@@ -24,6 +24,7 @@ from core.geometry import (
     _extract_closed_lwpolylines,
     _extract_line_cycles,
     _get_polygon_bounding_box,
+    _get_union_bounding_box,
     _point_in_polygon,
     _polygon_contains_polygon,
 )
@@ -415,3 +416,109 @@ class TestContentZoneIntegration:
         assert trimming_data["suggested_trim_right"] is None
         assert trimming_data["suggested_trim_top"] is None
         assert trimming_data["suggested_trim_bottom"] is None
+
+
+class TestUnionBoundingBox:
+    """Test cases for union bounding box calculation."""
+
+    def test_single_polygon(self) -> None:
+        """Union of single polygon equals its own bounding box."""
+        poly: Polygon = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        bbox = _get_union_bounding_box([poly])
+        assert bbox == (0, 0, 10, 10)
+
+    def test_two_disjoint_polygons(self) -> None:
+        """Union spans both disjoint polygons."""
+        poly_a: Polygon = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        poly_b: Polygon = [(90, 90), (100, 90), (100, 100), (90, 100)]
+        bbox = _get_union_bounding_box([poly_a, poly_b])
+        assert bbox == (0, 0, 100, 100)
+
+    def test_four_corner_polygons(self) -> None:
+        """Union of 4 corner polygons spans entire area."""
+        corners: list[Polygon] = [
+            [(0, 0), (10, 0), (10, 10), (0, 10)],  # bottom-left
+            [(90, 0), (100, 0), (100, 10), (90, 10)],  # bottom-right
+            [(0, 90), (10, 90), (10, 100), (0, 100)],  # top-left
+            [(90, 90), (100, 90), (100, 100), (90, 100)],  # top-right
+        ]
+        bbox = _get_union_bounding_box(corners)
+        assert bbox == (0, 0, 100, 100)
+
+    def test_empty_list(self) -> None:
+        """Empty list returns zero bounding box."""
+        bbox = _get_union_bounding_box([])
+        assert bbox == (0.0, 0.0, 0.0, 0.0)
+
+    def test_overlapping_polygons(self) -> None:
+        """Union of overlapping polygons spans outer extent."""
+        poly_a: Polygon = [(0, 0), (50, 0), (50, 50), (0, 50)]
+        poly_b: Polygon = [(30, 30), (80, 30), (80, 80), (30, 80)]
+        bbox = _get_union_bounding_box([poly_a, poly_b])
+        assert bbox == (0, 0, 80, 80)
+
+
+class TestTiedNetAreaContentZone:
+    """Test cases for content zone detection with tied net areas."""
+
+    @pytest.fixture
+    def equal_area_dxf_path(self) -> str:
+        """Return path to the equal area test DXF file."""
+        return str(Path(__file__).parent.parent / "assets" / "equal_area_test.dxf")
+
+    def test_four_equal_corners_block(self, equal_area_dxf_path: str) -> None:
+        """Test content zone spans all 4 equal corner shapes."""
+        if not os.path.exists(equal_area_dxf_path):
+            pytest.skip("Test DXF file not found")
+
+        doc = ezdxf.readfile(equal_area_dxf_path)
+        block_def = doc.blocks.get("FOUR_CORNERS")
+        bbox = (0, 0, 100, 100)  # Block bounding box
+
+        result = _detect_content_zone(block_def, bbox)
+
+        assert result["content_zone_detected"] is True
+        # All 4 corners have equal area (10x10 = 100), union spans 0-100 in both axes
+        # Content zone = block bbox, so all trims = 0
+        assert result["suggested_trim_left"] == 0.0
+        assert result["suggested_trim_right"] == 0.0
+        assert result["suggested_trim_top"] == 0.0
+        assert result["suggested_trim_bottom"] == 0.0
+
+    def test_two_equal_horizontal_block(self, equal_area_dxf_path: str) -> None:
+        """Test content zone spans both equal horizontal shapes."""
+        if not os.path.exists(equal_area_dxf_path):
+            pytest.skip("Test DXF file not found")
+
+        doc = ezdxf.readfile(equal_area_dxf_path)
+        block_def = doc.blocks.get("TWO_EQUAL_HORIZONTAL")
+        bbox = (0, 0, 100, 10)  # Block bounding box
+
+        result = _detect_content_zone(block_def, bbox)
+
+        assert result["content_zone_detected"] is True
+        # Two 20x10 rectangles: left at (0,0)-(20,10), right at (80,0)-(100,10)
+        # Union spans 0-100 on x-axis, 0-10 on y-axis
+        # Content zone = block bbox, so all trims = 0
+        assert result["suggested_trim_left"] == 0.0
+        assert result["suggested_trim_right"] == 0.0
+        assert result["suggested_trim_top"] == 0.0
+        assert result["suggested_trim_bottom"] == 0.0
+
+    def test_single_shape_regression(self, equal_area_dxf_path: str) -> None:
+        """Test single shape behavior is preserved (regression test)."""
+        if not os.path.exists(equal_area_dxf_path):
+            pytest.skip("Test DXF file not found")
+
+        doc = ezdxf.readfile(equal_area_dxf_path)
+        block_def = doc.blocks.get("SINGLE_SHAPE")
+        bbox = (0, 0, 50, 30)  # Block bounding box = shape bounding box
+
+        result = _detect_content_zone(block_def, bbox)
+
+        assert result["content_zone_detected"] is True
+        # Single shape is the content zone, trim values should be 0
+        assert result["suggested_trim_left"] == 0.0
+        assert result["suggested_trim_right"] == 0.0
+        assert result["suggested_trim_top"] == 0.0
+        assert result["suggested_trim_bottom"] == 0.0

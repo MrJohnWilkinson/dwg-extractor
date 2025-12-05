@@ -425,6 +425,46 @@ def _get_polygon_bounding_box(polygon: Polygon) -> tuple[float, float, float, fl
     return (min(x_coords), min(y_coords), max(x_coords), max(y_coords))
 
 
+def _get_union_bounding_box(polygons: list[Polygon]) -> tuple[float, float, float, float]:
+    """
+    Calculate the union bounding box of multiple polygons.
+
+    Returns (min_x, min_y, max_x, max_y) encompassing all polygons.
+    Returns (0.0, 0.0, 0.0, 0.0) for empty list.
+
+    Args:
+        polygons: List of Polygon objects (vertex lists)
+
+    Returns:
+        Tuple of (min_x, min_y, max_x, max_y) encompassing all polygons.
+
+    Examples:
+        >>> poly_a = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        >>> poly_b = [(90, 90), (100, 90), (100, 100), (90, 100)]
+        >>> _get_union_bounding_box([poly_a, poly_b])
+        (0, 0, 100, 100)
+    """
+    if not polygons:
+        return (0.0, 0.0, 0.0, 0.0)
+
+    # Get bounding box of first polygon
+    union_min_x, union_min_y, union_max_x, union_max_y = _get_polygon_bounding_box(polygons[0])
+
+    # Expand to include all other polygons
+    for polygon in polygons[1:]:
+        bbox = _get_polygon_bounding_box(polygon)
+        union_min_x = min(union_min_x, bbox[0])
+        union_min_y = min(union_min_y, bbox[1])
+        union_max_x = max(union_max_x, bbox[2])
+        union_max_y = max(union_max_y, bbox[3])
+
+    logger.debug(
+        f"Union bounding box of {len(polygons)} polygons: "
+        f"({union_min_x}, {union_min_y}, {union_max_x}, {union_max_y})"
+    )
+    return (union_min_x, union_min_y, union_max_x, union_max_y)
+
+
 def _extract_closed_lwpolylines(block_def: BlockLayout) -> list[Polygon]:
     """
     Extract closed LWPOLYLINE/POLYLINE entities from a block definition as polygons.
@@ -736,17 +776,37 @@ def _detect_content_zone(
             contained_shapes.append((shape, net_area))
 
     # Select content zone:
-    # - If there are contained shapes, pick the one with largest net area (the inner content)
-    # - If no containment exists, pick the shape with largest net area (single/independent shapes)
-    if contained_shapes:
-        content_zone_shape, max_net_area = max(contained_shapes, key=lambda x: x[1])
-        logger.debug(f"Content zone selected from contained shapes with net area: {max_net_area:.2f}")
-    else:
-        content_zone_shape, max_net_area = max(valid_shapes, key=lambda x: x[1])
-        logger.debug(f"Content zone selected (no nesting) with net area: {max_net_area:.2f}")
+    # - If there are contained shapes, pick the one(s) with largest net area (the inner content)
+    # - If no containment exists, pick the shape(s) with largest net area (single/independent shapes)
+    # - When multiple shapes tie for max net area, use union bounding box
+    #
+    # Use epsilon tolerance for tie detection to handle floating-point precision issues
+    epsilon = 0.001
 
-    # Calculate content zone bounding box
-    cz_bbox = _get_polygon_bounding_box(content_zone_shape)
+    if contained_shapes:
+        max_net_area = max(net_area for _, net_area in contained_shapes)
+        # Collect ALL shapes with maximum net area (within epsilon tolerance)
+        tied_shapes = [shape for shape, net_area in contained_shapes if abs(net_area - max_net_area) < epsilon]
+        logger.debug(
+            f"Content zone: {len(tied_shapes)} contained shape(s) with max net area {max_net_area:.2f} "
+            f"(from {len(contained_shapes)} total contained shapes)"
+        )
+    else:
+        max_net_area = max(net_area for _, net_area in valid_shapes)
+        # Collect ALL shapes with maximum net area (within epsilon tolerance)
+        tied_shapes = [shape for shape, net_area in valid_shapes if abs(net_area - max_net_area) < epsilon]
+        logger.debug(
+            f"Content zone: {len(tied_shapes)} shape(s) with max net area {max_net_area:.2f} "
+            f"(no nesting, from {len(valid_shapes)} total shapes)"
+        )
+
+    # Calculate union bounding box of all tied shapes
+    if len(tied_shapes) == 1:
+        cz_bbox = _get_polygon_bounding_box(tied_shapes[0])
+        logger.debug(f"Content zone selected: single shape with net area {max_net_area:.2f}")
+    else:
+        cz_bbox = _get_union_bounding_box(tied_shapes)
+        logger.debug(f"Content zone selected: union of {len(tied_shapes)} shapes with net area {max_net_area:.2f}")
     cz_min_x, cz_min_y, cz_max_x, cz_max_y = cz_bbox
     block_min_x, block_min_y, block_max_x, block_max_y = block_bbox
 

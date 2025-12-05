@@ -169,18 +169,24 @@ class DXFExtractorApp(ctk.CTk):
     def _extraction_worker(self) -> None:
         """Background worker thread for extraction process."""
         try:
-            # Step 1: Load file
-            self._update_progress(0.2, "Loading file...")
+            # Step 1: Initialize
+            self._update_progress(0.1, "Loading file...")
 
             # Validate file path exists
             if not self.selected_file_path:
                 self._show_error("No file selected")
                 return
 
-            # Step 2: Extract comprehensive data
-            self._update_progress(0.5, "Analyzing CAD file...")
+            # Step 2: Parse DXF structure
+            self._update_progress(0.2, "Parsing DXF structure...")
+
+            # Step 3: Extract comprehensive data
+            self._update_progress(0.3, "Analyzing block definitions...")
 
             extraction_result = extract_blocks(self.selected_file_path)
+
+            # Step 4: Process results
+            self._update_progress(0.6, "Processing extraction results...")
 
             # Check for empty results
             if not extraction_result["block_counts"]:
@@ -188,13 +194,16 @@ class DXFExtractorApp(ctk.CTk):
                 self._show_error(MSG_ERROR_NO_BLOCKS)
                 return
 
-            # Step 3: Generate Excel
-            self._update_progress(0.7, "Generating Excel...")
+            # Step 5: Generate Excel
+            self._update_progress(0.7, "Generating Excel report...")
 
             excel_path = write_excel(extraction_result, self.selected_file_path)
             self.output_excel_path = excel_path
 
-            # Step 4: Complete
+            # Step 6: Finalize
+            self._update_progress(0.9, "Finalizing...")
+
+            # Step 7: Complete
             self._update_progress(1.0, MSG_SUCCESS)
 
             # Show success and open file
