@@ -35,7 +35,7 @@ from core.constants import (
 )
 from core.excel_writer import write_excel
 from core.extractor import ExtractionAbortedError, extract_blocks
-from core.logger import create_queue_handler, setup_logger
+from core.logger import create_queue_handler, set_all_logger_levels, setup_logger
 
 
 # Set CustomTkinter appearance
@@ -77,6 +77,9 @@ class DXFExtractorApp(ctk.CTk):
         # Initialize root logger level to DEBUG to match dropdown default
         # Without this, Python's default WARNING level filters out DEBUG/INFO messages
         logging.getLogger().setLevel(logging.DEBUG)
+
+        # Initialize all application loggers to DEBUG to match dropdown default
+        set_all_logger_levels(logging.DEBUG)
 
         # Create UI
         self._create_widgets()
@@ -198,8 +201,10 @@ class DXFExtractorApp(ctk.CTk):
         # Update handler level
         self.queue_handler.setLevel(new_level)
 
-        # Update logger levels (module logger and root logger)
-        self.logger.setLevel(new_level)
+        # Update all application logger levels
+        set_all_logger_levels(new_level)
+
+        # Update root logger level
         logging.getLogger().setLevel(new_level)
 
         self.logger.info(f"Log level changed to {choice}")

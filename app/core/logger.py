@@ -248,6 +248,28 @@ def create_queue_handler(
     return handler
 
 
+def set_all_logger_levels(level: int) -> None:
+    """
+    Set log level for all application loggers.
+
+    Updates both logger level and handler levels for all loggers
+    in the core.* namespace and __main__.
+
+    Args:
+        level: Logging level constant (e.g., logging.DEBUG, logging.INFO)
+    """
+    # Get all logger names
+    logger_dict = logging.Logger.manager.loggerDict
+
+    # Update core.* loggers
+    for name in logger_dict:
+        if name.startswith("core.") or name == "__main__":
+            logger = logging.getLogger(name)
+            logger.setLevel(level)
+            for handler in logger.handlers:
+                handler.setLevel(level)
+
+
 @contextlib.contextmanager
 def timed_block(
     name: str, logger: logging.Logger | None = None, level: int = logging.DEBUG

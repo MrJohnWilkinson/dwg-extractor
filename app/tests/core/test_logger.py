@@ -19,6 +19,7 @@ from core.logger import (
     JsonFormatter,
     _get_log_format_from_env,
     _get_log_level_from_env,
+    set_all_logger_levels,
     timed,
     timed_block,
 )
@@ -329,3 +330,94 @@ class TestTimedBlockContextManager:
 
         # Should be empty since we're only capturing INFO and above
         assert "[TIMING]" not in caplog.text
+
+
+class TestSetAllLoggerLevels:
+    """Tests for set_all_logger_levels function."""
+
+    def test_updates_core_logger_levels(self) -> None:
+        """Verify logger levels are updated for core.* loggers."""
+        # Create a core.* logger
+        core_logger = logging.getLogger("core.test_module")
+        core_logger.setLevel(logging.INFO)
+
+        # Update all logger levels to DEBUG
+        set_all_logger_levels(logging.DEBUG)
+
+        # Verify level was updated
+        assert core_logger.level == logging.DEBUG
+
+        # Cleanup
+        core_logger.handlers.clear()
+
+    def test_updates_main_logger_level(self) -> None:
+        """Verify logger level is updated for __main__ logger."""
+        # Create __main__ logger
+        main_logger = logging.getLogger("__main__")
+        main_logger.setLevel(logging.WARNING)
+
+        # Update all logger levels to DEBUG
+        set_all_logger_levels(logging.DEBUG)
+
+        # Verify level was updated
+        assert main_logger.level == logging.DEBUG
+
+        # Cleanup
+        main_logger.handlers.clear()
+
+    def test_updates_handler_levels(self) -> None:
+        """Verify handler levels are updated for matching loggers."""
+        # Create a core.* logger with a handler
+        test_logger = logging.getLogger("core.test_handler")
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.ERROR)
+        test_logger.addHandler(handler)
+        test_logger.setLevel(logging.ERROR)
+
+        # Update all logger levels to DEBUG
+        set_all_logger_levels(logging.DEBUG)
+
+        # Verify both logger and handler levels were updated
+        assert test_logger.level == logging.DEBUG
+        assert handler.level == logging.DEBUG
+
+        # Cleanup
+        test_logger.handlers.clear()
+
+    def test_ignores_non_app_loggers(self) -> None:
+        """Verify non-app loggers are not affected."""
+        # Create a non-app logger
+        external_logger = logging.getLogger("external.module")
+        external_logger.setLevel(logging.WARNING)
+
+        # Update all logger levels to DEBUG
+        set_all_logger_levels(logging.DEBUG)
+
+        # Verify external logger was NOT updated
+        assert external_logger.level == logging.WARNING
+
+        # Cleanup
+        external_logger.handlers.clear()
+
+    def test_updates_multiple_core_loggers(self) -> None:
+        """Verify multiple core.* loggers are all updated."""
+        # Create multiple core.* loggers
+        logger1 = logging.getLogger("core.extractor")
+        logger2 = logging.getLogger("core.geometry")
+        logger3 = logging.getLogger("core.excel_writer")
+
+        logger1.setLevel(logging.INFO)
+        logger2.setLevel(logging.WARNING)
+        logger3.setLevel(logging.ERROR)
+
+        # Update all logger levels to DEBUG
+        set_all_logger_levels(logging.DEBUG)
+
+        # Verify all were updated
+        assert logger1.level == logging.DEBUG
+        assert logger2.level == logging.DEBUG
+        assert logger3.level == logging.DEBUG
+
+        # Cleanup
+        for logger in [logger1, logger2, logger3]:
+            logger.handlers.clear()
