@@ -239,7 +239,9 @@ def _calculate_segments(intersection_points: list[float]) -> list[float]:
         segment_size = intersection_points[i + 1] - intersection_points[i]
         segments.append(round(segment_size, 2))
 
-    logger.debug(f"Calculate segments: {len(intersection_points)} points -> {len(segments)} segments: {segments}")
+    logger.debug(
+        f"Calculate segments: {len(intersection_points)} points -> {len(segments)} segments: {segments}"
+    )
     return segments
 
 
@@ -285,7 +287,9 @@ def _categorize_rotation(angle: float) -> str:
     else:
         result = "other"
 
-    logger.debug(f"Categorize rotation: {angle}° -> normalized={normalized}° -> category={result}")
+    logger.debug(
+        f"Categorize rotation: {angle}° -> normalized={normalized}° -> category={result}"
+    )
     return result
 
 
@@ -425,7 +429,9 @@ def _get_polygon_bounding_box(polygon: Polygon) -> tuple[float, float, float, fl
     return (min(x_coords), min(y_coords), max(x_coords), max(y_coords))
 
 
-def _get_union_bounding_box(polygons: list[Polygon]) -> tuple[float, float, float, float]:
+def _get_union_bounding_box(
+    polygons: list[Polygon],
+) -> tuple[float, float, float, float]:
     """
     Calculate the union bounding box of multiple polygons.
 
@@ -448,7 +454,9 @@ def _get_union_bounding_box(polygons: list[Polygon]) -> tuple[float, float, floa
         return (0.0, 0.0, 0.0, 0.0)
 
     # Get bounding box of first polygon
-    union_min_x, union_min_y, union_max_x, union_max_y = _get_polygon_bounding_box(polygons[0])
+    union_min_x, union_min_y, union_max_x, union_max_y = _get_polygon_bounding_box(
+        polygons[0]
+    )
 
     # Expand to include all other polygons
     for polygon in polygons[1:]:
@@ -492,7 +500,11 @@ def _extract_closed_lwpolylines(block_def: BlockLayout) -> list[Polygon]:
                 is_closed = getattr(entity, "is_closed", False)
                 if not is_closed:
                     # Also check the closed attribute in dxf namespace
-                    is_closed = getattr(entity.dxf, "closed", False) if hasattr(entity, "dxf") else False
+                    is_closed = (
+                        getattr(entity.dxf, "closed", False)
+                        if hasattr(entity, "dxf")
+                        else False
+                    )
                 if not is_closed:
                     continue
 
@@ -504,7 +516,9 @@ def _extract_closed_lwpolylines(block_def: BlockLayout) -> list[Polygon]:
                 # Skip polylines with fewer than 3 vertices
                 if len(vertices) >= 3:
                     polygons.append(vertices)
-                    logger.debug(f"Extracted closed polyline with {len(vertices)} vertices")
+                    logger.debug(
+                        f"Extracted closed polyline with {len(vertices)} vertices"
+                    )
 
             except (AttributeError, IndexError, TypeError) as e:
                 logger.debug(f"Error extracting polyline: {e}")
@@ -559,7 +573,10 @@ def _extract_line_cycles(block_def: BlockLayout) -> list[Polygon]:
     def get_canonical(point: tuple[float, float]) -> tuple[float, float]:
         """Get or create canonical representative for a point."""
         for existing in canonical:
-            if abs(existing[0] - point[0]) <= epsilon and abs(existing[1] - point[1]) <= epsilon:
+            if (
+                abs(existing[0] - point[0]) <= epsilon
+                and abs(existing[1] - point[1]) <= epsilon
+            ):
                 return canonical[existing]
         # New canonical point
         canonical[point] = point
@@ -586,9 +603,11 @@ def _extract_line_cycles(block_def: BlockLayout) -> list[Polygon]:
 
     def find_cycle_from(start: tuple[float, float]) -> Polygon | None:
         """Find a simple cycle starting from a given vertex using DFS."""
-        stack: list[tuple[tuple[float, float], list[tuple[float, float]], set[tuple[float, float]]]] = [
-            (start, [start], {start})
-        ]
+        stack: list[
+            tuple[
+                tuple[float, float], list[tuple[float, float]], set[tuple[float, float]]
+            ]
+        ] = [(start, [start], {start})]
 
         while stack:
             current, path, visited = stack.pop()
@@ -681,9 +700,9 @@ def _calculate_net_areas(polygons: list[Polygon]) -> list[tuple[Polygon, float]]
                 is_direct = True
                 for k in range(n):
                     if k != i and k != j:
-                        if _polygon_contains_polygon(polygons[i], polygons[k]) and _polygon_contains_polygon(
-                            polygons[k], polygons[j]
-                        ):
+                        if _polygon_contains_polygon(
+                            polygons[i], polygons[k]
+                        ) and _polygon_contains_polygon(polygons[k], polygons[j]):
                             is_direct = False
                             break
                 if is_direct:
@@ -752,7 +771,9 @@ def _detect_content_zone(
     shape_net_areas = _calculate_net_areas(all_shapes)
 
     # Filter out shapes with non-positive net area
-    valid_shapes = [(shape, net_area) for shape, net_area in shape_net_areas if net_area > 0]
+    valid_shapes = [
+        (shape, net_area) for shape, net_area in shape_net_areas if net_area > 0
+    ]
 
     if not valid_shapes:
         logger.debug("No shapes with positive net area found")
@@ -786,7 +807,11 @@ def _detect_content_zone(
     if contained_shapes:
         max_net_area = max(net_area for _, net_area in contained_shapes)
         # Collect ALL shapes with maximum net area (within epsilon tolerance)
-        tied_shapes = [shape for shape, net_area in contained_shapes if abs(net_area - max_net_area) < epsilon]
+        tied_shapes = [
+            shape
+            for shape, net_area in contained_shapes
+            if abs(net_area - max_net_area) < epsilon
+        ]
         logger.debug(
             f"Content zone: {len(tied_shapes)} contained shape(s) with max net area {max_net_area:.2f} "
             f"(from {len(contained_shapes)} total contained shapes)"
@@ -794,7 +819,11 @@ def _detect_content_zone(
     else:
         max_net_area = max(net_area for _, net_area in valid_shapes)
         # Collect ALL shapes with maximum net area (within epsilon tolerance)
-        tied_shapes = [shape for shape, net_area in valid_shapes if abs(net_area - max_net_area) < epsilon]
+        tied_shapes = [
+            shape
+            for shape, net_area in valid_shapes
+            if abs(net_area - max_net_area) < epsilon
+        ]
         logger.debug(
             f"Content zone: {len(tied_shapes)} shape(s) with max net area {max_net_area:.2f} "
             f"(no nesting, from {len(valid_shapes)} total shapes)"
@@ -803,10 +832,14 @@ def _detect_content_zone(
     # Calculate union bounding box of all tied shapes
     if len(tied_shapes) == 1:
         cz_bbox = _get_polygon_bounding_box(tied_shapes[0])
-        logger.debug(f"Content zone selected: single shape with net area {max_net_area:.2f}")
+        logger.debug(
+            f"Content zone selected: single shape with net area {max_net_area:.2f}"
+        )
     else:
         cz_bbox = _get_union_bounding_box(tied_shapes)
-        logger.debug(f"Content zone selected: union of {len(tied_shapes)} shapes with net area {max_net_area:.2f}")
+        logger.debug(
+            f"Content zone selected: union of {len(tied_shapes)} shapes with net area {max_net_area:.2f}"
+        )
     cz_min_x, cz_min_y, cz_max_x, cz_max_y = cz_bbox
     block_min_x, block_min_y, block_max_x, block_max_y = block_bbox
 

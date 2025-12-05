@@ -24,6 +24,8 @@ import customtkinter as ctk
 
 from core.constants import (
     LOG_POLL_INTERVAL_MS,
+    MSG_ABORTED,
+    MSG_ABORTING,
     MSG_ERROR_FILE_NOT_FOUND,
     MSG_ERROR_INVALID_FILE,
     MSG_ERROR_NO_BLOCKS,
@@ -32,7 +34,7 @@ from core.constants import (
     MSG_SUCCESS,
 )
 from core.excel_writer import write_excel
-from core.extractor import extract_blocks
+from core.extractor import ExtractionAbortedError, extract_blocks
 from core.logger import create_queue_handler, setup_logger
 
 
@@ -59,6 +61,9 @@ class DXFExtractorApp(ctk.CTk):
         # Instance variables
         self.selected_file_path: str | None = None
         self.output_excel_path: str | None = None
+
+        # Abort control
+        self.abort_event: threading.Event | None = None
 
         # Log viewer state
         self.current_log_level: int = logging.INFO
@@ -125,6 +130,17 @@ class DXFExtractorApp(ctk.CTk):
             state="disabled",
         )
         self.open_folder_button.pack(side="left", padx=(10, 0))
+
+        # Abort button (initially hidden)
+        self.abort_button = ctk.CTkButton(
+            button_frame,
+            text="Abort",
+            width=120,
+            command=self._abort_extraction,
+            fg_color="#D35400",
+            hover_color="#A04000",
+        )
+        # Don't pack yet - will be shown during extraction
 
         # Progress bar
         self.progress_bar = ctk.CTkProgressBar(main_frame, width=400, height=20)
@@ -196,7 +212,9 @@ class DXFExtractorApp(ctk.CTk):
                     timestamp = datetime.fromtimestamp(record.created).strftime(
                         "%H:%M:%S.%f"
                     )[:-3]
-                    message = f"{timestamp} [{record.levelname}] {record.getMessage()}\n"
+                    message = (
+                        f"{timestamp} [{record.levelname}] {record.getMessage()}\n"
+                    )
                     # Append to textbox
                     self.log_viewer.configure(state="normal")
                     self.log_viewer.insert("end", message)
@@ -241,9 +259,15 @@ class DXFExtractorApp(ctk.CTk):
             self._show_error("Please select a file first")
             return
 
-        # Disable buttons during processing
-        self.browse_button.configure(state="disabled")
-        self.extract_button.configure(state="disabled")
+        # Create new abort event for this extraction
+        self.abort_event = threading.Event()
+
+        # Hide Browse, Extract, and Open Folder buttons; show Abort button
+        self.browse_button.pack_forget()
+        self.extract_button.pack_forget()
+        self.open_folder_button.pack_forget()
+        self.abort_button.pack(side="left")
+        self.abort_button.configure(state="normal")
 
         # Reset progress
         self.progress_bar.set(0)
@@ -272,7 +296,9 @@ class DXFExtractorApp(ctk.CTk):
             # Step 3: Extract comprehensive data
             self._update_progress(0.3, "Analyzing block definitions...")
 
-            extraction_result = extract_blocks(self.selected_file_path)
+            extraction_result = extract_blocks(
+                self.selected_file_path, abort_event=self.abort_event
+            )
 
             # Step 4: Process results
             self._update_progress(0.6, "Processing extraction results...")
@@ -298,6 +324,12 @@ class DXFExtractorApp(ctk.CTk):
             # Show success and open file
             self._show_success(excel_path)
 
+        except ExtractionAbortedError as e:
+            # User requested abort - this is intentional, not an error
+            self.logger.info(f"Extraction aborted: {str(e)}")
+            self._update_progress(0, MSG_ABORTED)
+            # No error dialog - abort is intentional
+
         except FileNotFoundError as e:
             self.logger.error(f"File not found: {str(e)}", exc_info=True)
             self._show_error(MSG_ERROR_FILE_NOT_FOUND)
@@ -311,9 +343,34 @@ class DXFExtractorApp(ctk.CTk):
             self._show_error(f"Extraction failed: {str(e)}")
 
         finally:
-            # Re-enable buttons
-            self.after(0, lambda: self.browse_button.configure(state="normal"))
-            self.after(0, lambda: self.extract_button.configure(state="normal"))
+            # Restore UI state
+            self.after(0, self._restore_ui_after_extraction)
+
+    def _restore_ui_after_extraction(self) -> None:
+        """Restore UI state after extraction completes or is aborted."""
+        # Hide Abort button
+        self.abort_button.pack_forget()
+
+        # Show and enable Browse and Extract buttons
+        self.browse_button.pack(side="left", padx=(0, 10))
+        self.browse_button.configure(state="normal")
+        self.extract_button.pack(side="left")
+        self.extract_button.configure(state="normal")
+
+        # Show Open Folder button (will be re-enabled by _show_success if needed)
+        self.open_folder_button.pack(side="left", padx=(10, 0))
+
+        # Reset abort event
+        self.abort_event = None
+
+    def _abort_extraction(self) -> None:
+        """Handle abort button click - request extraction cancellation."""
+        if self.abort_event is not None:
+            self.logger.info("User requested extraction abort")
+            self.abort_event.set()
+            self.status_label.configure(text=MSG_ABORTING)
+            # Disable abort button to prevent multiple clicks
+            self.abort_button.configure(state="disabled")
 
     def _update_progress(self, value: float, message: str) -> None:
         """Update progress bar and status message (thread-safe)."""

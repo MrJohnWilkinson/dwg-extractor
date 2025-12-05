@@ -543,7 +543,9 @@ class TestDynamicBlockHandleResolution:
 
         # No *U blocks should be in block_counts
         for block_name in result["block_counts"].keys():
-            assert not block_name.startswith("*U"), f"Found *U block in counts: {block_name}"
+            assert not block_name.startswith("*U"), (
+                f"Found *U block in counts: {block_name}"
+            )
 
 
 class TestOrphanedHandleResolution:
@@ -563,9 +565,15 @@ class TestOrphanedHandleResolution:
 
         # All *U999 issues should mention the orphaned handle, NOT "No XDATA found"
         for issue in u999_issues:
-            assert "B0DE5" in issue["details"], f"Expected handle B0DE5 in details: {issue['details']}"
-            assert "orphaned" in issue["details"].lower(), f"Expected 'orphaned' in details: {issue['details']}"
-            assert "No XDATA found" not in issue["details"], f"Should not say 'No XDATA found': {issue['details']}"
+            assert "B0DE5" in issue["details"], (
+                f"Expected handle B0DE5 in details: {issue['details']}"
+            )
+            assert "orphaned" in issue["details"].lower(), (
+                f"Expected 'orphaned' in details: {issue['details']}"
+            )
+            assert "No XDATA found" not in issue["details"], (
+                f"Should not say 'No XDATA found': {issue['details']}"
+            )
 
     def test_orphaned_handle_different_from_no_xdata(self) -> None:
         """Test that orphaned handles have different messages than blocks with no XDATA."""
@@ -585,12 +593,17 @@ class TestOrphanedHandleResolution:
         assert len(u777_issues) >= 1
 
         # *U999 should mention orphaned handle
-        assert any("Handle" in issue["details"] and "orphaned" in issue["details"].lower()
-                   for issue in u999_issues)
+        assert any(
+            "Handle" in issue["details"] and "orphaned" in issue["details"].lower()
+            for issue in u999_issues
+        )
 
         # *U777 should mention no XDATA (different message)
-        assert any("No XDATA found" in issue["details"] or "No AcDbBlockRepBTag" in issue["details"]
-                   for issue in u777_issues)
+        assert any(
+            "No XDATA found" in issue["details"]
+            or "No AcDbBlockRepBTag" in issue["details"]
+            for issue in u777_issues
+        )
 
     def test_orphaned_handle_in_extraction_issues(self) -> None:
         """Test that blocks with orphaned handles appear in extraction_issues."""
@@ -626,7 +639,9 @@ class TestOrphanedHandleResolution:
 
         # Should mention the specific handle DEADBEEF
         for issue in u888_issues:
-            assert "DEADBEEF" in issue["details"], f"Expected handle DEADBEEF in details: {issue['details']}"
+            assert "DEADBEEF" in issue["details"], (
+                f"Expected handle DEADBEEF in details: {issue['details']}"
+            )
 
     def test_valid_blocks_still_resolve_correctly(self) -> None:
         """Test that valid blocks still resolve correctly alongside orphaned ones."""

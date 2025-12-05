@@ -87,7 +87,9 @@ doc.saveas("app/tests/assets/orphaned_handle_test.dxf")
 print("Created app/tests/assets/orphaned_handle_test.dxf with orphaned handle XDATA")
 print("\nExpected results after extraction:")
 print("  - REGULAR_BLOCK: 2 insertions (1 on LAYER_A, 1 on LAYER_B)")
-print("  - VALID_ORIGINAL: 2 insertions (1 on LAYER_A, 1 on LAYER_B) - resolved from *U1")
+print(
+    "  - VALID_ORIGINAL: 2 insertions (1 on LAYER_A, 1 on LAYER_B) - resolved from *U1"
+)
 print("\nExtraction Issues (unresolved anonymous blocks):")
 print("  - *U999 on LAYER_A: 2 insertions (orphaned handle B0DE5)")
 print("  - *U999 on LAYER_B: 1 insertion (orphaned handle B0DE5)")

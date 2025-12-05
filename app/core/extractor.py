@@ -13,6 +13,7 @@ Usage:
 
 import logging
 import re
+import threading
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -42,6 +43,79 @@ from .types import (
 
 
 logger = setup_logger(__name__)
+
+
+class ExtractionAbortedError(Exception):
+    """
+    Exception raised when extraction is aborted by user request.
+
+    This exception is used for clean abort signaling during extraction.
+    It contains progress statistics about how far extraction progressed
+    before being stopped.
+
+    Attributes:
+        blocks_processed: Number of block definitions analyzed before abort
+        entities_processed: Number of modelspace entities analyzed before abort
+        phase: The extraction phase when abort occurred (e.g., "block analysis")
+
+    Examples:
+        >>> raise ExtractionAbortedError(
+        ...     blocks_processed=50,
+        ...     entities_processed=1000,
+        ...     phase="modelspace entity analysis"
+        ... )
+    """
+
+    def __init__(
+        self,
+        blocks_processed: int = 0,
+        entities_processed: int = 0,
+        phase: str = "unknown",
+    ) -> None:
+        self.blocks_processed = blocks_processed
+        self.entities_processed = entities_processed
+        self.phase = phase
+        message = (
+            f"Extraction aborted during {phase}. "
+            f"Progress: {blocks_processed} blocks, {entities_processed} entities processed."
+        )
+        super().__init__(message)
+
+
+def _check_abort(
+    abort_event: threading.Event | None,
+    phase: str,
+    blocks_processed: int = 0,
+    entities_processed: int = 0,
+) -> None:
+    """
+    Check if abort has been requested and raise ExtractionAbortedError if so.
+
+    This is a checkpoint function that should be called at key points during
+    extraction to allow for cooperative cancellation.
+
+    Args:
+        abort_event: Threading event that signals abort request, or None if abort not supported
+        phase: Description of current extraction phase for logging
+        blocks_processed: Number of block definitions processed so far
+        entities_processed: Number of modelspace entities processed so far
+
+    Raises:
+        ExtractionAbortedError: If abort_event is set
+
+    Examples:
+        >>> abort_event = threading.Event()
+        >>> abort_event.set()
+        >>> _check_abort(abort_event, "block analysis", blocks_processed=25)
+        ExtractionAbortedError: Extraction aborted during block analysis...
+    """
+    if abort_event is not None and abort_event.is_set():
+        logger.info(f"Abort requested during {phase}")
+        raise ExtractionAbortedError(
+            blocks_processed=blocks_processed,
+            entities_processed=entities_processed,
+            phase=phase,
+        )
 
 
 def _clean_mtext_content(entity: Any) -> str:
@@ -269,7 +343,9 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
         msp = doc.modelspace()
         processed_count = 0
         total_entities = sum(1 for _ in msp)
-        logger.debug(f"Color analysis starting with {total_entities} total modelspace entities")
+        logger.debug(
+            f"Color analysis starting with {total_entities} total modelspace entities"
+        )
 
         # Re-iterate since we consumed the iterator
         msp = doc.modelspace()
@@ -524,7 +600,10 @@ def _resolve_dynamic_block_name(
                             logger.debug(
                                 f"Resolved dynamic block name from AcDbBlockRepBTag: {original_name}"
                             )
-                            return (original_name, "Resolved from AcDbBlockRepBTag tag 1000")
+                            return (
+                                original_name,
+                                "Resolved from AcDbBlockRepBTag tag 1000",
+                            )
                     # Group code 1005 contains database handle pointing to original block
                     elif hasattr(tag, "code") and tag.code == 1005:
                         handle = tag.value
@@ -547,7 +626,10 @@ def _resolve_dynamic_block_name(
                                         logger.debug(
                                             f"Resolved dynamic block name from AcDbBlockRepBTag handle {handle}: {original_name}"
                                         )
-                                        return (original_name, f"Resolved from AcDbBlockRepBTag handle {handle}")
+                                        return (
+                                            original_name,
+                                            f"Resolved from AcDbBlockRepBTag handle {handle}",
+                                        )
                             else:
                                 # Handle not found in document - this is an orphaned dynamic block
                                 logger.debug(
@@ -565,7 +647,10 @@ def _resolve_dynamic_block_name(
 
         # If we found an orphaned handle, report it specifically
         if orphaned_handle is not None:
-            return (None, f"Handle {orphaned_handle} not found in document (orphaned dynamic block)")
+            return (
+                None,
+                f"Handle {orphaned_handle} not found in document (orphaned dynamic block)",
+            )
 
         # Fallback: Try AcDbDynamicBlockTrueName (used by some A$C blocks)
         try:
@@ -584,7 +669,10 @@ def _resolve_dynamic_block_name(
                             logger.debug(
                                 f"Resolved dynamic block name from AcDbDynamicBlockTrueName: {original_name}"
                             )
-                            return (original_name, "Resolved from AcDbDynamicBlockTrueName")
+                            return (
+                                original_name,
+                                "Resolved from AcDbDynamicBlockTrueName",
+                            )
         except (DXFError, KeyError):
             # AcDbDynamicBlockTrueName not found in XDATA
             pass
@@ -667,7 +755,10 @@ class ExtractionResult(TypedDict):
     extraction_issues: list[ExtractionIssue]
 
 
-def extract_blocks(file_path: str) -> ExtractionResult:
+def extract_blocks(
+    file_path: str,
+    abort_event: threading.Event | None = None,
+) -> ExtractionResult:
     """
     Extract comprehensive CAD analysis from a DXF file.
 
@@ -683,6 +774,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
     Args:
         file_path: Path to the DXF file to process
+        abort_event: Optional threading.Event to signal abort request. When set,
+                    extraction will stop at the next checkpoint and raise
+                    ExtractionAbortedError. If None, abort is not supported.
 
     Returns:
         ExtractionResult TypedDict containing all analysis data.
@@ -691,6 +785,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
     Raises:
         FileNotFoundError: If the specified file does not exist
         ValueError: If the file extension is not supported or file is corrupted
+        ExtractionAbortedError: If abort_event is set during extraction
 
     Examples:
         >>> result = extract_blocks('drawing.dxf')
@@ -704,6 +799,11 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         {'Piping': 200, 'Equipment': 31}
         >>> result['block_trimming_data']
         {'SHELF_4FT': {'native_width': 1200.0, 'native_height': 600.0, 'vertical_segments': [50.0, 1100.0, 50.0], 'horizontal_segments': [25.0, 550.0, 25.0]}}
+
+        >>> # With abort support
+        >>> abort_event = threading.Event()
+        >>> thread = threading.Thread(target=lambda: abort_event.set())
+        >>> result = extract_blocks('drawing.dxf', abort_event=abort_event)
     """
     logger.info(f"Starting block extraction from {file_path}")
 
@@ -720,12 +820,20 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         )
         raise ValueError(f"Unsupported file extension: {path.suffix}. Must be .dxf")
 
+    # Track progress for abort statistics
+    blocks_processed = 0
+    entities_processed = 0
+
     try:
         # Load DXF file
         with timed_block("DXF file loading", logger, logging.INFO):
             logger.info(f"Loading DXF file: {path.name}")
             doc = ezdxf.readfile(file_path)
             logger.info(f"Loaded DXF file: {path.name}")
+
+        # Checkpoint: after file loading
+        _check_abort(abort_event, "file loading", blocks_processed, entities_processed)
+
         msp = doc.modelspace()
 
         # Initialize result dictionaries
@@ -770,15 +878,27 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             total_block_defs = len(doc.blocks)
             for block_def in doc.blocks:
                 block_def_count += 1
+                blocks_processed = block_def_count
                 # Log progress every 50 blocks
                 if block_def_count % 50 == 0:
-                    logger.info(f"Analyzing block definitions... {block_def_count}/{total_block_defs}")
+                    logger.info(
+                        f"Analyzing block definitions... {block_def_count}/{total_block_defs}"
+                    )
+                # Checkpoint: every 25 blocks
+                if block_def_count % 25 == 0:
+                    _check_abort(
+                        abort_event,
+                        "block definition analysis",
+                        blocks_processed,
+                        entities_processed,
+                    )
                 block_name = block_def.name
 
                 # Skip modelspace/paperspace blocks
-                if block_name in ("*Model_Space", "*Paper_Space") or block_name.startswith(
-                    "*Paper_Space"
-                ):
+                if block_name in (
+                    "*Model_Space",
+                    "*Paper_Space",
+                ) or block_name.startswith("*Paper_Space"):
                     continue
 
                 # Handle anonymous blocks starting with *U (dynamic block instances)
@@ -786,7 +906,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                     # Try to resolve original name from XDATA on block record
                     try:
                         block_record = block_def.block_record
-                        resolved_name, resolution_details = _resolve_dynamic_block_name(block_record, doc, block_name)
+                        resolved_name, resolution_details = _resolve_dynamic_block_name(
+                            block_record, doc, block_name
+                        )
                         # Store resolution details for accurate error reporting later
                         anonymous_resolution_details[block_name] = resolution_details
                         if resolved_name:
@@ -804,15 +926,21 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                             )
                             continue  # Skip geometry analysis for unresolved *U blocks
                     except (AttributeError, TypeError) as e:
-                        logger.debug(f"Error accessing block record for {block_name}: {e}")
-                        anonymous_resolution_details[block_name] = f"Error accessing block record: {e}"
+                        logger.debug(
+                            f"Error accessing block record for {block_name}: {e}"
+                        )
+                        anonymous_resolution_details[block_name] = (
+                            f"Error accessing block record: {e}"
+                        )
                         continue
                 # Handle A$C blocks (alternate anonymous block naming convention)
                 elif block_name.startswith("A$C"):
                     # Try to resolve original name from XDATA on block record
                     try:
                         block_record = block_def.block_record
-                        resolved_name, resolution_details = _resolve_dynamic_block_name(block_record, doc, block_name)
+                        resolved_name, resolution_details = _resolve_dynamic_block_name(
+                            block_record, doc, block_name
+                        )
                         # Store resolution details for accurate error reporting later
                         anonymous_resolution_details[block_name] = resolution_details
                         if resolved_name:
@@ -832,10 +960,14 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                             )
                             effective_name = block_name
                     except (AttributeError, TypeError) as e:
-                        logger.debug(f"Error accessing block record for {block_name}: {e}")
+                        logger.debug(
+                            f"Error accessing block record for {block_name}: {e}"
+                        )
                         # Still process with raw name
                         anonymous_to_resolved[block_name] = block_name
-                        anonymous_resolution_details[block_name] = f"Error accessing block record: {e}"
+                        anonymous_resolution_details[block_name] = (
+                            f"Error accessing block record: {e}"
+                        )
                         effective_name = block_name
                 # Skip other anonymous blocks (dimension blocks, hatch patterns, etc.)
                 elif block_name.startswith("*"):
@@ -888,17 +1020,32 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             entity_count = 0
             for entity in msp:
                 entity_count += 1
+                entities_processed = entity_count
                 # Log progress every 1000 entities
                 if entity_count % 1000 == 0:
-                    logger.info(f"Analyzing modelspace entities... {entity_count}/{total_msp_entities}")
+                    logger.info(
+                        f"Analyzing modelspace entities... {entity_count}/{total_msp_entities}"
+                    )
+                # Checkpoint: every 500 entities
+                if entity_count % 500 == 0:
+                    _check_abort(
+                        abort_event,
+                        "modelspace entity analysis",
+                        blocks_processed,
+                        entities_processed,
+                    )
                 entity_type = entity.dxftype()
                 layer_name = entity.dxf.layer
 
                 # Count entity types
-                entity_type_counts[entity_type] = entity_type_counts.get(entity_type, 0) + 1
+                entity_type_counts[entity_type] = (
+                    entity_type_counts.get(entity_type, 0) + 1
+                )
 
                 # Count entities per layer
-                layer_entity_counts[layer_name] = layer_entity_counts.get(layer_name, 0) + 1
+                layer_entity_counts[layer_name] = (
+                    layer_entity_counts.get(layer_name, 0) + 1
+                )
 
                 # Extract TEXT and MTEXT annotation data
                 if entity_type in ("TEXT", "MTEXT"):
@@ -918,7 +1065,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                             contents = _clean_mtext_content(entity)
 
                         # Log annotation content (truncated to 50 chars)
-                        preview = contents[:50] + "..." if len(contents) > 50 else contents
+                        preview = (
+                            contents[:50] + "..." if len(contents) > 50 else contents
+                        )
                         logger.debug(
                             f"Processing {entity_type}: layer={layer_name}, content={preview!r}"
                         )
@@ -1022,7 +1171,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                             unresolved_anonymous_blocks.get(anon_key, 0) + 1
                         )
 
-                    logger.debug(f"Processing INSERT: block={block_name}, layer={layer_name}")
+                    logger.debug(
+                        f"Processing INSERT: block={block_name}, layer={layer_name}"
+                    )
                     block_counts[block_name] = block_counts.get(block_name, 0) + 1
                     layer_block_insertion_counts[layer_name] = (
                         layer_block_insertion_counts.get(layer_name, 0) + 1
@@ -1131,6 +1282,11 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             f"Found {total_annotation_entities} annotation entities across {len(layer_annotation_counts)} layers"
         )
         logger.info(f"Extracted {unique_annotation_groups} unique annotation groups")
+
+        # Checkpoint: before color analysis
+        _check_abort(
+            abort_event, "before color analysis", blocks_processed, entities_processed
+        )
 
         # Extract color analysis data
         with timed_block("color analysis", logger, logging.INFO):

@@ -69,7 +69,9 @@ class TestMtextFormatting:
 
         # Find LINE ONE LINE TWO entry
         line_entries = [
-            key for key in annotation_data.keys() if "LINE ONE" in key.annotation_contents
+            key
+            for key in annotation_data.keys()
+            if "LINE ONE" in key.annotation_contents
         ]
         assert len(line_entries) >= 1
 
@@ -104,7 +106,9 @@ class TestMtextFormatting:
 
         # Find overlined text entry
         overline_entries = [
-            key for key in annotation_data.keys() if "OVERLINED" in key.annotation_contents
+            key
+            for key in annotation_data.keys()
+            if "OVERLINED" in key.annotation_contents
         ]
         assert len(overline_entries) >= 1
 

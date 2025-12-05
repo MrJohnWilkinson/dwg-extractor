@@ -30,7 +30,9 @@ def create_equal_area_test_dxf() -> None:
     # Top-left: (0, 90) to (10, 100)
     four_corners.add_lwpolyline([(0, 90), (10, 90), (10, 100), (0, 100)], close=True)
     # Top-right: (90, 90) to (100, 100)
-    four_corners.add_lwpolyline([(90, 90), (100, 90), (100, 100), (90, 100)], close=True)
+    four_corners.add_lwpolyline(
+        [(90, 90), (100, 90), (100, 100), (90, 100)], close=True
+    )
 
     # Block 2: TWO_EQUAL_HORIZONTAL - 2 equal 20x10 rectangles side by side
     # This tests union bounding box with 2 tied shapes

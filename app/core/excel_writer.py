@@ -390,7 +390,9 @@ def _create_block_analysis_sheet(
     block_entities = data["block_entities"]
     block_xdata_apps = data["block_xdata_apps"]
 
-    logger.debug(f"Block Analysis: {len(block_layer_pairs)} block-layer pairs to process")
+    logger.debug(
+        f"Block Analysis: {len(block_layer_pairs)} block-layer pairs to process"
+    )
 
     if block_layer_pairs:
         # Unpack block-layer pairs into DataFrame rows (simplified - no rotations)
@@ -660,10 +662,18 @@ def _create_block_geometry_analysis_sheet(
                     EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: native_height,
                     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS: vertical_segments_str,
                     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS: horizontal_segments_str,
-                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT: suggested_trim_left if suggested_trim_left is not None else "",
-                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT: suggested_trim_right if suggested_trim_right is not None else "",
-                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP: suggested_trim_top if suggested_trim_top is not None else "",
-                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM: suggested_trim_bottom if suggested_trim_bottom is not None else "",
+                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT: suggested_trim_left
+                    if suggested_trim_left is not None
+                    else "",
+                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT: suggested_trim_right
+                    if suggested_trim_right is not None
+                    else "",
+                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP: suggested_trim_top
+                    if suggested_trim_top is not None
+                    else "",
+                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM: suggested_trim_bottom
+                    if suggested_trim_bottom is not None
+                    else "",
                     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED: content_zone_detected,
                 }
             )
@@ -711,7 +721,9 @@ def _create_annotations_analysis_sheet(
 
     annotation_data = data["annotation_data"]
 
-    logger.debug(f"Annotations Analysis: {len(annotation_data)} annotation groups to process")
+    logger.debug(
+        f"Annotations Analysis: {len(annotation_data)} annotation groups to process"
+    )
 
     if annotation_data:
         # Build DataFrame rows from annotation data

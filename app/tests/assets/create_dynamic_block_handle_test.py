@@ -107,9 +107,15 @@ doc.saveas("app/tests/assets/dynamic_block_handle_test.dxf")
 print("Created app/tests/assets/dynamic_block_handle_test.dxf with handle-based XDATA")
 print("\nExpected results after extraction:")
 print("  - REGULAR_BLOCK: 2 insertions (1 on LAYER_A, 1 on LAYER_B)")
-print("  - DOOR_HANDLE_TEST: 3 insertions (2 on LAYER_A, 1 on LAYER_B) - resolved from *U1 via handle")
-print("  - WINDOW_HANDLE_TEST: 2 insertions (1 on LAYER_A, 1 on LAYER_B) - resolved from *U2 via handle")
-print("  - DIRECT_STRING_BLOCK: 4 insertions (2 on LAYER_A, 2 on LAYER_B) - resolved from *U4 via string")
+print(
+    "  - DOOR_HANDLE_TEST: 3 insertions (2 on LAYER_A, 1 on LAYER_B) - resolved from *U1 via handle"
+)
+print(
+    "  - WINDOW_HANDLE_TEST: 2 insertions (1 on LAYER_A, 1 on LAYER_B) - resolved from *U2 via handle"
+)
+print(
+    "  - DIRECT_STRING_BLOCK: 4 insertions (2 on LAYER_A, 2 on LAYER_B) - resolved from *U4 via string"
+)
 print("\nExtraction Issues (unresolved anonymous blocks):")
 print("  - *U3 on LAYER_A: 1 insertion (invalid handle)")
 print("  - *U3 on LAYER_B: 2 insertions (invalid handle)")

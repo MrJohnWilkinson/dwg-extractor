@@ -263,8 +263,12 @@ class TestNetAreaCalculation:
         results = _calculate_net_areas([outer, inner])
 
         # Find outer and inner in results
-        outer_result = next((p, a) for p, a in results if _calculate_polygon_area(p) == 100)
-        inner_result = next((p, a) for p, a in results if _calculate_polygon_area(p) == 36)
+        outer_result = next(
+            (p, a) for p, a in results if _calculate_polygon_area(p) == 100
+        )
+        inner_result = next(
+            (p, a) for p, a in results if _calculate_polygon_area(p) == 36
+        )
 
         # Outer net area = 100 - 36 = 64
         assert outer_result[1] == 64.0

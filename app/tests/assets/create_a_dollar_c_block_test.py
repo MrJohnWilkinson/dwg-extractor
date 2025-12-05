@@ -56,7 +56,9 @@ block_record_4 = anon_block_4.block_record
 # Only GUID XDATA - not useful for name resolution
 if "AcDbDynamicBlockGUID" not in doc.appids:
     doc.appids.new("AcDbDynamicBlockGUID")
-block_record_4.set_xdata("AcDbDynamicBlockGUID", [(1000, "{12345678-ABCD-1234-ABCD-123456789ABC}")])
+block_record_4.set_xdata(
+    "AcDbDynamicBlockGUID", [(1000, "{12345678-ABCD-1234-ABCD-123456789ABC}")]
+)
 
 # Insert regular blocks
 msp.add_blockref("REGULAR_BLOCK", (0, 0), dxfattribs={"layer": "LAYER_A"})
@@ -65,17 +67,27 @@ msp.add_blockref("REGULAR_BLOCK", (0, 20), dxfattribs={"layer": "LAYER_B"})
 
 # Insert A$C block with resolvable XDATA (should become SHELF_UNIT)
 msp.add_blockref("A$C7F63364D", (50, 0), dxfattribs={"layer": "LAYER_A", "rotation": 0})
-msp.add_blockref("A$C7F63364D", (90, 0), dxfattribs={"layer": "LAYER_A", "rotation": 90})
-msp.add_blockref("A$C7F63364D", (50, 50), dxfattribs={"layer": "LAYER_B", "rotation": 0, "xscale": 2.0})
+msp.add_blockref(
+    "A$C7F63364D", (90, 0), dxfattribs={"layer": "LAYER_A", "rotation": 90}
+)
+msp.add_blockref(
+    "A$C7F63364D",
+    (50, 50),
+    dxfattribs={"layer": "LAYER_B", "rotation": 0, "xscale": 2.0},
+)
 
 # Insert A$C block with self-referencing XDATA (unresolved, uses raw A$C25B30886)
 msp.add_blockref("A$C25B30886", (150, 0), dxfattribs={"layer": "LAYER_A"})
 msp.add_blockref("A$C25B30886", (180, 0), dxfattribs={"layer": "LAYER_B"})
 
 # Insert A$C block with no XDATA (unresolved, uses raw A$C0c1c4685)
-msp.add_blockref("A$C0c1c4685", (250, 0), dxfattribs={"layer": "LAYER_A", "rotation": 180})
+msp.add_blockref(
+    "A$C0c1c4685", (250, 0), dxfattribs={"layer": "LAYER_A", "rotation": 180}
+)
 msp.add_blockref("A$C0c1c4685", (280, 0), dxfattribs={"layer": "LAYER_A"})
-msp.add_blockref("A$C0c1c4685", (250, 50), dxfattribs={"layer": "LAYER_B", "xscale": -1.0})
+msp.add_blockref(
+    "A$C0c1c4685", (250, 50), dxfattribs={"layer": "LAYER_B", "xscale": -1.0}
+)
 msp.add_blockref("A$C0c1c4685", (280, 50), dxfattribs={"layer": "LAYER_B"})
 
 # Insert A$C block with GUID-only XDATA (unresolved, uses raw A$CABC12345)
@@ -85,15 +97,27 @@ msp.add_blockref("A$CABC12345", (410, 0), dxfattribs={"layer": "LAYER_B"})
 
 # Save DXF file
 doc.saveas("app/tests/assets/a_dollar_c_block_test.dxf")
-print("Created app/tests/assets/a_dollar_c_block_test.dxf with A$C anonymous block simulation")
+print(
+    "Created app/tests/assets/a_dollar_c_block_test.dxf with A$C anonymous block simulation"
+)
 print("\nExpected results after extraction:")
 print("  - REGULAR_BLOCK: 3 insertions (2 on LAYER_A, 1 on LAYER_B)")
-print("  - SHELF_UNIT: 3 insertions (2 on LAYER_A, 1 on LAYER_B) - resolved from A$C7F63364D")
-print("  - A$C25B30886: 2 insertions (1 on LAYER_A, 1 on LAYER_B) - unresolved (self-referencing XDATA)")
-print("  - A$C0c1c4685: 4 insertions (2 on LAYER_A, 2 on LAYER_B) - unresolved (no XDATA)")
-print("  - A$CABC12345: 3 insertions (1 on LAYER_A, 2 on LAYER_B) - unresolved (GUID-only XDATA)")
+print(
+    "  - SHELF_UNIT: 3 insertions (2 on LAYER_A, 1 on LAYER_B) - resolved from A$C7F63364D"
+)
+print(
+    "  - A$C25B30886: 2 insertions (1 on LAYER_A, 1 on LAYER_B) - unresolved (self-referencing XDATA)"
+)
+print(
+    "  - A$C0c1c4685: 4 insertions (2 on LAYER_A, 2 on LAYER_B) - unresolved (no XDATA)"
+)
+print(
+    "  - A$CABC12345: 3 insertions (1 on LAYER_A, 2 on LAYER_B) - unresolved (GUID-only XDATA)"
+)
 print("\nExtraction Issues (unresolved A$C blocks):")
-print("  - A$C25B30886: LAYER_A=1, LAYER_B=1 (self-referencing AcDbDynamicBlockTrueName)")
+print(
+    "  - A$C25B30886: LAYER_A=1, LAYER_B=1 (self-referencing AcDbDynamicBlockTrueName)"
+)
 print("  - A$C0c1c4685: LAYER_A=2, LAYER_B=2 (no XDATA)")
 print("  - A$CABC12345: LAYER_A=1, LAYER_B=2 (only AcDbDynamicBlockGUID)")
 print("\nKey differences from *U handling:")

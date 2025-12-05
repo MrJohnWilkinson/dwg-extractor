@@ -220,7 +220,9 @@ class TestJsonFormatter:
 class TestTimedDecorator:
     """Tests for the @timed decorator."""
 
-    def test_timed_decorator_logs_duration(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_timed_decorator_logs_duration(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Verify timing decorator logs function duration."""
         # Create a test logger at DEBUG level
         test_logger = logging.getLogger("test_timed")
@@ -243,6 +245,7 @@ class TestTimedDecorator:
 
     def test_timed_decorator_preserves_function_signature(self) -> None:
         """Verify timing decorator preserves function metadata."""
+
         @timed()
         def documented_function() -> None:
             """This is a documented function."""
