@@ -74,6 +74,9 @@ class DXFExtractorApp(ctk.CTk):
         # Don't add to self.logger too - messages propagate up, causing duplicates
         self.queue_handler = create_queue_handler(self.log_queue)
         logging.getLogger().addHandler(self.queue_handler)
+        # Initialize root logger level to DEBUG to match dropdown default
+        # Without this, Python's default WARNING level filters out DEBUG/INFO messages
+        logging.getLogger().setLevel(logging.DEBUG)
 
         # Create UI
         self._create_widgets()

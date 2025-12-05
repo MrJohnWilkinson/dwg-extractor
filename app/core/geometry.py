@@ -760,7 +760,17 @@ def _calculate_net_areas(
     # A polygon A directly contains B if A contains B and there's no C where A contains C contains B
     net_areas: list[float] = list(areas)
 
+    direct_containment_start = time.perf_counter()
     for i in range(n):
+        # Check abort at start of each polygon to ensure responsive cancellation
+        # This loop is O(n³) so frequent checks are critical for responsiveness
+        _check_geometry_abort(abort_event)
+
+        # Log progress every 10 polygons for visibility into slow operations
+        if n > 20 and i > 0 and i % 10 == 0:
+            elapsed = time.perf_counter() - direct_containment_start
+            logger.debug(f"Net areas: direct containment progress {i}/{n} ({elapsed:.3f}s)")
+
         # Find all polygons that this polygon (i) contains
         directly_contained: list[int] = []
         for j in range(n):
