@@ -1382,10 +1382,17 @@ def extract_blocks(
             "color_analysis_data": color_analysis_data,
             "extraction_issues": extraction_issues,
         }
+        logger.debug("ExtractionResult dict constructed")
 
         logger.info(
             f"[TIMING] extraction complete, returning result with {len(block_counts)} blocks"
         )
+
+        # Force flush all handlers to ensure log appears immediately
+        for handler in logging.getLogger().handlers:
+            handler.flush()
+
+        logger.debug("About to return from extract_blocks()")
         return result
 
     except (DXFError, IOError, OSError) as e:

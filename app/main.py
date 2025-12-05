@@ -16,6 +16,7 @@ import platform
 import queue
 import subprocess
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox
@@ -343,21 +344,30 @@ class DXFExtractorApp(ctk.CTk):
                 self.selected_file_path, abort_event=self.abort_event
             )
             self.logger.info(
+                f"[TIMING] extract_blocks() returned at {time.strftime('%H:%M:%S')}"
+            )
+            # Force flush all handlers to ensure log appears immediately
+            for handler in logging.getLogger().handlers:
+                handler.flush()
+            self.logger.info(
                 f"extract_blocks() returned, processing {len(extraction_result['block_counts'])} blocks"
             )
 
             # Check for abort after extraction completes
+            self.logger.debug("Checking abort event after extraction")
             if self.abort_event and self.abort_event.is_set():
                 self.logger.info(
                     "Abort detected after extraction, skipping Excel generation"
                 )
                 return
+            self.logger.debug("Abort check passed, continuing to results processing")
 
             # Step 4: Process results
             self.logger.debug(
-                "Calling _update_progress for step 4 (Processing results)"
+                "About to schedule progress update: 60% (Processing results)"
             )
             self._update_progress(0.6, "Processing extraction results...")
+            self.logger.debug("Progress 60% scheduled, continuing")
 
             # Check for empty results
             self.logger.debug("Checking for empty extraction results...")

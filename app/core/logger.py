@@ -270,6 +270,22 @@ def set_all_logger_levels(level: int) -> None:
                 handler.setLevel(level)
 
 
+class FlushingFileHandler(logging.FileHandler):
+    """
+    FileHandler subclass that flushes after every emit.
+
+    Ensures every log message is immediately visible in the file,
+    even if Python's default buffering would otherwise delay it.
+    This is critical for diagnosing hangs where we need to see
+    exactly which log message was the last one written.
+    """
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Emit record and immediately flush to disk."""
+        super().emit(record)
+        self.flush()
+
+
 def create_debug_file_handler(file_path: str) -> logging.FileHandler:
     """
     Create a FileHandler for DEBUG logging with write-through mode.
@@ -281,7 +297,7 @@ def create_debug_file_handler(file_path: str) -> logging.FileHandler:
         file_path: Full path to the log file to create
 
     Returns:
-        A configured FileHandler with DEBUG level and write-through enabled
+        A configured FlushingFileHandler with DEBUG level and immediate flush
 
     Examples:
         >>> handler = create_debug_file_handler('/path/to/extraction.log')
@@ -302,8 +318,8 @@ def create_debug_file_handler(file_path: str) -> logging.FileHandler:
                 s = time.strftime("%H:%M:%S", ct)
             return f"{s}.{int(record.msecs):03d}"
 
-    # Create handler - use 'w' mode to overwrite any existing file
-    handler = logging.FileHandler(file_path, mode="w", encoding="utf-8")
+    # Create FlushingFileHandler - use 'w' mode to overwrite any existing file
+    handler = FlushingFileHandler(file_path, mode="w", encoding="utf-8")
     handler.setLevel(logging.DEBUG)
 
     # Set formatter with millisecond timestamps
