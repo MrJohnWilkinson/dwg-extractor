@@ -119,7 +119,7 @@ EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE: str = "FFFF0000"
 EXCEL_FILL_COLOR_EXTRACTION_ISSUE: str = "FFFFFF00"
 
 # Log viewer configuration
-LOG_POLL_INTERVAL_MS: int = 100
+LOG_POLL_INTERVAL_MS: int = 50
 
 # UI messages
 MSG_SELECT_FILE: str = "Please select a DXF file"

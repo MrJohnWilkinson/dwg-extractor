@@ -65,9 +65,9 @@ class DXFExtractorApp(ctk.CTk):
         self.log_queue: queue.Queue[logging.LogRecord] = queue.Queue()
 
         # Set up queue handler for log viewer
+        # Add to root logger to capture logs from all modules (extractor, etc.)
+        # Don't add to self.logger too - messages propagate up, causing duplicates
         self.queue_handler = create_queue_handler(self.log_queue)
-        self.logger.addHandler(self.queue_handler)
-        # Also add to root logger to capture logs from extractor module
         logging.getLogger().addHandler(self.queue_handler)
 
         # Create UI
@@ -173,7 +173,16 @@ class DXFExtractorApp(ctk.CTk):
             "WARNING": logging.WARNING,
             "ERROR": logging.ERROR,
         }
-        self.current_log_level = level_map.get(choice, logging.INFO)
+        new_level = level_map.get(choice, logging.INFO)
+        self.current_log_level = new_level
+
+        # Update handler level
+        self.queue_handler.setLevel(new_level)
+
+        # Update logger levels (module logger and root logger)
+        self.logger.setLevel(new_level)
+        logging.getLogger().setLevel(new_level)
+
         self.logger.info(f"Log level changed to {choice}")
 
     def _poll_log_queue(self) -> None:

@@ -267,13 +267,17 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
         text_annotations: list[ColorAnalysisRecord] = []
 
         msp = doc.modelspace()
-        entity_count = 0
+        processed_count = 0
         total_entities = sum(1 for _ in msp)
         logger.debug(f"Color analysis starting with {total_entities} total modelspace entities")
 
         # Re-iterate since we consumed the iterator
         msp = doc.modelspace()
         for entity in msp:
+            processed_count += 1
+            # Log progress every 1000 entities
+            if processed_count % 1000 == 0:
+                logger.info(f"Analyzing colors... {processed_count}/{total_entities}")
             entity_type = entity.dxftype()
 
             # Filter for relevant entity types
@@ -298,7 +302,6 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
             layer_name = entity.dxf.layer if hasattr(entity.dxf, "layer") else "0"
 
             color_r, color_g, color_b = rgb
-            entity_count += 1
 
             # Handle geometric entities (Lines and Polylines)
             if entity_type == "LINE":
@@ -365,7 +368,7 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
                     }
                 )
 
-        logger.info(f"Processed {entity_count} entities for color analysis")
+        logger.info(f"Processed {processed_count} entities for color analysis")
         logger.debug(
             f"Color analysis complete: {len(geometric_entities)} geometric groups, {len(text_annotations)} text entities"
         )
@@ -763,7 +766,13 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         # Extract block definition entity counts and geometry analysis
         with timed_block("block definition analysis", logger, logging.INFO):
             logger.info("Analyzing block definitions...")
+            block_def_count = 0
+            total_block_defs = len(doc.blocks)
             for block_def in doc.blocks:
+                block_def_count += 1
+                # Log progress every 50 blocks
+                if block_def_count % 50 == 0:
+                    logger.info(f"Analyzing block definitions... {block_def_count}/{total_block_defs}")
                 block_name = block_def.name
 
                 # Skip modelspace/paperspace blocks
@@ -873,9 +882,15 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         # Iterate through modelspace entities
         with timed_block("modelspace entity analysis", logger, logging.INFO):
             logger.info("Analyzing modelspace entities...")
+            # Get total entity count for progress reporting
+            total_msp_entities = sum(1 for _ in msp)
+            msp = doc.modelspace()  # Re-get modelspace since we consumed the iterator
             entity_count = 0
             for entity in msp:
                 entity_count += 1
+                # Log progress every 1000 entities
+                if entity_count % 1000 == 0:
+                    logger.info(f"Analyzing modelspace entities... {entity_count}/{total_msp_entities}")
                 entity_type = entity.dxftype()
                 layer_name = entity.dxf.layer
 
