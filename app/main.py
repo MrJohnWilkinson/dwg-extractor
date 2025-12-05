@@ -13,14 +13,17 @@ Usage:
 import logging
 import os
 import platform
+import queue
 import subprocess
 import threading
+from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
 from core.constants import (
+    LOG_POLL_INTERVAL_MS,
     MSG_ERROR_FILE_NOT_FOUND,
     MSG_ERROR_INVALID_FILE,
     MSG_ERROR_NO_BLOCKS,
@@ -30,7 +33,7 @@ from core.constants import (
 )
 from core.excel_writer import write_excel
 from core.extractor import extract_blocks
-from core.logger import setup_logger
+from core.logger import create_queue_handler, setup_logger
 
 
 # Set CustomTkinter appearance
@@ -50,15 +53,28 @@ class DXFExtractorApp(ctk.CTk):
 
         # Window configuration
         self.title("DXF Block Extractor")
-        self.geometry("500x300")
-        self.resizable(False, False)
+        self.geometry("600x500")
+        self.resizable(True, True)
 
         # Instance variables
         self.selected_file_path: str | None = None
         self.output_excel_path: str | None = None
 
+        # Log viewer state
+        self.current_log_level: int = logging.INFO
+        self.log_queue: queue.Queue[logging.LogRecord] = queue.Queue()
+
+        # Set up queue handler for log viewer
+        self.queue_handler = create_queue_handler(self.log_queue)
+        self.logger.addHandler(self.queue_handler)
+        # Also add to root logger to capture logs from extractor module
+        logging.getLogger().addHandler(self.queue_handler)
+
         # Create UI
         self._create_widgets()
+
+        # Start log queue polling
+        self._poll_log_queue()
 
     def _create_widgets(self) -> None:
         """Create and layout all UI widgets."""
@@ -118,6 +134,70 @@ class DXFExtractorApp(ctk.CTk):
         # Status label
         self.status_label = ctk.CTkLabel(main_frame, text="", font=ctk.CTkFont(size=12))
         self.status_label.pack()
+
+        # Log controls frame
+        log_controls_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        log_controls_frame.pack(pady=(15, 5), fill="x")
+
+        # Log level label
+        log_level_label = ctk.CTkLabel(
+            log_controls_frame, text="Log Level:", font=ctk.CTkFont(size=12)
+        )
+        log_level_label.pack(side="left", padx=(0, 10))
+
+        # Log level dropdown
+        self.log_level_dropdown = ctk.CTkOptionMenu(
+            log_controls_frame,
+            values=["DEBUG", "INFO", "WARNING", "ERROR"],
+            command=self._on_log_level_change,
+            width=120,
+        )
+        self.log_level_dropdown.set("INFO")
+        self.log_level_dropdown.pack(side="left")
+
+        # Log viewer textbox
+        self.log_viewer = ctk.CTkTextbox(
+            main_frame,
+            width=560,
+            height=150,
+            state="disabled",
+            font=("Courier", 10),
+        )
+        self.log_viewer.pack(pady=(5, 0), fill="both", expand=True)
+
+    def _on_log_level_change(self, choice: str) -> None:
+        """Handle log level dropdown change."""
+        level_map = {
+            "DEBUG": logging.DEBUG,
+            "INFO": logging.INFO,
+            "WARNING": logging.WARNING,
+            "ERROR": logging.ERROR,
+        }
+        self.current_log_level = level_map.get(choice, logging.INFO)
+        self.logger.info(f"Log level changed to {choice}")
+
+    def _poll_log_queue(self) -> None:
+        """Poll the log queue and update the log viewer."""
+        while True:
+            try:
+                record = self.log_queue.get_nowait()
+                # Check if record level meets current filter
+                if record.levelno >= self.current_log_level:
+                    # Format the log message
+                    timestamp = datetime.fromtimestamp(record.created).strftime(
+                        "%H:%M:%S.%f"
+                    )[:-3]
+                    message = f"{timestamp} [{record.levelname}] {record.getMessage()}\n"
+                    # Append to textbox
+                    self.log_viewer.configure(state="normal")
+                    self.log_viewer.insert("end", message)
+                    self.log_viewer.configure(state="disabled")
+                    # Auto-scroll to end
+                    self.log_viewer.see("end")
+            except queue.Empty:
+                break
+        # Schedule next poll
+        self.after(LOG_POLL_INTERVAL_MS, self._poll_log_queue)
 
     def _browse_file(self) -> None:
         """Handle browse button click - open file dialog."""

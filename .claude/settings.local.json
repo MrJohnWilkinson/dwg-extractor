@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(tree:*)",
+      "Bash(test:*)",
+      "SlashCommand(/dev:commit)",
+      "Bash(cat:*)",
+      "Bash(sort:*)",
+      "Bash(UV_PROJECT=app uv pip install:*)",
+      "Bash(bash:*)",
+      "Bash(scripts/start.sh:*)",
+      "Bash(scripts/build.sh:*)",
+      "WebSearch",
+      "WebFetch(domain:ezdxf.readthedocs.io)",
+      "Bash(lsb_release:*)",
+      "Bash(ldd:*)",
+      "Bash(tar:*)",
+      "Bash(git restore:*)",
+      "Bash(xvfb-run uv run pytest:*)",
+      "Bash(done)",
+      "Bash(while read file)",
+      "Bash(git mv:*)",
+      "Bash(rm:*)",
+      "Bash(git -C .git/.. log --oneline -10)",
+      "Bash(git config --global --add safe.directory '%(prefix)///wsl.localhost/Ubuntu/home/john/github-projects-linux/dwg-extractor')",
+      "Bash(docker --version:*)",
+      "Bash(source:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.claude.ai)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

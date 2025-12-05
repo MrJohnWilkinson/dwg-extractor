@@ -11,6 +11,7 @@ Usage:
     # Returns: ExtractionResult with block_counts, block_entities, layer_insertions, etc.
 """
 
+import logging
 import re
 from pathlib import Path
 from typing import Any, TypedDict
@@ -28,7 +29,7 @@ from .geometry import (
     _get_block_bounding_box,
     _get_intersection_points,
 )
-from .logger import setup_logger
+from .logger import setup_logger, timed_block
 from .types import (
     AnnotationKey,
     BlockLayerKey,
@@ -718,9 +719,10 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
     try:
         # Load DXF file
-        logger.debug(f"Loading DXF file: {file_path}")
-        doc = ezdxf.readfile(file_path)
-        logger.debug(f"DXF file loaded successfully: {file_path}")
+        with timed_block("DXF file loading", logger, logging.INFO):
+            logger.info(f"Loading DXF file: {path.name}")
+            doc = ezdxf.readfile(file_path)
+            logger.info(f"Loaded DXF file: {path.name}")
         msp = doc.modelspace()
 
         # Initialize result dictionaries
@@ -759,107 +761,108 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         logger.info(f"Initialized {len(layer_entity_counts)} layers from layer table")
 
         # Extract block definition entity counts and geometry analysis
-        logger.info("Analyzing block definitions...")
-        for block_def in doc.blocks:
-            block_name = block_def.name
+        with timed_block("block definition analysis", logger, logging.INFO):
+            logger.info("Analyzing block definitions...")
+            for block_def in doc.blocks:
+                block_name = block_def.name
 
-            # Skip modelspace/paperspace blocks
-            if block_name in ("*Model_Space", "*Paper_Space") or block_name.startswith(
-                "*Paper_Space"
-            ):
-                continue
-
-            # Handle anonymous blocks starting with *U (dynamic block instances)
-            if block_name.startswith("*U"):
-                # Try to resolve original name from XDATA on block record
-                try:
-                    block_record = block_def.block_record
-                    resolved_name, resolution_details = _resolve_dynamic_block_name(block_record, doc, block_name)
-                    # Store resolution details for accurate error reporting later
-                    anonymous_resolution_details[block_name] = resolution_details
-                    if resolved_name:
-                        # Store mapping for INSERT processing
-                        anonymous_to_resolved[block_name] = resolved_name
-                        logger.debug(
-                            f"Resolved anonymous block {block_name} to {resolved_name}"
-                        )
-                        # Use the resolved name for all processing
-                        effective_name = resolved_name
-                    else:
-                        # Track as unresolved - will be counted during INSERT processing
-                        logger.debug(
-                            f"Anonymous block {block_name} has no resolvable XDATA: {resolution_details}"
-                        )
-                        continue  # Skip geometry analysis for unresolved *U blocks
-                except (AttributeError, TypeError) as e:
-                    logger.debug(f"Error accessing block record for {block_name}: {e}")
-                    anonymous_resolution_details[block_name] = f"Error accessing block record: {e}"
+                # Skip modelspace/paperspace blocks
+                if block_name in ("*Model_Space", "*Paper_Space") or block_name.startswith(
+                    "*Paper_Space"
+                ):
                     continue
-            # Handle A$C blocks (alternate anonymous block naming convention)
-            elif block_name.startswith("A$C"):
-                # Try to resolve original name from XDATA on block record
-                try:
-                    block_record = block_def.block_record
-                    resolved_name, resolution_details = _resolve_dynamic_block_name(block_record, doc, block_name)
-                    # Store resolution details for accurate error reporting later
-                    anonymous_resolution_details[block_name] = resolution_details
-                    if resolved_name:
-                        # Store mapping for INSERT processing
-                        anonymous_to_resolved[block_name] = resolved_name
-                        logger.debug(
-                            f"Resolved A$C block {block_name} to {resolved_name}"
-                        )
-                        # Use the resolved name for all processing
-                        effective_name = resolved_name
-                    else:
-                        # Unlike *U, unresolved A$C blocks ARE processed with raw name
-                        # Store identity mapping for INSERT processing (to track in issues)
+
+                # Handle anonymous blocks starting with *U (dynamic block instances)
+                if block_name.startswith("*U"):
+                    # Try to resolve original name from XDATA on block record
+                    try:
+                        block_record = block_def.block_record
+                        resolved_name, resolution_details = _resolve_dynamic_block_name(block_record, doc, block_name)
+                        # Store resolution details for accurate error reporting later
+                        anonymous_resolution_details[block_name] = resolution_details
+                        if resolved_name:
+                            # Store mapping for INSERT processing
+                            anonymous_to_resolved[block_name] = resolved_name
+                            logger.debug(
+                                f"Resolved anonymous block {block_name} to {resolved_name}"
+                            )
+                            # Use the resolved name for all processing
+                            effective_name = resolved_name
+                        else:
+                            # Track as unresolved - will be counted during INSERT processing
+                            logger.debug(
+                                f"Anonymous block {block_name} has no resolvable XDATA: {resolution_details}"
+                            )
+                            continue  # Skip geometry analysis for unresolved *U blocks
+                    except (AttributeError, TypeError) as e:
+                        logger.debug(f"Error accessing block record for {block_name}: {e}")
+                        anonymous_resolution_details[block_name] = f"Error accessing block record: {e}"
+                        continue
+                # Handle A$C blocks (alternate anonymous block naming convention)
+                elif block_name.startswith("A$C"):
+                    # Try to resolve original name from XDATA on block record
+                    try:
+                        block_record = block_def.block_record
+                        resolved_name, resolution_details = _resolve_dynamic_block_name(block_record, doc, block_name)
+                        # Store resolution details for accurate error reporting later
+                        anonymous_resolution_details[block_name] = resolution_details
+                        if resolved_name:
+                            # Store mapping for INSERT processing
+                            anonymous_to_resolved[block_name] = resolved_name
+                            logger.debug(
+                                f"Resolved A$C block {block_name} to {resolved_name}"
+                            )
+                            # Use the resolved name for all processing
+                            effective_name = resolved_name
+                        else:
+                            # Unlike *U, unresolved A$C blocks ARE processed with raw name
+                            # Store identity mapping for INSERT processing (to track in issues)
+                            anonymous_to_resolved[block_name] = block_name
+                            logger.debug(
+                                f"A$C block {block_name} has no resolvable XDATA, using raw name: {resolution_details}"
+                            )
+                            effective_name = block_name
+                    except (AttributeError, TypeError) as e:
+                        logger.debug(f"Error accessing block record for {block_name}: {e}")
+                        # Still process with raw name
                         anonymous_to_resolved[block_name] = block_name
-                        logger.debug(
-                            f"A$C block {block_name} has no resolvable XDATA, using raw name: {resolution_details}"
-                        )
+                        anonymous_resolution_details[block_name] = f"Error accessing block record: {e}"
                         effective_name = block_name
-                except (AttributeError, TypeError) as e:
-                    logger.debug(f"Error accessing block record for {block_name}: {e}")
-                    # Still process with raw name
-                    anonymous_to_resolved[block_name] = block_name
-                    anonymous_resolution_details[block_name] = f"Error accessing block record: {e}"
+                # Skip other anonymous blocks (dimension blocks, hatch patterns, etc.)
+                elif block_name.startswith("*"):
+                    continue
+                else:
                     effective_name = block_name
-            # Skip other anonymous blocks (dimension blocks, hatch patterns, etc.)
-            elif block_name.startswith("*"):
-                continue
-            else:
-                effective_name = block_name
 
-            logger.debug(f"Analyzing block definition: {effective_name}")
-            entity_count = sum(1 for _ in block_def)
-            block_entities[effective_name] = entity_count
+                logger.debug(f"Analyzing block definition: {effective_name}")
+                entity_count = sum(1 for _ in block_def)
+                block_entities[effective_name] = entity_count
 
-            # Analyze block geometry for trimming assistance
-            bbox = _get_block_bounding_box(block_def)
-            native_width = round(bbox[2] - bbox[0], 2)
-            native_height = round(bbox[3] - bbox[1], 2)
+                # Analyze block geometry for trimming assistance
+                bbox = _get_block_bounding_box(block_def)
+                native_width = round(bbox[2] - bbox[0], 2)
+                native_height = round(bbox[3] - bbox[1], 2)
 
-            vertical_points, horizontal_points = _get_intersection_points(block_def)
-            vertical_segments = _calculate_segments(vertical_points)
-            horizontal_segments = _calculate_segments(horizontal_points)
+                vertical_points, horizontal_points = _get_intersection_points(block_def)
+                vertical_segments = _calculate_segments(vertical_points)
+                horizontal_segments = _calculate_segments(horizontal_points)
 
-            # Detect content zone and derive suggested trim values
-            content_zone_data = _detect_content_zone(block_def, bbox)
+                # Detect content zone and derive suggested trim values
+                content_zone_data = _detect_content_zone(block_def, bbox)
 
-            block_trimming_data[effective_name] = {
-                "native_width": native_width,
-                "native_height": native_height,
-                "vertical_segments": vertical_segments,
-                "horizontal_segments": horizontal_segments,
-                "suggested_trim_left": content_zone_data["suggested_trim_left"],
-                "suggested_trim_right": content_zone_data["suggested_trim_right"],
-                "suggested_trim_top": content_zone_data["suggested_trim_top"],
-                "suggested_trim_bottom": content_zone_data["suggested_trim_bottom"],
-                "content_zone_detected": content_zone_data["content_zone_detected"],
-            }
+                block_trimming_data[effective_name] = {
+                    "native_width": native_width,
+                    "native_height": native_height,
+                    "vertical_segments": vertical_segments,
+                    "horizontal_segments": horizontal_segments,
+                    "suggested_trim_left": content_zone_data["suggested_trim_left"],
+                    "suggested_trim_right": content_zone_data["suggested_trim_right"],
+                    "suggested_trim_top": content_zone_data["suggested_trim_top"],
+                    "suggested_trim_bottom": content_zone_data["suggested_trim_bottom"],
+                    "content_zone_detected": content_zone_data["content_zone_detected"],
+                }
 
-        logger.info(f"Analyzed {len(block_entities)} block definitions")
+            logger.info(f"Analyzed {len(block_entities)} block definitions")
         logger.info(
             f"Analyzed geometry for {len(block_trimming_data)} block definitions"
         )
@@ -868,209 +871,214 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         )
 
         # Iterate through modelspace entities
-        logger.info("Analyzing modelspace entities...")
-        for entity in msp:
-            entity_type = entity.dxftype()
-            layer_name = entity.dxf.layer
+        with timed_block("modelspace entity analysis", logger, logging.INFO):
+            logger.info("Analyzing modelspace entities...")
+            entity_count = 0
+            for entity in msp:
+                entity_count += 1
+                entity_type = entity.dxftype()
+                layer_name = entity.dxf.layer
 
-            # Count entity types
-            entity_type_counts[entity_type] = entity_type_counts.get(entity_type, 0) + 1
+                # Count entity types
+                entity_type_counts[entity_type] = entity_type_counts.get(entity_type, 0) + 1
 
-            # Count entities per layer
-            layer_entity_counts[layer_name] = layer_entity_counts.get(layer_name, 0) + 1
+                # Count entities per layer
+                layer_entity_counts[layer_name] = layer_entity_counts.get(layer_name, 0) + 1
 
-            # Extract TEXT and MTEXT annotation data
-            if entity_type in ("TEXT", "MTEXT"):
-                # Count annotations per layer
-                layer_annotation_counts[layer_name] = (
-                    layer_annotation_counts.get(layer_name, 0) + 1
-                )
-
-                # Extract annotation details for Annotations Analysis sheet
-                try:
-                    # Get text contents
-                    if entity_type == "TEXT":
-                        contents = (
-                            entity.dxf.text if hasattr(entity.dxf, "text") else ""
-                        )
-                    else:  # MTEXT
-                        contents = _clean_mtext_content(entity)
-
-                    # Log annotation content (truncated to 50 chars)
-                    preview = contents[:50] + "..." if len(contents) > 50 else contents
-                    logger.debug(
-                        f"Processing {entity_type}: layer={layer_name}, content={preview!r}"
+                # Extract TEXT and MTEXT annotation data
+                if entity_type in ("TEXT", "MTEXT"):
+                    # Count annotations per layer
+                    layer_annotation_counts[layer_name] = (
+                        layer_annotation_counts.get(layer_name, 0) + 1
                     )
 
-                    # Resolve color to RGB
-                    rgb_color = _resolve_entity_color_to_rgb(entity, doc)
+                    # Extract annotation details for Annotations Analysis sheet
+                    try:
+                        # Get text contents
+                        if entity_type == "TEXT":
+                            contents = (
+                                entity.dxf.text if hasattr(entity.dxf, "text") else ""
+                            )
+                        else:  # MTEXT
+                            contents = _clean_mtext_content(entity)
 
-                    # Only track if we have content and could resolve color
-                    if contents and rgb_color is not None:
-                        annotation_key = AnnotationKey(
-                            annotation_contents=contents,
-                            annotation_type=entity_type,
-                            layer_name=layer_name,
-                            color_r=rgb_color[0],
-                            color_g=rgb_color[1],
-                            color_b=rgb_color[2],
+                        # Log annotation content (truncated to 50 chars)
+                        preview = contents[:50] + "..." if len(contents) > 50 else contents
+                        logger.debug(
+                            f"Processing {entity_type}: layer={layer_name}, content={preview!r}"
                         )
-                        annotation_data[annotation_key] = (
-                            annotation_data.get(annotation_key, 0) + 1
-                        )
+
+                        # Resolve color to RGB
+                        rgb_color = _resolve_entity_color_to_rgb(entity, doc)
+
+                        # Only track if we have content and could resolve color
+                        if contents and rgb_color is not None:
+                            annotation_key = AnnotationKey(
+                                annotation_contents=contents,
+                                annotation_type=entity_type,
+                                layer_name=layer_name,
+                                color_r=rgb_color[0],
+                                color_g=rgb_color[1],
+                                color_b=rgb_color[2],
+                            )
+                            annotation_data[annotation_key] = (
+                                annotation_data.get(annotation_key, 0) + 1
+                            )
+                    except (AttributeError, TypeError):
+                        # Skip entities with missing or invalid annotation data
+                        pass
+
+                # Extract entity color for layer color analysis
+                try:
+                    # Try to get RGB color directly
+                    rgb_color = entity.rgb
+                    if rgb_color is not None:
+                        # Initialize set if needed
+                        if layer_name not in layer_unique_colors:
+                            layer_unique_colors[layer_name] = set()
+                        # Add RGB tuple to the set (ensures uniqueness)
+                        layer_unique_colors[layer_name].add(rgb_color)
                 except (AttributeError, TypeError):
-                    # Skip entities with missing or invalid annotation data
+                    # Entity doesn't have rgb property or it's not accessible
                     pass
 
-            # Extract entity color for layer color analysis
-            try:
-                # Try to get RGB color directly
-                rgb_color = entity.rgb
-                if rgb_color is not None:
-                    # Initialize set if needed
-                    if layer_name not in layer_unique_colors:
-                        layer_unique_colors[layer_name] = set()
-                    # Add RGB tuple to the set (ensures uniqueness)
-                    layer_unique_colors[layer_name].add(rgb_color)
-            except (AttributeError, TypeError):
-                # Entity doesn't have rgb property or it's not accessible
-                pass
+                # Count INSERT entities (block insertions)
+                if entity_type == "INSERT":
+                    original_block_name = entity.dxf.name
+                    is_unresolved_a_dollar_c = False
 
-            # Count INSERT entities (block insertions)
-            if entity_type == "INSERT":
-                original_block_name = entity.dxf.name
-                is_unresolved_a_dollar_c = False
-
-                # Handle anonymous blocks (*U blocks - dynamic block instances)
-                if original_block_name.startswith("*U"):
-                    if original_block_name in anonymous_to_resolved:
-                        # Use the resolved original name
-                        block_name = anonymous_to_resolved[original_block_name]
-                        logger.debug(
-                            f"Processing INSERT: anonymous block {original_block_name} resolved to {block_name}, layer={layer_name}"
-                        )
+                    # Handle anonymous blocks (*U blocks - dynamic block instances)
+                    if original_block_name.startswith("*U"):
+                        if original_block_name in anonymous_to_resolved:
+                            # Use the resolved original name
+                            block_name = anonymous_to_resolved[original_block_name]
+                            logger.debug(
+                                f"Processing INSERT: anonymous block {original_block_name} resolved to {block_name}, layer={layer_name}"
+                            )
+                        else:
+                            # Track unresolved anonymous block for extraction issues
+                            anon_key = (original_block_name, layer_name)
+                            unresolved_anonymous_blocks[anon_key] = (
+                                unresolved_anonymous_blocks.get(anon_key, 0) + 1
+                            )
+                            logger.debug(
+                                f"Processing INSERT: unresolved anonymous block {original_block_name}, layer={layer_name}"
+                            )
+                            # Skip further processing for unresolved *U blocks
+                            # Still count as INSERT entity type and layer count
+                            layer_block_insertion_counts[layer_name] = (
+                                layer_block_insertion_counts.get(layer_name, 0) + 1
+                            )
+                            continue
+                    # Handle A$C blocks (alternate anonymous block naming convention)
+                    elif original_block_name.startswith("A$C"):
+                        if original_block_name in anonymous_to_resolved:
+                            resolved = anonymous_to_resolved[original_block_name]
+                            # Check if it's an identity mapping (unresolved A$C block)
+                            if resolved == original_block_name:
+                                # Unresolved A$C block - use raw name but track in issues
+                                block_name = original_block_name
+                                is_unresolved_a_dollar_c = True
+                                logger.debug(
+                                    f"Processing INSERT: unresolved A$C block {original_block_name}, layer={layer_name}"
+                                )
+                            else:
+                                # Resolved A$C block - use resolved name
+                                block_name = resolved
+                                logger.debug(
+                                    f"Processing INSERT: A$C block {original_block_name} resolved to {block_name}, layer={layer_name}"
+                                )
+                        else:
+                            # Not in mapping (shouldn't happen if block def was processed)
+                            # Treat as unresolved and use raw name
+                            block_name = original_block_name
+                            is_unresolved_a_dollar_c = True
+                            logger.debug(
+                                f"Processing INSERT: A$C block {original_block_name} not in mapping, using raw name"
+                            )
                     else:
-                        # Track unresolved anonymous block for extraction issues
+                        block_name = original_block_name
+
+                    # Track unresolved A$C blocks in extraction issues
+                    # (but still continue with full processing unlike *U)
+                    if is_unresolved_a_dollar_c:
                         anon_key = (original_block_name, layer_name)
                         unresolved_anonymous_blocks[anon_key] = (
                             unresolved_anonymous_blocks.get(anon_key, 0) + 1
                         )
-                        logger.debug(
-                            f"Processing INSERT: unresolved anonymous block {original_block_name}, layer={layer_name}"
-                        )
-                        # Skip further processing for unresolved *U blocks
-                        # Still count as INSERT entity type and layer count
-                        layer_block_insertion_counts[layer_name] = (
-                            layer_block_insertion_counts.get(layer_name, 0) + 1
-                        )
-                        continue
-                # Handle A$C blocks (alternate anonymous block naming convention)
-                elif original_block_name.startswith("A$C"):
-                    if original_block_name in anonymous_to_resolved:
-                        resolved = anonymous_to_resolved[original_block_name]
-                        # Check if it's an identity mapping (unresolved A$C block)
-                        if resolved == original_block_name:
-                            # Unresolved A$C block - use raw name but track in issues
-                            block_name = original_block_name
-                            is_unresolved_a_dollar_c = True
-                            logger.debug(
-                                f"Processing INSERT: unresolved A$C block {original_block_name}, layer={layer_name}"
-                            )
-                        else:
-                            # Resolved A$C block - use resolved name
-                            block_name = resolved
-                            logger.debug(
-                                f"Processing INSERT: A$C block {original_block_name} resolved to {block_name}, layer={layer_name}"
-                            )
-                    else:
-                        # Not in mapping (shouldn't happen if block def was processed)
-                        # Treat as unresolved and use raw name
-                        block_name = original_block_name
-                        is_unresolved_a_dollar_c = True
-                        logger.debug(
-                            f"Processing INSERT: A$C block {original_block_name} not in mapping, using raw name"
-                        )
-                else:
-                    block_name = original_block_name
 
-                # Track unresolved A$C blocks in extraction issues
-                # (but still continue with full processing unlike *U)
-                if is_unresolved_a_dollar_c:
-                    anon_key = (original_block_name, layer_name)
-                    unresolved_anonymous_blocks[anon_key] = (
-                        unresolved_anonymous_blocks.get(anon_key, 0) + 1
+                    logger.debug(f"Processing INSERT: block={block_name}, layer={layer_name}")
+                    block_counts[block_name] = block_counts.get(block_name, 0) + 1
+                    layer_block_insertion_counts[layer_name] = (
+                        layer_block_insertion_counts.get(layer_name, 0) + 1
                     )
 
-                logger.debug(f"Processing INSERT: block={block_name}, layer={layer_name}")
-                block_counts[block_name] = block_counts.get(block_name, 0) + 1
-                layer_block_insertion_counts[layer_name] = (
-                    layer_block_insertion_counts.get(layer_name, 0) + 1
-                )
+                    # Track block-layer pairs
+                    pair_key = BlockLayerKey(
+                        block_name=block_name,
+                        layer_name=layer_name,
+                    )
+                    block_layer_pairs[pair_key] = block_layer_pairs.get(pair_key, 0) + 1
 
-                # Track block-layer pairs
-                pair_key = BlockLayerKey(
-                    block_name=block_name,
-                    layer_name=layer_name,
-                )
-                block_layer_pairs[pair_key] = block_layer_pairs.get(pair_key, 0) + 1
+                    # Track block rotation counts
+                    rotation = entity.dxf.rotation
+                    rotation_category = _categorize_rotation(rotation)
+                    logger.debug(
+                        f"Rotation data: block={block_name}, rotation={rotation:.2f}°, category={rotation_category}"
+                    )
+                    rotation_key = BlockRotationKey(
+                        block_name=block_name,
+                        layer_name=layer_name,
+                        rotation_category=rotation_category,
+                    )
+                    block_rotation_counts[rotation_key] = (
+                        block_rotation_counts.get(rotation_key, 0) + 1
+                    )
 
-                # Track block rotation counts
-                rotation = entity.dxf.rotation
-                rotation_category = _categorize_rotation(rotation)
-                logger.debug(
-                    f"Rotation data: block={block_name}, rotation={rotation:.2f}°, category={rotation_category}"
-                )
-                rotation_key = BlockRotationKey(
-                    block_name=block_name,
-                    layer_name=layer_name,
-                    rotation_category=rotation_category,
-                )
-                block_rotation_counts[rotation_key] = (
-                    block_rotation_counts.get(rotation_key, 0) + 1
-                )
+                    # Extract scale data (X and Y scale factors)
+                    try:
+                        x_scale = entity.dxf.xscale
+                        y_scale = entity.dxf.yscale
+                    except AttributeError:
+                        # Default to 1.0 if scale attributes are missing
+                        x_scale = 1.0
+                        y_scale = 1.0
 
-                # Extract scale data (X and Y scale factors)
-                try:
-                    x_scale = entity.dxf.xscale
-                    y_scale = entity.dxf.yscale
-                except AttributeError:
-                    # Default to 1.0 if scale attributes are missing
-                    x_scale = 1.0
-                    y_scale = 1.0
+                    logger.debug(
+                        f"Scale data: block={block_name}, x_scale={x_scale}, y_scale={y_scale}"
+                    )
 
-                logger.debug(
-                    f"Scale data: block={block_name}, x_scale={x_scale}, y_scale={y_scale}"
-                )
+                    # Store all unique scale combinations per block (across all layers)
+                    if block_name not in block_scale_data:
+                        block_scale_data[block_name] = set()
+                    block_scale_data[block_name].add((x_scale, y_scale))
 
-                # Store all unique scale combinations per block (across all layers)
-                if block_name not in block_scale_data:
-                    block_scale_data[block_name] = set()
-                block_scale_data[block_name].add((x_scale, y_scale))
+                    # Extract XDATA application IDs
+                    # Access the xdata property which is a dictionary-like object
+                    try:
+                        # The xdata attribute contains a dictionary mapping appids to tag data
+                        if (
+                            hasattr(entity, "xdata")
+                            and entity.xdata is not None
+                            and len(entity.xdata) > 0
+                        ):
+                            # Get all application IDs from the xdata dictionary
+                            app_ids = (
+                                list(entity.xdata.data.keys())
+                                if hasattr(entity.xdata, "data")
+                                else []
+                            )
+                            if app_ids:
+                                # Initialize set if needed
+                                if pair_key not in block_xdata_apps:
+                                    block_xdata_apps[pair_key] = set()
+                                # Add all application IDs to the set
+                                block_xdata_apps[pair_key].update(app_ids)
+                    except (AttributeError, TypeError):
+                        # Entity doesn't support XDATA
+                        pass
 
-                # Extract XDATA application IDs
-                # Access the xdata property which is a dictionary-like object
-                try:
-                    # The xdata attribute contains a dictionary mapping appids to tag data
-                    if (
-                        hasattr(entity, "xdata")
-                        and entity.xdata is not None
-                        and len(entity.xdata) > 0
-                    ):
-                        # Get all application IDs from the xdata dictionary
-                        app_ids = (
-                            list(entity.xdata.data.keys())
-                            if hasattr(entity.xdata, "data")
-                            else []
-                        )
-                        if app_ids:
-                            # Initialize set if needed
-                            if pair_key not in block_xdata_apps:
-                                block_xdata_apps[pair_key] = set()
-                            # Add all application IDs to the set
-                            block_xdata_apps[pair_key].update(app_ids)
-                except (AttributeError, TypeError):
-                    # Entity doesn't support XDATA
-                    pass
+            logger.info(f"Processed {entity_count} modelspace entities")
 
         # Convert color sets to counts
         layer_unique_color_counts: dict[str, int] = {
@@ -1110,8 +1118,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         logger.info(f"Extracted {unique_annotation_groups} unique annotation groups")
 
         # Extract color analysis data
-        color_analysis_data = extract_color_analysis(doc)
-        logger.info(f"Extracted {len(color_analysis_data)} color analysis records")
+        with timed_block("color analysis", logger, logging.INFO):
+            color_analysis_data = extract_color_analysis(doc)
+            logger.info(f"Extracted {len(color_analysis_data)} color analysis records")
 
         # Convert unresolved anonymous blocks to extraction issues
         for (anon_name, issue_layer_name), count in unresolved_anonymous_blocks.items():

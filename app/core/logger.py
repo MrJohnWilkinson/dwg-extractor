@@ -15,7 +15,9 @@ import contextlib
 import functools
 import json
 import logging
+import logging.handlers
 import os
+import queue
 import sys
 import time
 from typing import Any, Callable, Generator, ParamSpec, TypeVar
@@ -216,6 +218,34 @@ def timed(
         return wrapper
 
     return decorator
+
+
+def create_queue_handler(
+    log_queue: "queue.Queue[logging.LogRecord]", level: int = logging.DEBUG
+) -> logging.Handler:
+    """
+    Create a QueueHandler for thread-safe log delivery to the GUI.
+
+    Creates a logging.handlers.QueueHandler that puts log records into the provided
+    queue. The handler does not apply formatting - formatting happens at display time
+    to keep queue operations fast.
+
+    Args:
+        log_queue: The queue to send log records to
+        level: Minimum log level to capture (default: DEBUG)
+
+    Returns:
+        A configured QueueHandler attached to the provided queue
+
+    Examples:
+        >>> import queue
+        >>> log_queue = queue.Queue()
+        >>> handler = create_queue_handler(log_queue, logging.INFO)
+        >>> logger.addHandler(handler)
+    """
+    handler = logging.handlers.QueueHandler(log_queue)
+    handler.setLevel(level)
+    return handler
 
 
 @contextlib.contextmanager
