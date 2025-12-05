@@ -13,6 +13,8 @@ Usage:
     content_zone = _detect_content_zone(block_def, bbox)
 """
 
+import threading
+import time
 from collections import defaultdict
 
 from ezdxf.layouts import BlockLayout
@@ -22,6 +24,27 @@ from .types import ContentZoneData, Polygon
 
 
 logger = setup_logger(__name__)
+
+
+class GeometryAbortedError(Exception):
+    """Exception raised when geometry operation is aborted by user request."""
+
+    pass
+
+
+def _check_geometry_abort(abort_event: threading.Event | None) -> None:
+    """
+    Check if abort has been requested and raise GeometryAbortedError if so.
+
+    Args:
+        abort_event: Threading event that signals abort request, or None if abort not supported
+
+    Raises:
+        GeometryAbortedError: If abort_event is set
+    """
+    if abort_event is not None and abort_event.is_set():
+        logger.debug("Abort requested during geometry operation")
+        raise GeometryAbortedError("Geometry operation aborted")
 
 
 def _get_block_bounding_box(
@@ -528,7 +551,9 @@ def _extract_closed_lwpolylines(block_def: BlockLayout) -> list[Polygon]:
     return polygons
 
 
-def _extract_line_cycles(block_def: BlockLayout) -> list[Polygon]:
+def _extract_line_cycles(
+    block_def: BlockLayout, abort_event: threading.Event | None = None
+) -> list[Polygon]:
     """
     Detect closed cycles from connected LINE entities using graph-based analysis.
 
@@ -537,6 +562,7 @@ def _extract_line_cycles(block_def: BlockLayout) -> list[Polygon]:
 
     Args:
         block_def: ezdxf block definition object
+        abort_event: Optional threading event to check for abort requests
 
     Returns:
         List of Polygon objects (vertex lists) for each detected cycle.
@@ -547,6 +573,7 @@ def _extract_line_cycles(block_def: BlockLayout) -> list[Polygon]:
         >>> len(cycles)
         1
     """
+    start_time = time.perf_counter()
     epsilon = 0.01
 
     # Collect all line segments
@@ -559,6 +586,8 @@ def _extract_line_cycles(block_def: BlockLayout) -> list[Polygon]:
 
     if not segments:
         return []
+
+    logger.debug(f"Line cycles: found {len(segments)} LINE segments")
 
     # Build adjacency graph with tolerance-based vertex merging
     # First, collect all unique vertices with tolerance
@@ -591,7 +620,15 @@ def _extract_line_cycles(block_def: BlockLayout) -> list[Polygon]:
             adjacency[canon_start].add(canon_end)
             adjacency[canon_end].add(canon_start)
 
+    logger.debug(
+        f"Line cycles: built adjacency graph with {len(adjacency)} unique vertices"
+    )
+
+    # Check abort after building adjacency graph (expensive O(n²) operation)
+    _check_geometry_abort(abort_event)
+
     # Find cycles using DFS
+    cycle_start_time = time.perf_counter()
     polygons: list[Polygon] = []
     visited_edges: set[tuple[tuple[float, float], tuple[float, float]]] = set()
 
@@ -630,7 +667,13 @@ def _extract_line_cycles(block_def: BlockLayout) -> list[Polygon]:
         return None
 
     # Try to find cycles starting from each vertex
+    vertices_processed = 0
     for vertex in list(adjacency.keys()):
+        vertices_processed += 1
+        # Check abort periodically during cycle detection
+        if vertices_processed % 50 == 0:
+            _check_geometry_abort(abort_event)
+
         # Only try vertices with at least 2 connections
         if len(adjacency[vertex]) < 2:
             continue
@@ -646,11 +689,18 @@ def _extract_line_cycles(block_def: BlockLayout) -> list[Polygon]:
             polygons.append(cycle)
             logger.debug(f"Found line cycle with {len(cycle)} vertices")
 
-    logger.debug(f"Detected {len(polygons)} line cycles from block")
+    cycle_elapsed = time.perf_counter() - cycle_start_time
+    total_elapsed = time.perf_counter() - start_time
+    logger.debug(
+        f"Line cycles: detected {len(polygons)} cycles in {cycle_elapsed:.3f}s "
+        f"(total {total_elapsed:.3f}s)"
+    )
     return polygons
 
 
-def _calculate_net_areas(polygons: list[Polygon]) -> list[tuple[Polygon, float]]:
+def _calculate_net_areas(
+    polygons: list[Polygon], abort_event: threading.Event | None = None
+) -> list[tuple[Polygon, float]]:
     """
     Calculate net areas for all polygons accounting for containment.
 
@@ -659,6 +709,7 @@ def _calculate_net_areas(polygons: list[Polygon]) -> list[tuple[Polygon, float]]
 
     Args:
         polygons: List of Polygon objects (vertex lists)
+        abort_event: Optional threading event to check for abort requests
 
     Returns:
         List of (polygon, net_area) tuples.
@@ -673,18 +724,36 @@ def _calculate_net_areas(polygons: list[Polygon]) -> list[tuple[Polygon, float]]
     if not polygons:
         return []
 
+    start_time = time.perf_counter()
+    n = len(polygons)
+    logger.debug(f"Net areas: calculating for {n} polygons")
+
     # Calculate own area for each polygon
     areas = [_calculate_polygon_area(p) for p in polygons]
 
     # Build containment relationships
     # contained_by[i] = list of polygon indices that contain polygon i
-    n = len(polygons)
     contained_by: list[list[int]] = [[] for _ in range(n)]
 
+    containment_checks = 0
     for i in range(n):
+        # Log progress every 10 polygons if > 20 total
+        if n > 20 and i > 0 and i % 10 == 0:
+            logger.debug(f"Net areas: containment check progress {i}/{n}")
+            _check_geometry_abort(abort_event)
+
         for j in range(n):
             if i != j and _polygon_contains_polygon(polygons[j], polygons[i]):
                 contained_by[i].append(j)
+            containment_checks += 1
+
+    logger.debug(
+        f"Net areas: completed {containment_checks} containment checks in "
+        f"{time.perf_counter() - start_time:.3f}s"
+    )
+
+    # Check abort after containment analysis
+    _check_geometry_abort(abort_event)
 
     # Calculate net areas
     # For each polygon, subtract areas of polygons it directly contains
@@ -712,12 +781,17 @@ def _calculate_net_areas(polygons: list[Polygon]) -> list[tuple[Polygon, float]]
         for j in directly_contained:
             net_areas[i] -= areas[j]
 
+    elapsed = time.perf_counter() - start_time
+    logger.debug(f"Net areas: calculation completed in {elapsed:.3f}s")
+
     return [(polygons[i], net_areas[i]) for i in range(n)]
 
 
 def _detect_content_zone(
     block_def: BlockLayout,
     block_bbox: tuple[float, float, float, float],
+    abort_event: threading.Event | None = None,
+    block_name: str | None = None,
 ) -> ContentZoneData:
     """
     Detect the content zone within a block definition and derive trim values.
@@ -733,6 +807,8 @@ def _detect_content_zone(
     Args:
         block_def: ezdxf block definition object
         block_bbox: Tuple of (min_x, min_y, max_x, max_y) for the block's bounding box
+        abort_event: Optional threading event to check for abort requests
+        block_name: Optional block name for logging context
 
     Returns:
         ContentZoneData with suggested trim values and detection flag.
@@ -745,9 +821,30 @@ def _detect_content_zone(
         >>> content_zone['suggested_trim_left']
         5.0
     """
+    total_start_time = time.perf_counter()
+    block_context = f" for block '{block_name}'" if block_name else ""
+    logger.debug(f"Content zone detection starting{block_context}")
+
     # Extract closed shapes from both sources
+    polyline_start = time.perf_counter()
     lwpolyline_shapes = _extract_closed_lwpolylines(block_def)
-    line_cycle_shapes = _extract_line_cycles(block_def)
+    polyline_elapsed = time.perf_counter() - polyline_start
+    logger.debug(
+        f"Content zone: extracted {len(lwpolyline_shapes)} polylines in {polyline_elapsed:.3f}s"
+    )
+
+    # Check abort after polyline extraction
+    _check_geometry_abort(abort_event)
+
+    line_cycle_start = time.perf_counter()
+    line_cycle_shapes = _extract_line_cycles(block_def, abort_event=abort_event)
+    line_cycle_elapsed = time.perf_counter() - line_cycle_start
+    logger.debug(
+        f"Content zone: extracted {len(line_cycle_shapes)} line cycles in {line_cycle_elapsed:.3f}s"
+    )
+
+    # Check abort after line cycle extraction
+    _check_geometry_abort(abort_event)
 
     # Combine all shapes (LWPOLYLINEs first for deterministic ordering)
     all_shapes = lwpolyline_shapes + line_cycle_shapes
@@ -768,7 +865,15 @@ def _detect_content_zone(
         )
 
     # Calculate net areas for all shapes
-    shape_net_areas = _calculate_net_areas(all_shapes)
+    net_area_start = time.perf_counter()
+    shape_net_areas = _calculate_net_areas(all_shapes, abort_event=abort_event)
+    net_area_elapsed = time.perf_counter() - net_area_start
+    logger.debug(
+        f"Content zone: calculated net areas for {len(all_shapes)} shapes in {net_area_elapsed:.3f}s"
+    )
+
+    # Check abort after net area calculation
+    _check_geometry_abort(abort_event)
 
     # Filter out shapes with non-positive net area
     valid_shapes = [
@@ -853,6 +958,9 @@ def _detect_content_zone(
         f"Suggested trims - L: {suggested_trim_left}, R: {suggested_trim_right}, "
         f"T: {suggested_trim_top}, B: {suggested_trim_bottom}"
     )
+
+    total_elapsed = time.perf_counter() - total_start_time
+    logger.debug(f"Content zone detection completed{block_context} in {total_elapsed:.3f}s")
 
     return ContentZoneData(
         suggested_trim_left=suggested_trim_left,

@@ -14,6 +14,7 @@ Usage:
 import logging
 import re
 import threading
+import time
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -24,6 +25,7 @@ from ezdxf.document import Drawing
 
 from .constants import SUPPORTED_EXTENSIONS
 from .geometry import (
+    GeometryAbortedError,
     _calculate_segments,
     _categorize_rotation,
     _detect_content_zone,
@@ -43,6 +45,9 @@ from .types import (
 
 
 logger = setup_logger(__name__)
+
+# Time-based progress logging threshold (seconds)
+PROGRESS_LOG_INTERVAL_SECONDS = 5
 
 
 class ExtractionAbortedError(Exception):
@@ -876,14 +881,24 @@ def extract_blocks(
             logger.info("Analyzing block definitions...")
             block_def_count = 0
             total_block_defs = len(doc.blocks)
+            last_progress_log_time = time.perf_counter()
             for block_def in doc.blocks:
                 block_def_count += 1
                 blocks_processed = block_def_count
-                # Log progress every 50 blocks
-                if block_def_count % 50 == 0:
+                current_time = time.perf_counter()
+
+                # Log progress every 50 blocks OR if more than PROGRESS_LOG_INTERVAL_SECONDS
+                # have elapsed since last INFO log
+                time_since_last_log = current_time - last_progress_log_time
+                if (
+                    block_def_count % 50 == 0
+                    or time_since_last_log >= PROGRESS_LOG_INTERVAL_SECONDS
+                ):
                     logger.info(
                         f"Analyzing block definitions... {block_def_count}/{total_block_defs}"
                     )
+                    last_progress_log_time = current_time
+
                 # Checkpoint: every 25 blocks
                 if block_def_count % 25 == 0:
                     _check_abort(
@@ -975,33 +990,62 @@ def extract_blocks(
                 else:
                     effective_name = block_name
 
+                # Per-block timing at DEBUG level
+                block_start_time = time.perf_counter()
                 logger.debug(f"Analyzing block definition: {effective_name}")
+
                 entity_count = sum(1 for _ in block_def)
                 block_entities[effective_name] = entity_count
 
                 # Analyze block geometry for trimming assistance
-                bbox = _get_block_bounding_box(block_def)
-                native_width = round(bbox[2] - bbox[0], 2)
-                native_height = round(bbox[3] - bbox[1], 2)
+                try:
+                    bbox = _get_block_bounding_box(block_def)
+                    native_width = round(bbox[2] - bbox[0], 2)
+                    native_height = round(bbox[3] - bbox[1], 2)
 
-                vertical_points, horizontal_points = _get_intersection_points(block_def)
-                vertical_segments = _calculate_segments(vertical_points)
-                horizontal_segments = _calculate_segments(horizontal_points)
+                    vertical_points, horizontal_points = _get_intersection_points(
+                        block_def
+                    )
+                    vertical_segments = _calculate_segments(vertical_points)
+                    horizontal_segments = _calculate_segments(horizontal_points)
 
-                # Detect content zone and derive suggested trim values
-                content_zone_data = _detect_content_zone(block_def, bbox)
+                    # Detect content zone and derive suggested trim values
+                    # Pass abort_event and block_name for logging context
+                    content_zone_data = _detect_content_zone(
+                        block_def,
+                        bbox,
+                        abort_event=abort_event,
+                        block_name=effective_name,
+                    )
 
-                block_trimming_data[effective_name] = {
-                    "native_width": native_width,
-                    "native_height": native_height,
-                    "vertical_segments": vertical_segments,
-                    "horizontal_segments": horizontal_segments,
-                    "suggested_trim_left": content_zone_data["suggested_trim_left"],
-                    "suggested_trim_right": content_zone_data["suggested_trim_right"],
-                    "suggested_trim_top": content_zone_data["suggested_trim_top"],
-                    "suggested_trim_bottom": content_zone_data["suggested_trim_bottom"],
-                    "content_zone_detected": content_zone_data["content_zone_detected"],
-                }
+                    block_trimming_data[effective_name] = {
+                        "native_width": native_width,
+                        "native_height": native_height,
+                        "vertical_segments": vertical_segments,
+                        "horizontal_segments": horizontal_segments,
+                        "suggested_trim_left": content_zone_data["suggested_trim_left"],
+                        "suggested_trim_right": content_zone_data["suggested_trim_right"],
+                        "suggested_trim_top": content_zone_data["suggested_trim_top"],
+                        "suggested_trim_bottom": content_zone_data["suggested_trim_bottom"],
+                        "content_zone_detected": content_zone_data["content_zone_detected"],
+                    }
+
+                except GeometryAbortedError:
+                    # Re-raise as ExtractionAbortedError with proper context
+                    logger.info(
+                        f"Abort detected during geometry analysis of block '{effective_name}'"
+                    )
+                    raise ExtractionAbortedError(
+                        blocks_processed=blocks_processed,
+                        entities_processed=entities_processed,
+                        phase=f"geometry analysis of block '{effective_name}'",
+                    )
+
+                # Log per-block timing at DEBUG level
+                block_elapsed = time.perf_counter() - block_start_time
+                logger.debug(
+                    f"Block '{effective_name}' analysis completed in {block_elapsed:.3f}s"
+                )
 
             logger.info(f"Analyzed {len(block_entities)} block definitions")
         logger.info(

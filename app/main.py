@@ -66,7 +66,7 @@ class DXFExtractorApp(ctk.CTk):
         self.abort_event: threading.Event | None = None
 
         # Log viewer state
-        self.current_log_level: int = logging.INFO
+        self.current_log_level: int = logging.DEBUG
         self.log_queue: queue.Queue[logging.LogRecord] = queue.Queue()
 
         # Set up queue handler for log viewer
@@ -168,7 +168,7 @@ class DXFExtractorApp(ctk.CTk):
             command=self._on_log_level_change,
             width=120,
         )
-        self.log_level_dropdown.set("INFO")
+        self.log_level_dropdown.set("DEBUG")
         self.log_level_dropdown.pack(side="left")
 
         # Log viewer textbox
