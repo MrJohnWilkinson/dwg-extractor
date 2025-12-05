@@ -132,3 +132,6 @@ MSG_ERROR_FILE_NOT_FOUND: str = "File not found"
 # Abort-related messages
 MSG_ABORTING: str = "Aborting extraction..."
 MSG_ABORTED: str = "Extraction aborted"
+
+# Log file messages
+MSG_LOG_FILE_CREATED: str = "Debug log: {}"

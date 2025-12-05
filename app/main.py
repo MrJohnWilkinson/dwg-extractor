@@ -29,13 +29,18 @@ from core.constants import (
     MSG_ERROR_FILE_NOT_FOUND,
     MSG_ERROR_INVALID_FILE,
     MSG_ERROR_NO_BLOCKS,
-    MSG_PROCESSING,
+    MSG_LOG_FILE_CREATED,
     MSG_SELECT_FILE,
     MSG_SUCCESS,
 )
 from core.excel_writer import write_excel
 from core.extractor import ExtractionAbortedError, extract_blocks
-from core.logger import create_queue_handler, set_all_logger_levels, setup_logger
+from core.logger import (
+    create_debug_file_handler,
+    create_queue_handler,
+    set_all_logger_levels,
+    setup_logger,
+)
 
 
 # Set CustomTkinter appearance
@@ -64,6 +69,10 @@ class DXFExtractorApp(ctk.CTk):
 
         # Abort control
         self.abort_event: threading.Event | None = None
+
+        # Debug log file state
+        self.debug_file_handler: logging.Handler | None = None
+        self.debug_log_path: str | None = None
 
         # Log viewer state
         self.current_log_level: int = logging.DEBUG
@@ -270,6 +279,20 @@ class DXFExtractorApp(ctk.CTk):
         # Create new abort event for this extraction
         self.abort_event = threading.Event()
 
+        # Create debug log file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        input_path = Path(self.selected_file_path)
+        log_filename = f"{input_path.stem}_debug_{timestamp}.log"
+        log_path = input_path.parent / log_filename
+
+        # Create and attach file handler
+        self.debug_file_handler = create_debug_file_handler(str(log_path))
+        logging.getLogger().addHandler(self.debug_file_handler)
+
+        # Store path for status display
+        self.debug_log_path = str(log_path)
+        self.logger.info(f"Debug log file created: {self.debug_log_path}")
+
         # Hide Browse, Extract, and Open Folder buttons; show Abort button
         self.browse_button.pack_forget()
         self.extract_button.pack_forget()
@@ -279,7 +302,8 @@ class DXFExtractorApp(ctk.CTk):
 
         # Reset progress
         self.progress_bar.set(0)
-        self.status_label.configure(text=MSG_PROCESSING)
+        # Update status to show log file path
+        self.status_label.configure(text=MSG_LOG_FILE_CREATED.format(log_filename))
 
         self.logger.info(f"Starting extraction for {self.selected_file_path}")
 
@@ -356,6 +380,12 @@ class DXFExtractorApp(ctk.CTk):
 
     def _restore_ui_after_extraction(self) -> None:
         """Restore UI state after extraction completes or is aborted."""
+        # Remove and close debug file handler
+        if self.debug_file_handler is not None:
+            logging.getLogger().removeHandler(self.debug_file_handler)
+            self.debug_file_handler.close()
+            self.debug_file_handler = None
+
         # Hide Abort button
         self.abort_button.pack_forget()
 

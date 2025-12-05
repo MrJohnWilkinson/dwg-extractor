@@ -270,6 +270,55 @@ def set_all_logger_levels(level: int) -> None:
                 handler.setLevel(level)
 
 
+def create_debug_file_handler(file_path: str) -> logging.FileHandler:
+    """
+    Create a FileHandler for DEBUG logging with write-through mode.
+
+    Creates a file handler that writes all DEBUG+ log messages directly to disk
+    with no buffering, enabling real-time monitoring via `tail -f`.
+
+    Args:
+        file_path: Full path to the log file to create
+
+    Returns:
+        A configured FileHandler with DEBUG level and write-through enabled
+
+    Examples:
+        >>> handler = create_debug_file_handler('/path/to/extraction.log')
+        >>> logging.getLogger().addHandler(handler)
+        # Messages are immediately visible in the file
+    """
+
+    class MillisecondFormatter(logging.Formatter):
+        """Formatter that includes milliseconds in timestamp."""
+
+        def formatTime(
+            self, record: logging.LogRecord, datefmt: str | None = None
+        ) -> str:
+            ct = self.converter(record.created)
+            if datefmt:
+                s = time.strftime(datefmt, ct)
+            else:
+                s = time.strftime("%H:%M:%S", ct)
+            return f"{s}.{int(record.msecs):03d}"
+
+    # Create handler - use 'w' mode to overwrite any existing file
+    handler = logging.FileHandler(file_path, mode="w", encoding="utf-8")
+    handler.setLevel(logging.DEBUG)
+
+    # Set formatter with millisecond timestamps
+    handler.setFormatter(
+        MillisecondFormatter("%(asctime)s [%(levelname)s] %(message)s")
+    )
+
+    # Force immediate flush after each write using line buffering
+    # Close the default stream and reopen with line buffering
+    handler.stream.close()
+    handler.stream = open(file_path, "w", encoding="utf-8", buffering=1)
+
+    return handler
+
+
 @contextlib.contextmanager
 def timed_block(
     name: str, logger: logging.Logger | None = None, level: int = logging.DEBUG
