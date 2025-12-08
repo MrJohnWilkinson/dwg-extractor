@@ -12,6 +12,7 @@ Usage:
 """
 
 import re
+import threading
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -42,6 +43,28 @@ from .types import (
 
 
 logger = setup_logger(__name__)
+
+
+class ExtractionAbortedError(Exception):
+    """Raised when extraction is aborted by user."""
+
+    pass
+
+
+def _check_abort(abort_event: threading.Event | None, context: str) -> None:
+    """
+    Check if abort requested and raise if so.
+
+    Args:
+        abort_event: Optional threading.Event to check for abort signal
+        context: Description of current operation for logging
+
+    Raises:
+        ExtractionAbortedError: If abort_event is set
+    """
+    if abort_event and abort_event.is_set():
+        logger.info(f"Extraction aborted during {context}")
+        raise ExtractionAbortedError(f"Aborted during {context}")
 
 
 def _clean_mtext_content(entity: Any) -> str:
@@ -684,7 +707,10 @@ class ExtractionResult(TypedDict):
     block_content_zone_data: dict[str, ContentZoneData]
 
 
-def extract_blocks(file_path: str) -> ExtractionResult:
+def extract_blocks(
+    file_path: str,
+    abort_event: threading.Event | None = None,
+) -> ExtractionResult:
     """
     Extract comprehensive CAD analysis from a DXF file.
 
@@ -700,6 +726,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
     Args:
         file_path: Path to the DXF file to process
+        abort_event: Optional threading.Event to signal abort request.
+                     When set, extraction will stop at the next checkpoint
+                     and raise ExtractionAbortedError.
 
     Returns:
         ExtractionResult TypedDict containing all analysis data.
@@ -708,6 +737,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
     Raises:
         FileNotFoundError: If the specified file does not exist
         ValueError: If the file extension is not supported or file is corrupted
+        ExtractionAbortedError: If abort_event is set during extraction
 
     Examples:
         >>> result = extract_blocks('drawing.dxf')
@@ -738,6 +768,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         raise ValueError(f"Unsupported file extension: {path.suffix}. Must be .dxf")
 
     try:
+        # Initial abort check before any processing
+        _check_abort(abort_event, "extraction start")
+
         # Load DXF file
         logger.debug(f"Loading DXF file: {file_path}")
         doc = ezdxf.readfile(file_path)
@@ -782,7 +815,13 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
         # Extract block definition entity counts and geometry analysis
         logger.info("Analyzing block definitions...")
+        block_def_count = 0
         for block_def in doc.blocks:
+            block_def_count += 1
+            # Abort checkpoint every 25 blocks
+            if block_def_count % 25 == 0:
+                _check_abort(abort_event, "block definition analysis")
+
             block_name = block_def.name
 
             # Skip modelspace/paperspace blocks
@@ -882,7 +921,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             }
 
             # Detect content zone for trim value suggestions
-            content_zone_result = _detect_content_zone(block_def, bbox)
+            content_zone_result = _detect_content_zone(block_def, bbox, abort_event)
             block_content_zone_data[effective_name] = content_zone_result
 
         logger.info(f"Analyzed {len(block_entities)} block definitions")
@@ -895,7 +934,13 @@ def extract_blocks(file_path: str) -> ExtractionResult:
 
         # Iterate through modelspace entities
         logger.info("Analyzing modelspace entities...")
+        entity_idx = 0
         for entity in msp:
+            entity_idx += 1
+            # Abort checkpoint every 500 entities
+            if entity_idx % 500 == 0:
+                _check_abort(abort_event, "modelspace entity processing")
+
             entity_type = entity.dxftype()
             layer_name = entity.dxf.layer
 

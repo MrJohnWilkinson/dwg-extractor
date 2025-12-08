@@ -127,6 +127,8 @@ MSG_SUCCESS: str = "Extraction complete"
 MSG_ERROR_INVALID_FILE: str = "Invalid or corrupted file"
 MSG_ERROR_NO_BLOCKS: str = "No blocks found in file"
 MSG_ERROR_FILE_NOT_FOUND: str = "File not found"
+MSG_ABORTING: str = "Aborting..."
+MSG_ABORTED: str = "Extraction aborted"
 
 # Content Zone Detection Thresholds
 # These prevent O(n^3) and exponential DFS hangs on complex blocks
