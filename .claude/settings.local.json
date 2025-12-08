@@ -49,7 +49,16 @@
       "Bash(git -C /home/john/github-projects-linux/dwg-extractor log --oneline --all \"--grep=isolate\\|virtual\\|environment\\|WSL\\|conflict\")",
       "Bash(git -C /home/john/github-projects-linux/dwg-extractor log --oneline --all --grep=devcontainer)",
       "Bash(git -C /home/john/github-projects-linux/dwg-extractor log --oneline --all \"--grep=volume\\|mount\")",
-      "Bash(git -C /home/john/github-projects-linux/dwg-extractor show --stat f56ad26 52f78ee 339a02a 7d4965b --format=\"\n=== %h | %ad | %s ===%n%b\" --date=format:\"%Y-%m-%d %H:%M\")"
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor show --stat f56ad26 52f78ee 339a02a 7d4965b --format=\"\n=== %h | %ad | %s ===%n%b\" --date=format:\"%Y-%m-%d %H:%M\")",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor show 065f3b3 --stat --format=\"%B\")",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor show d8bc7c6 --stat --format=\"%B\")",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor show 17e4319 --stat --format=\"%B\")",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor show cffaabd --stat --format=\"%B\")",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor show cd39fe1 --stat --format=\"%B\")",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor log --oneline ad25eab~5..HEAD)",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor show ad25eab --stat --format=\"%h %s%n%ad%n\" --date=short)",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor diff --stat ad25eab..HEAD -- app/)",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor branch -a)"
     ],
     "deny": [],
     "ask": []
