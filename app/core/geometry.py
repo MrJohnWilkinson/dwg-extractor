@@ -20,20 +20,14 @@ Usage:
 """
 
 import threading
-import time
-from collections import defaultdict
 
 from ezdxf.layouts import BlockLayout
 from shapely import Point
 from shapely import Polygon as ShapelyPolygon
-from shapely.geometry import LineString  # noqa: F401  # Used in Unit B
-from shapely.ops import (  # noqa: F401  # polygonize used in Unit B
-    polygonize,
-    unary_union,
-)
+from shapely.geometry import LineString
+from shapely.ops import polygonize, unary_union
 
 from .constants import (
-    CYCLE_DETECTION_TIMEOUT_SECONDS,
     LINE_SEGMENT_THRESHOLD,
     POLYGON_COUNT_THRESHOLD,
 )
@@ -530,11 +524,11 @@ def _extract_line_cycles(
     abort_event: threading.Event | None = None,
 ) -> list[Polygon]:
     """
-    Extract closed cycles from LINE segments using iterative DFS.
+    Extract closed cycles from LINE segments using Shapely polygonize.
 
-    Builds an adjacency graph from LINE segment endpoints and uses depth-first
-    search to find all closed cycles (polygons). Includes timeout protection
-    and abort checkpoints for performance safety.
+    Collects all LINE entities from the block definition, converts them to
+    Shapely LineString objects, and uses polygonize() to find all closed
+    polygons formed by the line segments.
 
     Args:
         block_def: ezdxf block definition object
@@ -545,113 +539,34 @@ def _extract_line_cycles(
 
     Raises:
         GeometryAbortedError: If abort_event is set during processing.
-
-    Note:
-        Coordinates are rounded to 2 decimal places for adjacency graph keys,
-        matching the existing segment calculation precision.
     """
-    start_time = time.perf_counter()
-    iterations = 0
-
-    # Build adjacency graph from LINE segments
-    # Key: (x, y) rounded to 2 decimal places
-    # Value: list of connected (x, y) points
-    graph: dict[tuple[float, float], list[tuple[float, float]]] = defaultdict(list)
-    edges: set[tuple[tuple[float, float], tuple[float, float]]] = set()
-
+    # Collect all LINE segments as LineStrings
+    lines: list[LineString] = []
     for entity in block_def:
         if entity.dxftype() == "LINE":
             start = entity.dxf.start
             end = entity.dxf.end
+            lines.append(LineString([(start.x, start.y), (end.x, end.y)]))
 
-            # Round coordinates for tolerance matching
-            p1 = (round(start.x, 2), round(start.y, 2))
-            p2 = (round(end.x, 2), round(end.y, 2))
-
-            if p1 != p2:  # Skip degenerate lines
-                graph[p1].append(p2)
-                graph[p2].append(p1)
-                # Store edge as sorted tuple to avoid duplicates
-                edge = (min(p1, p2), max(p1, p2))
-                edges.add(edge)
-
-    if not graph:
+    if not lines:
         return []
 
-    # Find cycles using iterative DFS
-    cycles: list[Polygon] = []
-    visited_cycles: set[frozenset[tuple[float, float]]] = set()
+    # Check abort before expensive operation
+    if abort_event and abort_event.is_set():
+        raise GeometryAbortedError("Cycle detection aborted")
 
-    # Try to find cycles starting from each vertex
-    vertices = list(graph.keys())
+    # Polygonize finds all closed polygons from line segments
+    polygons = list(polygonize(lines))
 
-    for start_vertex in vertices:
-        iterations += 1
+    # Convert to internal Polygon format
+    result: list[Polygon] = []
+    for poly in polygons:
+        if poly.is_valid and not poly.is_empty:
+            coords = list(poly.exterior.coords)[:-1]  # Exclude closing point
+            result.append([(float(x), float(y)) for x, y in coords])
 
-        # Timeout check
-        if time.perf_counter() - start_time > CYCLE_DETECTION_TIMEOUT_SECONDS:
-            logger.warning(
-                f"Cycle detection timeout after {iterations} iterations "
-                f"({CYCLE_DETECTION_TIMEOUT_SECONDS}s)"
-            )
-            break
-
-        # Abort check every 1000 iterations
-        if iterations % 1000 == 0 and abort_event and abort_event.is_set():
-            raise GeometryAbortedError("Cycle detection aborted")
-
-        # DFS to find cycles from this vertex
-        # Stack: (current_vertex, path, visited_edges)
-        stack: list[
-            tuple[
-                tuple[float, float],
-                list[tuple[float, float]],
-                set[tuple[tuple[float, float], tuple[float, float]]],
-            ]
-        ] = [(start_vertex, [start_vertex], set())]
-
-        while stack:
-            iterations += 1
-
-            # Timeout check in inner loop
-            if time.perf_counter() - start_time > CYCLE_DETECTION_TIMEOUT_SECONDS:
-                logger.warning(
-                    f"Cycle detection timeout after {iterations} iterations "
-                    f"({CYCLE_DETECTION_TIMEOUT_SECONDS}s)"
-                )
-                stack.clear()
-                break
-
-            # Abort check every 1000 iterations
-            if iterations % 1000 == 0 and abort_event and abort_event.is_set():
-                raise GeometryAbortedError("Cycle detection aborted")
-
-            current, path, visited_edges = stack.pop()
-
-            for neighbor in graph[current]:
-                edge = (min(current, neighbor), max(current, neighbor))
-
-                if edge in visited_edges:
-                    continue
-
-                if neighbor == start_vertex and len(path) >= 3:
-                    # Found a cycle
-                    cycle_set = frozenset(path)
-                    if cycle_set not in visited_cycles:
-                        visited_cycles.add(cycle_set)
-                        # Convert to Polygon (float tuples)
-                        polygon: Polygon = [(float(p[0]), float(p[1])) for p in path]
-                        cycles.append(polygon)
-                elif neighbor not in path:
-                    # Continue DFS
-                    new_visited = visited_edges | {edge}
-                    new_path = path + [neighbor]
-                    # Limit path length to prevent excessive memory usage
-                    if len(new_path) <= 20:
-                        stack.append((neighbor, new_path, new_visited))
-
-    logger.debug(f"Found {len(cycles)} LINE cycles in {iterations} iterations")
-    return cycles
+    logger.debug(f"Found {len(result)} LINE cycles via polygonize")
+    return result
 
 
 def _calculate_net_areas(
