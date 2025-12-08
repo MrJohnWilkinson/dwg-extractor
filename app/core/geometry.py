@@ -640,9 +640,8 @@ def _detect_content_zone(
     content zone bounding box relative to the block bounding box.
 
     Performance safeguards:
-    - Skips LINE cycle detection if > LINE_SEGMENT_THRESHOLD segments
-    - Skips net area calculation if > POLYGON_COUNT_THRESHOLD polygons
-    - Times out cycle detection after CYCLE_DETECTION_TIMEOUT_SECONDS
+    - Skips LINE cycle detection if > LINE_SEGMENT_THRESHOLD segments (5000)
+    - Skips net area calculation if > POLYGON_COUNT_THRESHOLD polygons (500)
 
     Args:
         block_def: ezdxf block definition object

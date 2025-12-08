@@ -2,7 +2,7 @@
 Script to create a test DXF file with many LINE segments.
 
 This file is used for testing LINE segment threshold protection:
-- MANY_LINES: 500+ LINE segments (grid pattern) to exceed LINE_SEGMENT_THRESHOLD
+- MANY_LINES: 5500+ LINE segments (grid pattern) to exceed LINE_SEGMENT_THRESHOLD
 - FEW_LINES: Simple rectangle with <50 LINE segments
 """
 
@@ -12,36 +12,36 @@ import ezdxf
 # Create a new DXF document
 doc = ezdxf.new("R2010")
 
-# Block 1: MANY_LINES - Grid pattern with 500+ LINE segments
-# This exceeds LINE_SEGMENT_THRESHOLD (200) to test threshold skip
+# Block 1: MANY_LINES - Grid pattern with 5500+ LINE segments
+# This exceeds LINE_SEGMENT_THRESHOLD (5000) to test threshold skip
 block_many = doc.blocks.new(name="MANY_LINES")
 
-# Create a 25x25 grid of lines (25 horizontal + 25 vertical = 50 per row/col)
-# Total: ~550 LINE segments
-grid_size = 25
+# Create a 75x75 grid of lines to exceed 5000 segments
+# Total: 76 horizontal + 76 vertical + 75*2 diagonal + 5000 extra = 5302+ segments
+grid_size = 75
 spacing = 10
 
-# Horizontal lines
+# Horizontal lines (76 lines)
 for i in range(grid_size + 1):
     y = i * spacing
     block_many.add_line((0, y), (grid_size * spacing, y))
 
-# Vertical lines
+# Vertical lines (76 lines)
 for i in range(grid_size + 1):
     x = i * spacing
     block_many.add_line((x, 0), (x, grid_size * spacing))
 
-# Add some diagonal lines to increase count
+# Add some diagonal lines to increase count (150 lines)
 for i in range(grid_size):
     x = i * spacing
     y = i * spacing
     block_many.add_line((x, y), (x + spacing, y + spacing))
     block_many.add_line((x + spacing, y), (x, y + spacing))
 
-# Add extra lines to ensure we're well over 200
-for i in range(200):
-    x = (i % 25) * spacing
-    y = (i // 25) * spacing
+# Add extra lines to ensure we're well over 5000
+for i in range(5000):
+    x = (i % 100) * spacing
+    y = (i // 100) * spacing
     block_many.add_line((x, y), (x + 5, y + 5))
 
 # Block 2: FEW_LINES - Simple rectangle with few LINE segments
@@ -57,18 +57,18 @@ block_few.add_line((90, 10), (90, 40))
 block_few.add_line((90, 40), (10, 40))
 block_few.add_line((10, 40), (10, 10))
 
-# Block 3: EXACTLY_THRESHOLD - Exactly 200 LINE segments
+# Block 3: EXACTLY_THRESHOLD - Exactly 5000 LINE segments
 block_exact = doc.blocks.new(name="EXACTLY_THRESHOLD")
-for i in range(200):
-    x = (i % 20) * 10
-    y = (i // 20) * 10
+for i in range(5000):
+    x = (i % 100) * 10
+    y = (i // 100) * 10
     block_exact.add_line((x, y), (x + 5, y))
 
-# Block 4: JUST_OVER_THRESHOLD - 201 LINE segments
+# Block 4: JUST_OVER_THRESHOLD - 5001 LINE segments
 block_over = doc.blocks.new(name="JUST_OVER_THRESHOLD")
-for i in range(201):
-    x = (i % 20) * 10
-    y = (i // 20) * 10
+for i in range(5001):
+    x = (i % 100) * 10
+    y = (i // 100) * 10
     block_over.add_line((x, y), (x + 5, y))
 
 # Add block references to modelspace

@@ -7,7 +7,6 @@ Tests cover:
 """
 
 from core.constants import (
-    CYCLE_DETECTION_TIMEOUT_SECONDS,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
     EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM,
     EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT,
@@ -30,12 +29,12 @@ class TestContentZoneThresholds:
         assert 10 <= POLYGON_COUNT_THRESHOLD <= 1000
 
     def test_line_threshold_reasonable(self) -> None:
-        """Threshold should be between 50 and 500."""
-        assert 50 <= LINE_SEGMENT_THRESHOLD <= 500
+        """Threshold should be between 1000 and 10000.
 
-    def test_timeout_reasonable(self) -> None:
-        """Timeout should be between 1 and 30 seconds."""
-        assert 1.0 <= CYCLE_DETECTION_TIMEOUT_SECONDS <= 30.0
+        With Shapely's efficient GEOS-based polygonize(), the threshold can be
+        much higher than the original DFS implementation. 5000 is conservative.
+        """
+        assert 1000 <= LINE_SEGMENT_THRESHOLD <= 10000
 
 
 class TestContentZoneExcelColumns:

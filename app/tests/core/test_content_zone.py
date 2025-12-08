@@ -20,7 +20,6 @@ import ezdxf
 import pytest
 
 from core.constants import (
-    CYCLE_DETECTION_TIMEOUT_SECONDS,
     LINE_SEGMENT_THRESHOLD,
     POLYGON_COUNT_THRESHOLD,
 )
@@ -139,7 +138,7 @@ class TestLineCycleDetection:
         assert has_octagon
 
     def test_line_cycle_timeout_protection(self) -> None:
-        """Verify timeout protection terminates within reasonable time."""
+        """Verify Shapely polygonize completes quickly for moderate line counts."""
         # Create a block with moderate LINE count (not exceeding threshold)
         doc = ezdxf.new()
         block = doc.blocks.new(name="MODERATE_LINES")
@@ -154,8 +153,8 @@ class TestLineCycleDetection:
         _extract_line_cycles(block)
         elapsed = time.perf_counter() - start_time
 
-        # Should complete within timeout + small buffer
-        assert elapsed < CYCLE_DETECTION_TIMEOUT_SECONDS + 1.0
+        # Shapely polygonize should complete very quickly (within 5 seconds)
+        assert elapsed < 5.0
 
     def test_line_cycle_abort_event(self) -> None:
         """Verify abort event raises GeometryAbortedError."""

@@ -131,7 +131,7 @@ MSG_ABORTING: str = "Aborting..."
 MSG_ABORTED: str = "Extraction aborted"
 
 # Content Zone Detection Thresholds
-# These prevent O(n^3) and exponential DFS hangs on complex blocks
+# Conservative limits for Shapely-based geometry operations
 
 POLYGON_COUNT_THRESHOLD: int = 500
 """Maximum polygons for content zone net area calculation.
@@ -139,11 +139,8 @@ Blocks with more polygons skip content zone detection.
 Rationale: With Shapely's efficient GEOS operations, can handle 500 polygons
 in reasonable time (previously 30 with O(n^3) manual calculation)."""
 
-LINE_SEGMENT_THRESHOLD: int = 200
-"""Maximum LINE segments for cycle detection DFS.
+LINE_SEGMENT_THRESHOLD: int = 5000
+"""Maximum LINE segments for cycle detection using Shapely polygonize.
 Blocks with more LINE segments skip LINE cycle extraction.
-Rationale: DFS on 967 segments (504 vertices) caused 6+ minute hang."""
-
-CYCLE_DETECTION_TIMEOUT_SECONDS: float = 5.0
-"""Safety timeout for cycle detection algorithm.
-Prevents indefinite hang even if threshold check is bypassed."""
+Rationale: With Shapely's GEOS-based polygonize(), can handle 5000 segments
+efficiently (previously 200 with DFS-based cycle detection)."""
