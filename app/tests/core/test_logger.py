@@ -7,18 +7,26 @@ Tests cover:
 - Timing decorator for function timing
 - Timing context manager for block timing
 - JsonFormatter output structure
+- FlushingFileHandler immediate disk writes
+- MillisecondFormatter timestamp format
+- create_debug_file_handler factory function
 """
 
 import json
 import logging
+import re
 import time
+from pathlib import Path
 
 import pytest
 
 from core.logger import (
+    FlushingFileHandler,
     JsonFormatter,
+    MillisecondFormatter,
     _get_log_format_from_env,
     _get_log_level_from_env,
+    create_debug_file_handler,
     timed,
     timed_block,
 )
@@ -329,3 +337,260 @@ class TestTimedBlockContextManager:
 
         # Should be empty since we're only capturing INFO and above
         assert "[TIMING]" not in caplog.text
+
+
+class TestFlushingFileHandler:
+    """Tests for FlushingFileHandler class."""
+
+    def test_flushing_file_handler_immediate_write(self, tmp_path: Path) -> None:
+        """Verify FlushingFileHandler writes immediately without explicit flush."""
+        log_file = tmp_path / "test.log"
+        handler = FlushingFileHandler(str(log_file), mode="w")
+        handler.setFormatter(logging.Formatter("%(message)s"))
+
+        # Use a unique logger name to avoid conflicts
+        logger = logging.getLogger("test_flush_immediate")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.info("test message")
+
+        # File should contain message immediately (no flush() call needed)
+        content = log_file.read_text()
+        assert "test message" in content
+
+        handler.close()
+        logger.handlers.clear()
+
+    def test_flushing_file_handler_mode_write(self, tmp_path: Path) -> None:
+        """Verify handler uses write mode (overwrites existing)."""
+        log_file = tmp_path / "test.log"
+
+        # Write initial content
+        log_file.write_text("existing content")
+
+        handler = FlushingFileHandler(str(log_file), mode="w")
+        handler.setFormatter(logging.Formatter("%(message)s"))
+
+        logger = logging.getLogger("test_flush_mode")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.info("new message")
+        handler.close()
+        logger.handlers.clear()
+
+        # Existing content should be overwritten
+        content = log_file.read_text()
+        assert "existing content" not in content
+        assert "new message" in content
+
+    def test_flushing_file_handler_encoding_utf8(self, tmp_path: Path) -> None:
+        """Verify UTF-8 encoding is used for special characters."""
+        log_file = tmp_path / "test.log"
+        handler = FlushingFileHandler(str(log_file), mode="w", encoding="utf-8")
+        handler.setFormatter(logging.Formatter("%(message)s"))
+
+        logger = logging.getLogger("test_flush_utf8")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        # Log message with special characters
+        logger.info("Test with special chars: \u00e9\u00e0\u00fc\u00f1")
+        handler.close()
+        logger.handlers.clear()
+
+        content = log_file.read_text(encoding="utf-8")
+        assert "\u00e9\u00e0\u00fc\u00f1" in content
+
+    def test_flushing_file_handler_multiple_messages(self, tmp_path: Path) -> None:
+        """Verify multiple messages are written immediately."""
+        log_file = tmp_path / "test.log"
+        handler = FlushingFileHandler(str(log_file), mode="w")
+        handler.setFormatter(logging.Formatter("%(message)s"))
+
+        logger = logging.getLogger("test_flush_multi")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.info("message 1")
+        content1 = log_file.read_text()
+        assert "message 1" in content1
+
+        logger.info("message 2")
+        content2 = log_file.read_text()
+        assert "message 1" in content2
+        assert "message 2" in content2
+
+        handler.close()
+        logger.handlers.clear()
+
+
+class TestMillisecondFormatter:
+    """Tests for MillisecondFormatter class."""
+
+    def test_millisecond_formatter_time_format(self) -> None:
+        """Verify timestamp uses HH:MM:SS.mmm format."""
+        formatter = MillisecondFormatter("%(asctime)s %(message)s")
+
+        record = logging.LogRecord(
+            name="test_logger",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test message",
+            args=(),
+            exc_info=None,
+        )
+
+        output = formatter.format(record)
+
+        # Should match HH:MM:SS.mmm format at start of string
+        assert re.match(r"^\d{2}:\d{2}:\d{2}\.\d{3}", output)
+
+    def test_millisecond_formatter_valid_time_values(self) -> None:
+        """Verify formatted time has valid hour, minute, second values."""
+        formatter = MillisecondFormatter("%(asctime)s")
+
+        record = logging.LogRecord(
+            name="test_logger",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="Test",
+            args=(),
+            exc_info=None,
+        )
+
+        output = formatter.format(record)
+        match = re.match(r"^(\d{2}):(\d{2}):(\d{2})\.(\d{3})", output)
+
+        assert match is not None
+        hours = int(match.group(1))
+        minutes = int(match.group(2))
+        seconds = int(match.group(3))
+        millis = int(match.group(4))
+
+        assert 0 <= hours <= 23
+        assert 0 <= minutes <= 59
+        assert 0 <= seconds <= 59
+        assert 0 <= millis <= 999
+
+    def test_millisecond_formatter_with_level_and_message(self) -> None:
+        """Verify formatter works with full format string."""
+        formatter = MillisecondFormatter("%(asctime)s [%(levelname)s] %(message)s")
+
+        record = logging.LogRecord(
+            name="test_logger",
+            level=logging.DEBUG,
+            pathname="test.py",
+            lineno=1,
+            msg="Debug message",
+            args=(),
+            exc_info=None,
+        )
+
+        output = formatter.format(record)
+
+        # Verify full format
+        assert re.match(r"^\d{2}:\d{2}:\d{2}\.\d{3} \[DEBUG\] Debug message$", output)
+
+
+class TestCreateDebugFileHandler:
+    """Tests for create_debug_file_handler factory function."""
+
+    def test_create_debug_file_handler_creates_handler(self, tmp_path: Path) -> None:
+        """Verify factory returns FlushingFileHandler."""
+        log_file = tmp_path / "debug.log"
+        handler = create_debug_file_handler(str(log_file))
+
+        assert isinstance(handler, FlushingFileHandler)
+        handler.close()
+
+    def test_create_debug_file_handler_debug_level(self, tmp_path: Path) -> None:
+        """Verify handler is set to DEBUG level."""
+        log_file = tmp_path / "debug.log"
+        handler = create_debug_file_handler(str(log_file))
+
+        assert handler.level == logging.DEBUG
+        handler.close()
+
+    def test_create_debug_file_handler_format(self, tmp_path: Path) -> None:
+        """Verify handler uses millisecond timestamp format."""
+        log_file = tmp_path / "debug.log"
+        handler = create_debug_file_handler(str(log_file))
+
+        logger = logging.getLogger("test_debug_format")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.debug("test message")
+        handler.close()
+        logger.handlers.clear()
+
+        content = log_file.read_text()
+        # Should match HH:MM:SS.mmm [LEVEL] message format
+        assert re.match(r"^\d{2}:\d{2}:\d{2}\.\d{3} \[DEBUG\] test message", content)
+
+    def test_create_debug_file_handler_creates_file(self, tmp_path: Path) -> None:
+        """Verify handler creates log file."""
+        log_file = tmp_path / "debug.log"
+        assert not log_file.exists()
+
+        handler = create_debug_file_handler(str(log_file))
+
+        logger = logging.getLogger("test_debug_create")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.info("test")
+        handler.close()
+        logger.handlers.clear()
+
+        assert log_file.exists()
+
+    def test_create_debug_file_handler_all_levels(self, tmp_path: Path) -> None:
+        """Verify handler captures all log levels at DEBUG and above."""
+        log_file = tmp_path / "debug.log"
+        handler = create_debug_file_handler(str(log_file))
+
+        logger = logging.getLogger("test_debug_levels")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.debug("debug msg")
+        logger.info("info msg")
+        logger.warning("warning msg")
+        logger.error("error msg")
+        handler.close()
+        logger.handlers.clear()
+
+        content = log_file.read_text()
+        assert "debug msg" in content
+        assert "info msg" in content
+        assert "warning msg" in content
+        assert "error msg" in content
+
+    def test_create_debug_file_handler_utf8_encoding(self, tmp_path: Path) -> None:
+        """Verify handler uses UTF-8 encoding."""
+        log_file = tmp_path / "debug.log"
+        handler = create_debug_file_handler(str(log_file))
+
+        logger = logging.getLogger("test_debug_utf8")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.info("Unicode: \u4e2d\u6587\u65e5\u672c\u8a9e\ud55c\uad6d\uc5b4")
+        handler.close()
+        logger.handlers.clear()
+
+        content = log_file.read_text(encoding="utf-8")
+        assert "\u4e2d\u6587\u65e5\u672c\u8a9e\ud55c\uad6d\uc5b4" in content

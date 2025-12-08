@@ -15,6 +15,7 @@ import os
 import platform
 import subprocess
 import threading
+from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
@@ -30,7 +31,7 @@ from core.constants import (
 )
 from core.excel_writer import write_excel
 from core.extractor import extract_blocks
-from core.logger import setup_logger
+from core.logger import create_debug_file_handler, setup_logger
 
 
 # Set CustomTkinter appearance
@@ -56,6 +57,7 @@ class DXFExtractorApp(ctk.CTk):
         # Instance variables
         self.selected_file_path: str | None = None
         self.output_excel_path: str | None = None
+        self.debug_file_handler: logging.FileHandler | None = None
 
         # Create UI
         self._create_widgets()
@@ -169,13 +171,25 @@ class DXFExtractorApp(ctk.CTk):
     def _extraction_worker(self) -> None:
         """Background worker thread for extraction process."""
         try:
-            # Step 1: Load file
-            self._update_progress(0.2, "Loading file...")
-
             # Validate file path exists
             if not self.selected_file_path:
                 self._show_error("No file selected")
                 return
+
+            # Set up debug file logging
+            input_path = Path(self.selected_file_path)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            log_filename = f"{input_path.stem}_debug_{timestamp}.log"
+            log_path = input_path.parent / log_filename
+
+            self.debug_file_handler = create_debug_file_handler(str(log_path))
+            logging.getLogger().addHandler(self.debug_file_handler)
+
+            self.logger.info(f"Debug log: {log_path}")
+            self._update_progress(0.1, f"Logging to: {log_filename}")
+
+            # Step 1: Load file
+            self._update_progress(0.2, "Loading file...")
 
             # Step 2: Extract comprehensive data
             self._update_progress(0.5, "Analyzing CAD file...")
@@ -213,6 +227,12 @@ class DXFExtractorApp(ctk.CTk):
             self._show_error(f"Extraction failed: {str(e)}")
 
         finally:
+            # Clean up debug file handler
+            if self.debug_file_handler:
+                logging.getLogger().removeHandler(self.debug_file_handler)
+                self.debug_file_handler.close()
+                self.debug_file_handler = None
+
             # Re-enable buttons
             self.after(0, lambda: self.browse_button.configure(state="normal"))
             self.after(0, lambda: self.extract_button.configure(state="normal"))

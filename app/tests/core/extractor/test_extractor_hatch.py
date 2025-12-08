@@ -4,7 +4,6 @@ Unit tests for the extractor module - HATCH entity extraction functionality.
 This module contains tests for HATCH entity extraction in color analysis.
 """
 
-
 from core.extractor import extract_blocks
 
 

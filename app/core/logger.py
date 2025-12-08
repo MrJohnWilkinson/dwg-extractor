@@ -2,13 +2,16 @@
 Centralized logging configuration for the DXF Block Extractor application.
 
 This module provides stdout-only logging to enable real-time monitoring by LLM agents
-during development and ADW workflow execution. No file handlers are used to ensure
-immediate visibility of all log messages.
+during development and ADW workflow execution. File handlers with immediate flush
+are available for debug logging during extraction.
 
 Features:
 - Log level configuration via DXF_EXTRACTOR_LOG_LEVEL environment variable
 - JSON output format via DXF_EXTRACTOR_LOG_FORMAT environment variable
 - Timing decorator and context manager for performance measurement
+- FlushingFileHandler for immediate disk writes (tail -f compatible)
+- MillisecondFormatter for HH:MM:SS.mmm timestamp format
+- create_debug_file_handler() factory for debug log files
 """
 
 import contextlib
@@ -122,6 +125,73 @@ class JsonFormatter(logging.Formatter):
             log_data["exc_info"] = self.formatException(record.exc_info)
 
         return json.dumps(log_data)
+
+
+class FlushingFileHandler(logging.FileHandler):
+    """
+    FileHandler that flushes after every emit for immediate visibility.
+
+    Standard FileHandler buffers writes, making `tail -f` unreliable for
+    real-time log monitoring. This handler ensures each log message is
+    immediately written to disk by calling flush() after every emit().
+
+    Examples:
+        >>> handler = FlushingFileHandler("debug.log", mode='w')
+        >>> handler.setFormatter(logging.Formatter("%(message)s"))
+        >>> logger.addHandler(handler)
+        >>> logger.info("Test message")  # Immediately visible in file
+    """
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """Emit a record and immediately flush to disk."""
+        super().emit(record)
+        self.flush()
+
+
+class MillisecondFormatter(logging.Formatter):
+    """
+    Formatter with millisecond precision timestamps.
+
+    Overrides formatTime to produce HH:MM:SS.mmm format for precise
+    timing analysis during extraction operations.
+
+    Examples:
+        >>> formatter = MillisecondFormatter("%(asctime)s [%(levelname)s] %(message)s")
+        >>> # Output: 14:30:22.123 [INFO] Test message
+    """
+
+    def formatTime(self, record: logging.LogRecord, datefmt: str | None = None) -> str:
+        """Format timestamp as HH:MM:SS.mmm."""
+        ct = self.converter(record.created)
+        s = time.strftime("%H:%M:%S", ct)
+        return f"{s}.{int(record.msecs):03d}"
+
+
+def create_debug_file_handler(file_path: str) -> logging.FileHandler:
+    """
+    Create file handler with DEBUG level and immediate flush.
+
+    Creates a FlushingFileHandler configured for debug logging with
+    millisecond-precision timestamps. The handler overwrites any
+    existing file and uses UTF-8 encoding.
+
+    Args:
+        file_path: Absolute path to log file
+
+    Returns:
+        Configured FlushingFileHandler ready to add to logger
+
+    Examples:
+        >>> handler = create_debug_file_handler("/path/to/debug.log")
+        >>> logging.getLogger().addHandler(handler)
+        >>> # Later: handler.close()
+    """
+    handler = FlushingFileHandler(file_path, mode="w", encoding="utf-8")
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(
+        MillisecondFormatter("%(asctime)s [%(levelname)s] %(message)s")
+    )
+    return handler
 
 
 def setup_logger(name: str) -> logging.Logger:
