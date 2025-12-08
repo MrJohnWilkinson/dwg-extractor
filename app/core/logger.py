@@ -12,6 +12,8 @@ Features:
 - FlushingFileHandler for immediate disk writes (tail -f compatible)
 - MillisecondFormatter for HH:MM:SS.mmm timestamp format
 - create_debug_file_handler() factory for debug log files
+- QueueHandler for GUI log viewer (thread-safe queue-based logging)
+- create_queue_handler() factory for GUI log viewer integration
 """
 
 import contextlib
@@ -19,6 +21,7 @@ import functools
 import json
 import logging
 import os
+import queue
 import sys
 import time
 from typing import Any, Callable, Generator, ParamSpec, TypeVar
@@ -165,6 +168,77 @@ class MillisecondFormatter(logging.Formatter):
         ct = self.converter(record.created)
         s = time.strftime("%H:%M:%S", ct)
         return f"{s}.{int(record.msecs):03d}"
+
+
+class QueueHandler(logging.Handler):
+    """
+    Handler that puts log records into a queue for GUI consumption.
+
+    This handler enables thread-safe log message passing from background
+    worker threads to the GUI main thread. Messages are formatted and
+    placed into a queue as (level_number, formatted_message) tuples.
+
+    If the queue is full, messages are silently dropped to avoid blocking
+    the logging thread.
+
+    Examples:
+        >>> log_queue = queue.Queue(maxsize=1000)
+        >>> handler = QueueHandler(log_queue)
+        >>> handler.setFormatter(logging.Formatter("%(message)s"))
+        >>> logger.addHandler(handler)
+        >>> logger.info("Test message")
+        >>> level, msg = log_queue.get_nowait()
+    """
+
+    def __init__(self, log_queue: queue.Queue[tuple[int, str]]) -> None:
+        """
+        Initialize the queue handler.
+
+        Args:
+            log_queue: Queue to receive (level, formatted_message) tuples
+        """
+        super().__init__()
+        self.log_queue = log_queue
+
+    def emit(self, record: logging.LogRecord) -> None:
+        """
+        Format and emit a log record to the queue.
+
+        Args:
+            record: The log record to emit
+        """
+        try:
+            msg = self.format(record)
+            self.log_queue.put_nowait((record.levelno, msg))
+        except queue.Full:
+            pass  # Drop message if queue is full
+
+
+def create_queue_handler(log_queue: queue.Queue[tuple[int, str]]) -> QueueHandler:
+    """
+    Create a queue handler for GUI log viewer.
+
+    Creates a QueueHandler configured to capture all log levels (DEBUG and above)
+    with HH:MM:SS timestamp format for display in the GUI log viewer.
+
+    Args:
+        log_queue: Queue to receive formatted log messages as (level, message) tuples
+
+    Returns:
+        Configured QueueHandler ready to add to logger
+
+    Examples:
+        >>> log_queue = queue.Queue(maxsize=1000)
+        >>> handler = create_queue_handler(log_queue)
+        >>> logging.getLogger().addHandler(handler)
+        >>> # Messages now flow to queue for GUI consumption
+    """
+    handler = QueueHandler(log_queue)
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(
+        logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
+    )
+    return handler
 
 
 def create_debug_file_handler(file_path: str) -> logging.FileHandler:

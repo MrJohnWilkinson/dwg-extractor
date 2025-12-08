@@ -10,10 +10,13 @@ Tests cover:
 - FlushingFileHandler immediate disk writes
 - MillisecondFormatter timestamp format
 - create_debug_file_handler factory function
+- QueueHandler for GUI log viewer
+- create_queue_handler factory function
 """
 
 import json
 import logging
+import queue
 import re
 import time
 from pathlib import Path
@@ -24,9 +27,11 @@ from core.logger import (
     FlushingFileHandler,
     JsonFormatter,
     MillisecondFormatter,
+    QueueHandler,
     _get_log_format_from_env,
     _get_log_level_from_env,
     create_debug_file_handler,
+    create_queue_handler,
     timed,
     timed_block,
 )
@@ -594,3 +599,169 @@ class TestCreateDebugFileHandler:
 
         content = log_file.read_text(encoding="utf-8")
         assert "\u4e2d\u6587\u65e5\u672c\u8a9e\ud55c\uad6d\uc5b4" in content
+
+
+class TestQueueHandler:
+    """Tests for QueueHandler class."""
+
+    def test_queue_handler_puts_messages(self) -> None:
+        """Verify QueueHandler puts formatted messages into queue."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = QueueHandler(log_queue)
+        handler.setFormatter(logging.Formatter("%(message)s"))
+
+        logger = logging.getLogger("test_queue_puts")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.info("test message")
+
+        # Verify message is in queue
+        assert not log_queue.empty()
+        level, msg = log_queue.get_nowait()
+        assert level == logging.INFO
+        assert msg == "test message"
+
+        logger.handlers.clear()
+
+    def test_queue_handler_handles_full_queue(self) -> None:
+        """Verify QueueHandler drops messages when queue is full (no exception)."""
+        # Create queue with maxsize=1
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue(maxsize=1)
+        handler = QueueHandler(log_queue)
+        handler.setFormatter(logging.Formatter("%(message)s"))
+
+        logger = logging.getLogger("test_queue_full")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        # First message should succeed
+        logger.info("message 1")
+
+        # Second message should be dropped silently (no exception)
+        logger.info("message 2")  # This should not raise
+
+        # Queue should only have first message
+        assert log_queue.qsize() == 1
+        level, msg = log_queue.get_nowait()
+        assert msg == "message 1"
+
+        logger.handlers.clear()
+
+    def test_queue_handler_message_format(self) -> None:
+        """Verify tuple contains (levelno, formatted_string)."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = QueueHandler(log_queue)
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+        )
+
+        logger = logging.getLogger("test_queue_format")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.warning("test warning")
+
+        level, msg = log_queue.get_nowait()
+        assert level == logging.WARNING
+        assert "[WARNING]" in msg
+        assert "test warning" in msg
+
+        logger.handlers.clear()
+
+    def test_queue_handler_all_levels(self) -> None:
+        """Verify QueueHandler captures all log levels."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = QueueHandler(log_queue)
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(logging.Formatter("%(message)s"))
+
+        logger = logging.getLogger("test_queue_levels")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.debug("debug")
+        logger.info("info")
+        logger.warning("warning")
+        logger.error("error")
+
+        messages = []
+        while not log_queue.empty():
+            level, msg = log_queue.get_nowait()
+            messages.append((level, msg))
+
+        assert len(messages) == 4
+        assert messages[0] == (logging.DEBUG, "debug")
+        assert messages[1] == (logging.INFO, "info")
+        assert messages[2] == (logging.WARNING, "warning")
+        assert messages[3] == (logging.ERROR, "error")
+
+        logger.handlers.clear()
+
+
+class TestCreateQueueHandler:
+    """Tests for create_queue_handler factory function."""
+
+    def test_create_queue_handler_returns_handler(self) -> None:
+        """Verify factory returns QueueHandler instance."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = create_queue_handler(log_queue)
+
+        assert isinstance(handler, QueueHandler)
+
+    def test_create_queue_handler_debug_level(self) -> None:
+        """Verify handler is set to DEBUG level."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = create_queue_handler(log_queue)
+
+        assert handler.level == logging.DEBUG
+
+    def test_create_queue_handler_format(self) -> None:
+        """Verify handler uses HH:MM:SS timestamp format."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = create_queue_handler(log_queue)
+
+        logger = logging.getLogger("test_queue_handler_format")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.info("test message")
+
+        level, msg = log_queue.get_nowait()
+        # Should match HH:MM:SS [LEVEL] message format
+        assert re.match(r"^\d{2}:\d{2}:\d{2} \[INFO\] test message$", msg)
+
+        logger.handlers.clear()
+
+    def test_create_queue_handler_captures_all_levels(self) -> None:
+        """Verify handler captures DEBUG and above."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = create_queue_handler(log_queue)
+
+        logger = logging.getLogger("test_queue_handler_levels")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.debug("debug msg")
+        logger.info("info msg")
+        logger.warning("warning msg")
+        logger.error("error msg")
+
+        messages = []
+        while not log_queue.empty():
+            level, msg = log_queue.get_nowait()
+            messages.append(msg)
+
+        assert len(messages) == 4
+        assert "debug msg" in messages[0]
+        assert "info msg" in messages[1]
+        assert "warning msg" in messages[2]
+        assert "error msg" in messages[3]
+
+        logger.handlers.clear()

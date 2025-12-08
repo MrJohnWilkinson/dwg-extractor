@@ -13,6 +13,7 @@ Usage:
 import logging
 import os
 import platform
+import queue
 import subprocess
 import threading
 from datetime import datetime
@@ -34,7 +35,7 @@ from core.constants import (
 from core.excel_writer import write_excel
 from core.extractor import ExtractionAbortedError, extract_blocks
 from core.geometry import GeometryAbortedError
-from core.logger import create_debug_file_handler, setup_logger
+from core.logger import create_debug_file_handler, create_queue_handler, setup_logger
 
 
 # Set CustomTkinter appearance
@@ -54,8 +55,8 @@ class DXFExtractorApp(ctk.CTk):
 
         # Window configuration
         self.title("DXF Block Extractor")
-        self.geometry("500x300")
-        self.resizable(False, False)
+        self.geometry("600x500")
+        self.resizable(True, True)
 
         # Instance variables
         self.selected_file_path: str | None = None
@@ -63,18 +64,26 @@ class DXFExtractorApp(ctk.CTk):
         self.debug_file_handler: logging.FileHandler | None = None
         self.abort_event: threading.Event | None = None
 
+        # Log viewer queue and handler
+        self.log_queue: queue.Queue[tuple[int, str]] = queue.Queue(maxsize=1000)
+        self.queue_handler = create_queue_handler(self.log_queue)
+        logging.getLogger().addHandler(self.queue_handler)
+
         # Create UI
         self._create_widgets()
+
+        # Start log queue polling
+        self._poll_log_queue()
 
     def _create_widgets(self) -> None:
         """Create and layout all UI widgets."""
         # Main container with padding
-        main_frame = ctk.CTkFrame(self)
-        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self.main_frame = ctk.CTkFrame(self)
+        self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         # Title label
         title_label = ctk.CTkLabel(
-            main_frame,
+            self.main_frame,
             text="DXF Block Extractor",
             font=ctk.CTkFont(size=20, weight="bold"),
         )
@@ -82,12 +91,15 @@ class DXFExtractorApp(ctk.CTk):
 
         # File path entry
         self.file_entry = ctk.CTkEntry(
-            main_frame, width=360, placeholder_text=MSG_SELECT_FILE, state="readonly"
+            self.main_frame,
+            width=360,
+            placeholder_text=MSG_SELECT_FILE,
+            state="readonly",
         )
         self.file_entry.pack(pady=(0, 15))
 
         # Button frame for horizontal layout
-        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        button_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         button_frame.pack(pady=(0, 15))
 
         # Browse button
@@ -128,13 +140,38 @@ class DXFExtractorApp(ctk.CTk):
         # Don't pack - will be shown during extraction
 
         # Progress bar
-        self.progress_bar = ctk.CTkProgressBar(main_frame, width=400, height=20)
+        self.progress_bar = ctk.CTkProgressBar(self.main_frame, width=400, height=20)
         self.progress_bar.pack(pady=(0, 15))
         self.progress_bar.set(0)
 
         # Status label
-        self.status_label = ctk.CTkLabel(main_frame, text="", font=ctk.CTkFont(size=12))
+        self.status_label = ctk.CTkLabel(
+            self.main_frame, text="", font=ctk.CTkFont(size=12)
+        )
         self.status_label.pack()
+
+        # Log viewer panel
+        self.log_frame = ctk.CTkFrame(self.main_frame)
+        self.log_frame.pack(fill="both", expand=True, pady=10)
+
+        # Log level selector
+        self.log_level_var = ctk.StringVar(value="INFO")
+        self.log_level_menu = ctk.CTkOptionMenu(
+            self.log_frame,
+            values=["DEBUG", "INFO", "WARNING", "ERROR"],
+            variable=self.log_level_var,
+            command=self._on_log_level_change,
+        )
+        self.log_level_menu.pack(anchor="w", padx=5, pady=5)
+
+        # Log text area
+        self.log_text = ctk.CTkTextbox(
+            self.log_frame,
+            font=("Courier", 10),
+            state="disabled",
+            height=200,
+        )
+        self.log_text.pack(fill="both", expand=True, padx=5, pady=5)
 
     def _browse_file(self) -> None:
         """Handle browse button click - open file dialog."""
@@ -376,8 +413,34 @@ class DXFExtractorApp(ctk.CTk):
             # Don't show error to user - this is a convenience feature
             self.logger.warning(f"Failed to open output folder: {str(e)}")
 
+    def _poll_log_queue(self) -> None:
+        """Poll log queue and update text widget."""
+        level_filter = getattr(logging, self.log_level_var.get())
+
+        while True:
+            try:
+                level, msg = self.log_queue.get_nowait()
+                if level >= level_filter:
+                    self.log_text.configure(state="normal")
+                    self.log_text.insert("end", msg + "\n")
+                    self.log_text.see("end")  # Auto-scroll
+                    self.log_text.configure(state="disabled")
+            except queue.Empty:
+                break
+
+        self.after(100, self._poll_log_queue)
+
+    def _on_log_level_change(self, value: str) -> None:
+        """Handle log level dropdown change.
+
+        Level filtering is done during polling, so this is a no-op.
+        The dropdown value is read directly in _poll_log_queue.
+        """
+        pass
+
     def destroy(self) -> None:
-        """Override destroy to log application close."""
+        """Override destroy to clean up queue handler and log application close."""
+        logging.getLogger().removeHandler(self.queue_handler)
         self.logger.info("Application closed")
         super().destroy()
 
