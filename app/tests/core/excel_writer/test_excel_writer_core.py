@@ -23,6 +23,8 @@ from openpyxl import load_workbook
 
 from core.constants import (
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
+    EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
+    EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
@@ -30,6 +32,7 @@ from core.constants import (
     EXCEL_COLUMN_BLOCK_NAME,
     EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
     EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+    EXCEL_COLUMN_BLOCK_POLYGON_COUNT,
     EXCEL_COLUMN_BLOCK_ROTATION_0,
     EXCEL_COLUMN_BLOCK_ROTATION_90,
     EXCEL_COLUMN_BLOCK_ROTATION_180,
@@ -373,7 +376,7 @@ class TestExcelWriter:
     def test_block_geometry_analysis_sheet_consolidated(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test Block Geometry Analysis sheet has all 18 columns consolidated."""
+        """Test Block Geometry Analysis sheet has all 21 columns consolidated."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -399,12 +402,15 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP),
             format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM),
             format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_POLYGON_COUNT),
         ]
 
         assert list(df.columns) == expected_columns
 
-        # Verify exactly 18 columns (13 original + 5 content zone)
-        assert len(df.columns) == 18
+        # Verify exactly 21 columns (13 original + 8 content zone)
+        assert len(df.columns) == 21
 
         # Verify sort by block_name alphabetical
         block_names = df[format_header(EXCEL_COLUMN_BLOCK_NAME)].tolist()
@@ -503,7 +509,7 @@ class TestExcelWriter:
 
         # Should have headers but no data rows
         assert len(df) == 0
-        assert len(df.columns) == 18
+        assert len(df.columns) == 21
 
     def test_block_trimming_analysis_auto_filter(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -691,7 +697,7 @@ class TestExcelWriter:
         # Should have headers but no data rows
         assert len(df) == 0
 
-        # Verify all 18 column headers (formatted)
+        # Verify all 21 column headers (formatted)
         expected_columns = [
             format_header(EXCEL_COLUMN_BLOCK_NAME),
             format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
@@ -711,6 +717,9 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP),
             format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM),
             format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_POLYGON_COUNT),
         ]
         assert list(df.columns) == expected_columns
 
@@ -825,7 +834,7 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT),
         ]
 
-        # Block Geometry Analysis sheet - 18 columns (13 original + 5 content zone)
+        # Block Geometry Analysis sheet - 21 columns (13 original + 8 content zone)
         df_geometry = pd.read_excel(
             excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
         )
@@ -848,12 +857,15 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP),
             format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM),
             format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_POLYGON_COUNT),
         ]
 
     def test_spec_010_consolidated_geometry_sheet(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test spec 010: Block Geometry Analysis sheet has consolidated 18 columns with scales, rotations, and content zone."""
+        """Test spec 010: Block Geometry Analysis sheet has consolidated 21 columns with scales, rotations, and content zone."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -862,8 +874,8 @@ class TestExcelWriter:
         )
         df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
 
-        # Verify Block Geometry Analysis has exactly 18 columns (13 original + 5 content zone)
-        assert len(df_geometry.columns) == 18
+        # Verify Block Geometry Analysis has exactly 21 columns (13 original + 8 content zone)
+        assert len(df_geometry.columns) == 21
 
         # Verify scale columns present (formatted)
         assert format_header(EXCEL_COLUMN_BLOCK_SCALE_X) in df_geometry.columns
@@ -1362,7 +1374,7 @@ class TestContentZoneExcelOutput:
     def test_content_zone_column_count(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Block Geometry Analysis sheet has 18 columns (13 original + 5 content zone)."""
+        """Block Geometry Analysis sheet has 21 columns (13 original + 8 content zone)."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -1372,4 +1384,177 @@ class TestContentZoneExcelOutput:
         headers = [cell.value for cell in ws[1]]
         # Filter out None values for accurate count
         headers = [h for h in headers if h is not None]
-        assert len(headers) == 18
+        assert len(headers) == 21
+
+    def test_new_content_zone_columns_in_headers(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """New content zone columns appear in DataFrame headers with correct Title Case formatting."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Get headers
+        headers = [cell.value for cell in ws[1]]
+
+        # Verify new columns appear with correct formatting
+        assert format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH) in headers
+        assert format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT) in headers
+        assert format_header(EXCEL_COLUMN_BLOCK_POLYGON_COUNT) in headers
+
+        # Verify column order: width, height, polygon_count appear after content_zone_detected
+        detected_idx = headers.index(
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED)
+        )
+        width_idx = headers.index(format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH))
+        height_idx = headers.index(
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT)
+        )
+        poly_idx = headers.index(format_header(EXCEL_COLUMN_BLOCK_POLYGON_COUNT))
+
+        assert width_idx == detected_idx + 1
+        assert height_idx == detected_idx + 2
+        assert poly_idx == detected_idx + 3
+
+    def test_content_zone_width_height_populated_when_detected(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Width/height values are populated when content zone is detected."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Get header column indices
+        headers = [cell.value for cell in ws[1]]
+        block_name_col = headers.index(format_header(EXCEL_COLUMN_BLOCK_NAME)) + 1
+        width_col = headers.index(
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH)
+        ) + 1
+        height_col = headers.index(
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT)
+        ) + 1
+        detected_col = headers.index(
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED)
+        ) + 1
+
+        # Find VALVE row (should have content zone detected)
+        valve_row = None
+        for row_idx in range(2, ws.max_row + 1):
+            if ws.cell(row=row_idx, column=block_name_col).value == "VALVE":
+                valve_row = row_idx
+                break
+
+        assert valve_row is not None, "VALVE row not found"
+        assert ws.cell(row=valve_row, column=detected_col).value == "TRUE"
+        assert ws.cell(row=valve_row, column=width_col).value == 80.0
+        assert ws.cell(row=valve_row, column=height_col).value == 40.0
+
+    def test_content_zone_width_height_empty_when_not_detected(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Width/height show empty string when content zone not detected."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Get header column indices
+        headers = [cell.value for cell in ws[1]]
+        block_name_col = headers.index(format_header(EXCEL_COLUMN_BLOCK_NAME)) + 1
+        width_col = headers.index(
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH)
+        ) + 1
+        height_col = headers.index(
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT)
+        ) + 1
+        detected_col = headers.index(
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED)
+        ) + 1
+
+        # Find TAG row (should have content zone NOT detected)
+        tag_row = None
+        for row_idx in range(2, ws.max_row + 1):
+            if ws.cell(row=row_idx, column=block_name_col).value == "TAG":
+                tag_row = row_idx
+                break
+
+        assert tag_row is not None, "TAG row not found"
+        assert ws.cell(row=tag_row, column=detected_col).value == "FALSE"
+        # Empty string in Excel becomes None when loaded
+        assert ws.cell(row=tag_row, column=width_col).value is None
+        assert ws.cell(row=tag_row, column=height_col).value is None
+
+    def test_polygon_count_always_present(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Polygon count appears for all rows."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Get header column indices
+        headers = [cell.value for cell in ws[1]]
+        poly_col = headers.index(format_header(EXCEL_COLUMN_BLOCK_POLYGON_COUNT)) + 1
+
+        # Check that all data rows have polygon count (either 0 or a count)
+        for row_idx in range(2, ws.max_row + 1):
+            poly_value = ws.cell(row=row_idx, column=poly_col).value
+            # Value should be an integer (0 or positive)
+            assert isinstance(poly_value, int) or poly_value is None or poly_value == ""
+
+    def test_polygon_count_zero_when_no_polygons(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Polygon count displays 0 when no polygons found."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Get header column indices
+        headers = [cell.value for cell in ws[1]]
+        block_name_col = headers.index(format_header(EXCEL_COLUMN_BLOCK_NAME)) + 1
+        poly_col = headers.index(format_header(EXCEL_COLUMN_BLOCK_POLYGON_COUNT)) + 1
+
+        # Find TAG row (fixture has polygon_count=0)
+        tag_row = None
+        for row_idx in range(2, ws.max_row + 1):
+            if ws.cell(row=row_idx, column=block_name_col).value == "TAG":
+                tag_row = row_idx
+                break
+
+        assert tag_row is not None, "TAG row not found"
+        assert ws.cell(row=tag_row, column=poly_col).value == 0
+
+    def test_polygon_count_value_when_polygons_found(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Polygon count displays actual count when polygons found."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Get header column indices
+        headers = [cell.value for cell in ws[1]]
+        block_name_col = headers.index(format_header(EXCEL_COLUMN_BLOCK_NAME)) + 1
+        poly_col = headers.index(format_header(EXCEL_COLUMN_BLOCK_POLYGON_COUNT)) + 1
+
+        # Find VALVE row (fixture has polygon_count=2)
+        valve_row = None
+        for row_idx in range(2, ws.max_row + 1):
+            if ws.cell(row=row_idx, column=block_name_col).value == "VALVE":
+                valve_row = row_idx
+                break
+
+        assert valve_row is not None, "VALVE row not found"
+        assert ws.cell(row=valve_row, column=poly_col).value == 2

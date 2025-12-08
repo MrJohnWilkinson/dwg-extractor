@@ -29,6 +29,8 @@ from .constants import (
     EXCEL_COLUMN_ANNOTATION_LAYER_NAME,
     EXCEL_COLUMN_ANNOTATION_TYPE,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
+    EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
+    EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
@@ -36,6 +38,7 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_NAME,
     EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
     EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+    EXCEL_COLUMN_BLOCK_POLYGON_COUNT,
     EXCEL_COLUMN_BLOCK_ROTATION_0,
     EXCEL_COLUMN_BLOCK_ROTATION_90,
     EXCEL_COLUMN_BLOCK_ROTATION_180,
@@ -649,12 +652,18 @@ def _create_block_geometry_analysis_sheet(
                 trim_top: float | str = content_zone["suggested_trim_top"] or ""
                 trim_bottom: float | str = content_zone["suggested_trim_bottom"] or ""
                 detected = "TRUE"
+                cz_width: float | str = content_zone["content_zone_width"] or ""
+                cz_height: float | str = content_zone["content_zone_height"] or ""
+                poly_count: int | str = content_zone["polygon_count"]
             else:
                 trim_left = ""
                 trim_right = ""
                 trim_top = ""
                 trim_bottom = ""
                 detected = "FALSE" if content_zone else ""
+                cz_width = ""
+                cz_height = ""
+                poly_count = content_zone["polygon_count"] if content_zone else ""
 
             rows.append(
                 {
@@ -676,6 +685,9 @@ def _create_block_geometry_analysis_sheet(
                     EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP: trim_top,
                     EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM: trim_bottom,
                     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED: detected,
+                    EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH: cz_width,
+                    EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT: cz_height,
+                    EXCEL_COLUMN_BLOCK_POLYGON_COUNT: poly_count,
                 }
             )
 
@@ -683,7 +695,7 @@ def _create_block_geometry_analysis_sheet(
         # Sort by block_name alphabetically
         df.sort_values(by=EXCEL_COLUMN_BLOCK_NAME, ascending=True, inplace=True)
     else:
-        # Create empty DataFrame with headers only (all 18 columns)
+        # Create empty DataFrame with headers only (all 21 columns)
         df = pd.DataFrame(
             columns=[
                 EXCEL_COLUMN_BLOCK_NAME,
@@ -704,6 +716,9 @@ def _create_block_geometry_analysis_sheet(
                 EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP,
                 EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM,
                 EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
+                EXCEL_COLUMN_BLOCK_POLYGON_COUNT,
             ]
         )
 
