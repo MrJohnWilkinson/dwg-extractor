@@ -95,7 +95,12 @@ IMPORTANT: Execute every step in order, top to bottom.
 Execute every command to validate the feature works correctly with zero regressions.
 
 <list commands you'll use to validate with 100% confidence the feature is implemented correctly with zero regressions. every command must execute without errors so be specific about what you want to run to validate the feature works as expected. Include commands to test the feature end-to-end.>
-- `cd app/server && uv run pytest` - Run server tests to validate the feature works with zero regressions
+- Run tests to validate the feature works with zero regressions 
+    - `uv run pytest app/tests/` 
+    - `uv run mypy app/`
+    - `uv run ruff check app/`
+    - `uv run ruff format app/`
+    - `uv run ruff check app/ --fix`
 
 ## Notes
 <optionally list any additional notes, future considerations, or context that are relevant to the feature that will be helpful to the developer>

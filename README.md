@@ -56,7 +56,6 @@ dwg-extractor/
 
 ### Testing
 - **Run All Tests:** `uv run pytest app/tests/` - Run complete test suite
-- **Run with Coverage:** `uv run pytest --cov=app app/tests/` - Run tests with coverage
 
 ### Code Quality
 - **Type Check:** `uv run mypy app/`

@@ -71,7 +71,12 @@ IMPORTANT: Execute every step in order, top to bottom.
 Execute every command to validate the bug is fixed with zero regressions.
 
 <list commands you'll use to validate with 100% confidence the bug is fixed with zero regressions. every command must execute without errors so be specific about what you want to run to validate the bug is fixed with zero regressions. Include commands to reproduce the bug before and after the fix.>
-- `cd app/server && uv run pytest` - Run server tests to validate the bug is fixed with zero regressions
+- Run tests to validate the bug is fixed with zero regressions 
+    - `uv run pytest app/tests/` 
+    - `uv run mypy app/`
+    - `uv run ruff check app/`
+    - `uv run ruff format app/`
+    - `uv run ruff check app/ --fix`
 
 ## Notes
 <optionally list any additional notes or context that are relevant to the bug that will be helpful to the developer>

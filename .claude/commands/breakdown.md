@@ -77,7 +77,7 @@ DOCUMENT_PATH: $ARGUMENTS (required)
 **Dependencies**: None | Task X must be completed first
 
 **Description**:
-<Clear description of what needs to be done in this task.  Keep this high level, using 1 to 5 bullet points.  Provide important files, but AVOID being too descriptive. Include:
+<Clear description of what needs to be done in this task.  Keep this high level, using 1 to 20 bullet points.  Provide important files, but AVOID being too descriptive. Include:
 - The main specific files or components affected
 - Key functionality to implement/fix
 - Clear scope boundaries
@@ -91,7 +91,7 @@ DOCUMENT_PATH: $ARGUMENTS (required)
 **Dependencies**: None | Task X must be completed first
 
 **Description**:
-<Clear description of what needs to be done in this task.  Keep this high level, using 1 to 5 bullet points.  Provide important files, but AVOID being too descriptive. Include:
+<Clear description of what needs to be done in this task.  Keep this high level, using 1 to 20 bullet points.  Provide important files, but AVOID being too descriptive. Include:
 - The main specific files or components affected
 - Key functionality to implement/fix
 - Clear scope boundaries
