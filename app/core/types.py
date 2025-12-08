@@ -210,6 +210,11 @@ class ContentZoneData(TypedDict):
         suggested_trim_bottom: Distance from block bottom edge to content zone bottom edge,
                               or None if no content zone detected
         content_zone_detected: True if a valid content zone was found, False otherwise
+        content_zone_width: Width of content zone bounding box (cz_max_x - cz_min_x),
+                           or None if no content zone detected
+        content_zone_height: Height of content zone bounding box (cz_max_y - cz_min_y),
+                            or None if no content zone detected
+        polygon_count: Total number of closed polygons found (LWPOLYLINE + LINE cycles)
     """
 
     suggested_trim_left: float | None
@@ -217,3 +222,6 @@ class ContentZoneData(TypedDict):
     suggested_trim_top: float | None
     suggested_trim_bottom: float | None
     content_zone_detected: bool
+    content_zone_width: float | None
+    content_zone_height: float | None
+    polygon_count: int

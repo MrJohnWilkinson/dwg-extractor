@@ -540,6 +540,20 @@ class TestTrimValueCalculation:
         assert result["suggested_trim_top"] == 0.0
         assert result["suggested_trim_bottom"] == 0.0
 
+    def test_content_zone_dimensions_calculated(self) -> None:
+        """Verify width and height are calculated correctly."""
+        doc = ezdxf.readfile("app/tests/assets/content_zone_test.dxf")
+        block = doc.blocks.get("NESTED_RECTANGLES")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(block, bbox)
+
+        assert result["content_zone_detected"] is True
+        # Inner rectangle is (10, 10) to (90, 70)
+        # Width = 90 - 10 = 80, Height = 70 - 10 = 60
+        assert result["content_zone_width"] == 80.0
+        assert result["content_zone_height"] == 60.0
+
 
 class TestContentZoneDetection:
     """Test suite for _detect_content_zone function."""
@@ -629,6 +643,27 @@ class TestContentZoneDetection:
         assert result["content_zone_detected"] is True
         # The inner LINE rectangle should be the content zone
 
+    def test_polygon_count_returned(self) -> None:
+        """Verify polygon count is returned correctly."""
+        doc = ezdxf.readfile("app/tests/assets/content_zone_test.dxf")
+        block = doc.blocks.get("NESTED_RECTANGLES")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(block, bbox)
+
+        assert result["polygon_count"] == 2  # Outer and inner rectangle
+
+    def test_polygon_count_zero_when_no_shapes(self) -> None:
+        """Verify polygon_count is 0 when no shapes found."""
+        doc = ezdxf.readfile("app/tests/assets/content_zone_test.dxf")
+        block = doc.blocks.get("EMPTY_BLOCK")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(block, bbox)
+
+        assert result["content_zone_detected"] is False
+        assert result["polygon_count"] == 0
+
 
 class TestEdgeCases:
     """Test suite for edge cases and boundary conditions."""
@@ -692,6 +727,9 @@ class TestEdgeCases:
         assert result["suggested_trim_right"] is None
         assert result["suggested_trim_top"] is None
         assert result["suggested_trim_bottom"] is None
+        assert result["content_zone_width"] is None
+        assert result["content_zone_height"] is None
+        assert result["polygon_count"] == 0
 
     def test_polygon_bbox_empty(self) -> None:
         """Handle empty polygon for bbox calculation."""
@@ -737,6 +775,9 @@ class TestTypeAnnotations:
         assert "suggested_trim_top" in result
         assert "suggested_trim_bottom" in result
         assert "content_zone_detected" in result
+        assert "content_zone_width" in result
+        assert "content_zone_height" in result
+        assert "polygon_count" in result
 
     def test_polygon_type(self) -> None:
         """Verify Polygon type structure."""

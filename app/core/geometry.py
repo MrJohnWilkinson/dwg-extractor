@@ -349,6 +349,9 @@ def _empty_content_zone_data() -> ContentZoneData:
         suggested_trim_top=None,
         suggested_trim_bottom=None,
         content_zone_detected=False,
+        content_zone_width=None,
+        content_zone_height=None,
+        polygon_count=0,
     )
 
 
@@ -687,13 +690,31 @@ def _detect_content_zone(
             f"[{block_name}] Skipping content zone: "
             f"{polygon_count} polygons exceeds threshold {POLYGON_COUNT_THRESHOLD}"
         )
-        return _empty_content_zone_data()
+        return ContentZoneData(
+            suggested_trim_left=None,
+            suggested_trim_right=None,
+            suggested_trim_top=None,
+            suggested_trim_bottom=None,
+            content_zone_detected=False,
+            content_zone_width=None,
+            content_zone_height=None,
+            polygon_count=polygon_count,
+        )
 
     # Calculate net areas (O(n^3) but bounded by threshold)
     net_areas = _calculate_net_areas(all_shapes, abort_event)
 
     if not net_areas:
-        return _empty_content_zone_data()
+        return ContentZoneData(
+            suggested_trim_left=None,
+            suggested_trim_right=None,
+            suggested_trim_top=None,
+            suggested_trim_bottom=None,
+            content_zone_detected=False,
+            content_zone_width=None,
+            content_zone_height=None,
+            polygon_count=polygon_count,
+        )
 
     # Find maximum net area value (already sorted descending)
     max_net_area = net_areas[0][1]
@@ -703,7 +724,16 @@ def _detect_content_zone(
         logger.debug(
             f"[{block_name}] Content zone has non-positive area: {max_net_area}"
         )
-        return _empty_content_zone_data()
+        return ContentZoneData(
+            suggested_trim_left=None,
+            suggested_trim_right=None,
+            suggested_trim_top=None,
+            suggested_trim_bottom=None,
+            content_zone_detected=False,
+            content_zone_width=None,
+            content_zone_height=None,
+            polygon_count=polygon_count,
+        )
 
     # Find all shapes tied for maximum net area
     tied_shapes = [shape for shape, net_area in net_areas if net_area == max_net_area]
@@ -724,6 +754,10 @@ def _detect_content_zone(
     trim_top = round(block_max_y - cz_max_y, 2)
     trim_bottom = round(cz_min_y - block_min_y, 2)
 
+    # Calculate content zone dimensions
+    cz_width = round(cz_max_x - cz_min_x, 2)
+    cz_height = round(cz_max_y - cz_min_y, 2)
+
     logger.debug(
         f"[{block_name}] Content zone detected: "
         f"trim_left={trim_left}, trim_right={trim_right}, "
@@ -736,4 +770,7 @@ def _detect_content_zone(
         suggested_trim_top=trim_top,
         suggested_trim_bottom=trim_bottom,
         content_zone_detected=True,
+        content_zone_width=cz_width,
+        content_zone_height=cz_height,
+        polygon_count=polygon_count,
     )
