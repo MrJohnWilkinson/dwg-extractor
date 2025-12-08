@@ -24,6 +24,13 @@ import time
 from collections import defaultdict
 
 from ezdxf.layouts import BlockLayout
+from shapely import Point
+from shapely import Polygon as ShapelyPolygon
+from shapely.geometry import LineString  # noqa: F401  # Used in Unit B
+from shapely.ops import (  # noqa: F401  # polygonize used in Unit B
+    polygonize,
+    unary_union,
+)
 
 from .constants import (
     CYCLE_DETECTION_TIMEOUT_SECONDS,
@@ -35,6 +42,17 @@ from .types import ContentZoneData, Polygon
 
 
 logger = setup_logger(__name__)
+
+
+def _to_shapely_polygon(polygon: Polygon) -> ShapelyPolygon:
+    """Convert internal Polygon type to Shapely Polygon."""
+    return ShapelyPolygon(polygon)
+
+
+def _from_shapely_polygon(shapely_poly: ShapelyPolygon) -> Polygon:
+    """Convert Shapely Polygon to internal Polygon type."""
+    coords = list(shapely_poly.exterior.coords)[:-1]  # Exclude closing point
+    return [(float(x), float(y)) for x, y in coords]
 
 
 class GeometryAbortedError(Exception):
@@ -390,11 +408,7 @@ def _extract_closed_lwpolylines(block_def: BlockLayout) -> list[Polygon]:
 
 def _shoelace_area(polygon: Polygon) -> float:
     """
-    Calculate the area of a polygon using the shoelace formula.
-
-    The shoelace formula computes the signed area of a simple polygon.
-    This implementation returns the absolute value to handle both
-    clockwise and counter-clockwise vertex orderings.
+    Calculate the area of a polygon using Shapely.
 
     Args:
         polygon: List of (x, y) vertices forming a closed polygon.
@@ -411,24 +425,13 @@ def _shoelace_area(polygon: Polygon) -> float:
     """
     if len(polygon) < 3:
         return 0.0
-
-    n = len(polygon)
-    area = 0.0
-
-    for i in range(n):
-        j = (i + 1) % n
-        area += polygon[i][0] * polygon[j][1]
-        area -= polygon[j][0] * polygon[i][1]
-
-    return abs(area) / 2.0
+    shapely_poly = ShapelyPolygon(polygon)
+    return abs(shapely_poly.area)
 
 
 def _point_in_polygon(point: tuple[float, float], polygon: Polygon) -> bool:
     """
-    Determine if a point is inside a polygon using the ray-casting algorithm.
-
-    Casts a horizontal ray from the point to the right and counts how many
-    polygon edges it crosses. An odd count means the point is inside.
+    Determine if a point is inside a polygon using Shapely.
 
     Args:
         point: (x, y) coordinates of the point to test.
@@ -440,28 +443,13 @@ def _point_in_polygon(point: tuple[float, float], polygon: Polygon) -> bool:
     """
     if len(polygon) < 3:
         return False
-
-    x, y = point
-    n = len(polygon)
-    inside = False
-
-    j = n - 1
-    for i in range(n):
-        xi, yi = polygon[i]
-        xj, yj = polygon[j]
-
-        # Check if point is between the y-coordinates of the edge
-        if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi) + xi):
-            inside = not inside
-
-        j = i
-
-    return inside
+    shapely_poly = ShapelyPolygon(polygon)
+    return shapely_poly.contains(Point(point))
 
 
 def _polygon_contains_polygon(outer: Polygon, inner: Polygon) -> bool:
     """
-    Determine if one polygon completely contains another.
+    Determine if one polygon completely contains another using Shapely.
 
     A polygon is considered to contain another if ALL vertices of the inner
     polygon are inside the outer polygon.
@@ -475,18 +463,14 @@ def _polygon_contains_polygon(outer: Polygon, inner: Polygon) -> bool:
     """
     if len(outer) < 3 or len(inner) < 3:
         return False
-
-    # Check if all vertices of inner polygon are inside outer polygon
-    for vertex in inner:
-        if not _point_in_polygon(vertex, outer):
-            return False
-
-    return True
+    outer_shapely = ShapelyPolygon(outer)
+    inner_shapely = ShapelyPolygon(inner)
+    return outer_shapely.contains(inner_shapely)
 
 
 def _get_polygon_bbox(polygon: Polygon) -> tuple[float, float, float, float]:
     """
-    Calculate the bounding box of a polygon.
+    Calculate the bounding box of a polygon using Shapely.
 
     Args:
         polygon: List of (x, y) vertices.
@@ -497,20 +481,24 @@ def _get_polygon_bbox(polygon: Polygon) -> tuple[float, float, float, float]:
     """
     if not polygon:
         return (0.0, 0.0, 0.0, 0.0)
-
-    min_x = min(p[0] for p in polygon)
-    min_y = min(p[1] for p in polygon)
-    max_x = max(p[0] for p in polygon)
-    max_y = max(p[1] for p in polygon)
-
-    return (min_x, min_y, max_x, max_y)
+    # Shapely requires at least 3 points for a valid polygon
+    # For degenerate cases (1-2 points), calculate bbox directly
+    if len(polygon) < 3:
+        min_x = min(p[0] for p in polygon)
+        min_y = min(p[1] for p in polygon)
+        max_x = max(p[0] for p in polygon)
+        max_y = max(p[1] for p in polygon)
+        return (min_x, min_y, max_x, max_y)
+    shapely_poly = ShapelyPolygon(polygon)
+    minx, miny, maxx, maxy = shapely_poly.bounds
+    return (minx, miny, maxx, maxy)
 
 
 def _get_union_bounding_box(
     polygons: list[Polygon],
 ) -> tuple[float, float, float, float]:
     """
-    Calculate the union bounding box encompassing all input polygons.
+    Calculate the union bounding box encompassing all input polygons using Shapely.
 
     The union bounding box is the minimum axis-aligned rectangle that contains
     all vertices of all input polygons. This is used when multiple shapes tie
@@ -531,17 +519,10 @@ def _get_union_bounding_box(
     """
     if not polygons:
         return (0.0, 0.0, 0.0, 0.0)
-
-    union_min_x, union_min_y, union_max_x, union_max_y = _get_polygon_bbox(polygons[0])
-
-    for polygon in polygons[1:]:
-        min_x, min_y, max_x, max_y = _get_polygon_bbox(polygon)
-        union_min_x = min(union_min_x, min_x)
-        union_min_y = min(union_min_y, min_y)
-        union_max_x = max(union_max_x, max_x)
-        union_max_y = max(union_max_y, max_y)
-
-    return (union_min_x, union_min_y, union_max_x, union_max_y)
+    shapely_polys = [ShapelyPolygon(p) for p in polygons]
+    union = unary_union(shapely_polys)
+    minx, miny, maxx, maxy = union.bounds
+    return (minx, miny, maxx, maxy)
 
 
 def _extract_line_cycles(

@@ -8,6 +8,8 @@ dependencies = [
     "pandas>=2.0.0",
     "openpyxl>=3.1.0",
     "customtkinter>=5.2.0",
+    "shapely>=2.0.0",
+    "types-shapely>=2.1.0.20250917",
 ]
 
 [project.optional-dependencies]
