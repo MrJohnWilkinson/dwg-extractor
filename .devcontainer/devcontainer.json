@@ -41,28 +41,27 @@
             "path": "zsh"
           }
         },
-        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"
+        "python.defaultInterpreterPath": "/home/node/.venv/bin/python"
       }
     }
   },
   "remoteUser": "node",
   "mounts": [
     "source=claude-code-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
-    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind",
-    "source=${localWorkspaceFolderBasename}-venv,target=/workspace/.venv,type=volume"
+    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind"
   ],
   "containerEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
-    "UV_PROJECT_ENVIRONMENT": "/workspace/.venv",
+    "UV_PROJECT_ENVIRONMENT": "/home/node/.venv",
     "UV_PYTHON_PREFERENCE": "system",
-    "VIRTUAL_ENV": "/workspace/.venv",
-    "PATH": "/workspace/.venv/bin:/usr/local/share/npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+    "VIRTUAL_ENV": "/home/node/.venv",
+    "PATH": "/home/node/.venv/bin:/usr/local/share/npm-global/bin:/usr/local/bin:/usr/bin:/bin"
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
-  "postCreateCommand": "sudo /bin/chown -R node:node /workspace/.venv && rm -rf /workspace/.venv/* /workspace/.venv/.* 2>/dev/null; uv venv /workspace/.venv --python $(which python3) && uv sync",
+  "postCreateCommand": "uv venv /home/node/.venv --python $(which python3) && uv sync",
   "waitFor": "postStartCommand"
 }

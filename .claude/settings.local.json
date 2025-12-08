@@ -41,7 +41,15 @@
       "Bash(git -C /home/john/github-projects-linux/dwg-extractor push)",
       "Bash(git -C /home/john/github-projects-linux/dwg-extractor status)",
       "Bash(git -C /home/john/github-projects-linux/dwg-extractor commit -m \"$(cat <<''EOF''\nchore: update test assets and Claude Code settings\n\nUpdate DXF test asset files and local settings\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git -C /home/john/github-projects-linux/dwg-extractor commit -m \"$(cat <<''EOF''\nchore: update test assets and add analysis/spec docs\n\n- Update DXF test asset files\n- Add extraction performance analysis\n- Add polygon count threshold spec\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor commit -m \"$(cat <<''EOF''\nchore: update test assets and add analysis/spec docs\n\n- Update DXF test asset files\n- Add extraction performance analysis\n- Add polygon count threshold spec\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git log:*)",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor log --oneline --all --since=\"2025-11-27\" --until=\"2025-12-01\")",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor log --oneline --all --grep=\"venv\")",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor log --oneline --all --grep=container)",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor log --oneline --all \"--grep=isolate\\|virtual\\|environment\\|WSL\\|conflict\")",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor log --oneline --all --grep=devcontainer)",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor log --oneline --all \"--grep=volume\\|mount\")",
+      "Bash(git -C /home/john/github-projects-linux/dwg-extractor show --stat f56ad26 52f78ee 339a02a 7d4965b --format=\"\n=== %h | %ad | %s ===%n%b\" --date=format:\"%Y-%m-%d %H:%M\")"
     ],
     "deny": [],
     "ask": []

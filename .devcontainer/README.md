@@ -29,13 +29,12 @@ In a new repo, these can be left as they are in many cases.  If the devcontainer
 |------|-----------|----------------|--------|--------|
 | devcontainer.json | name | `"Claude Code Sandbox"` | `"activity-logger"` | Cosmetic |
 | devcontainer.json | extensions | 4 (base set) | 8 (adds Python, Ruff, Markdown) | Enhanced Python dev |
-| devcontainer.json | python.defaultInterpreterPath | Not present | `${workspaceFolder}/.venv/bin/python` | Python venv integration |
+| devcontainer.json | python.defaultInterpreterPath | Not present | `/home/node/.venv/bin/python` | Python venv integration |
 | devcontainer.json | mounts (claude config) | `type=volume` (isolated) | `type=bind` (host ~/.claude) | **Config sharing vs isolation** |
-| devcontainer.json | mounts (.venv) | Not present | `type=volume` (shadows .venv) | **WSL/container venv isolation** |
 | devcontainer.json | containerEnv | 3 vars | 6 vars (adds UV_*, VIRTUAL_ENV, PATH) | Python/uv tooling |
 | devcontainer.json | forwardPorts | Not present | `[5173, 8001, 8002]` | App-specific ports |
 | devcontainer.json | portsAttributes | Not present | 3 port configs with labels | Port labeling |
-| devcontainer.json | postCreateCommand | Not present | uv venv + sync + npm install | Project setup automation |
+| devcontainer.json | postCreateCommand | Not present | uv venv + sync | Project setup automation |
 | Dockerfile | base image | `node:20` | `ubuntu:24.04` | **Different base** |
 | Dockerfile | Python | Not present | Manual install (3.12) | Python support |
 | Dockerfile | uv package manager | Not present | Installed | Python dependency mgmt |
@@ -44,6 +43,13 @@ In a new repo, these can be left as they are in many cases.  If the devcontainer
 | Dockerfile | node user creation | Already exists in node:20 | Complex (rename ubuntu) | Base image difference |
 | Dockerfile | Node.js | Inherited from node:20 | Manual install via NodeSource | Base image difference |
 | init-firewall.sh | Allowed domains | Base domains only | Adds supabase.co, supabase.in | Database connectivity |
+
+### Python Virtual Environment Location
+
+The venv is placed at `/home/node/.venv` (outside the bind-mounted workspace) rather than `/workspace/.venv`. This avoids conflicts between the WSL host `.venv` and the container's venv without requiring a Docker volume mount to shadow the workspace `.venv`. The simpler approach:
+- Eliminates the need for a venv volume mount
+- Removes the sudoers rule for chown operations
+- Simplifies the postCreateCommand
 
 ---
 
@@ -95,24 +101,23 @@ In a new repo, these can be left as they are in many cases.  If the devcontainer
             "path": "zsh"
           }
         },
-        "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"
+        "python.defaultInterpreterPath": "/home/node/.venv/bin/python"
       }
     }
   },
   "remoteUser": "node",
   "mounts": [
     "source=claude-code-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
-    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind",
-    "source=${localWorkspaceFolderBasename}-venv,target=/workspace/.venv,type=volume"
+    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind"
   ],
   "containerEnv": {
     "NODE_OPTIONS": "--max-old-space-size=4096",
     "CLAUDE_CONFIG_DIR": "/home/node/.claude",
     "POWERLEVEL9K_DISABLE_GITSTATUS": "true",
-    "UV_PROJECT_ENVIRONMENT": "/workspace/.venv",
+    "UV_PROJECT_ENVIRONMENT": "/home/node/.venv",
     "UV_PYTHON_PREFERENCE": "system",
-    "VIRTUAL_ENV": "/workspace/.venv",
-    "PATH": "/workspace/.venv/bin:/usr/local/share/npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+    "VIRTUAL_ENV": "/home/node/.venv",
+    "PATH": "/home/node/.venv/bin:/usr/local/share/npm-global/bin:/usr/local/bin:/usr/bin:/bin"
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
@@ -123,7 +128,7 @@ In a new repo, these can be left as they are in many cases.  If the devcontainer
     "8002": { "label": "FastAPI Backend", "onAutoForward": "notify" }
   },
   "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
-  "postCreateCommand": "rm -rf /workspace/.venv && uv venv /workspace/.venv --python $(which python3) && uv sync && npm --prefix app/client install",
+  "postCreateCommand": "uv venv /home/node/.venv --python $(which python3) && uv sync",
   "waitFor": "postStartCommand"
 }
 ```
@@ -612,7 +617,7 @@ Remove from `devcontainer.json`:
 - Extensions: `ms-python.python`, `ms-python.vscode-pylance`, `charliermarsh.ruff`
 - Setting: `python.defaultInterpreterPath`
 - containerEnv: `UV_PROJECT_ENVIRONMENT`, `UV_PYTHON_PREFERENCE`, `VIRTUAL_ENV`
-- Update `PATH` to remove `/workspace/.venv/bin:`
+- Update `PATH` to remove `/home/node/.venv/bin:`
 - Remove Python parts from `postCreateCommand`
 
 Remove from `Dockerfile`:
