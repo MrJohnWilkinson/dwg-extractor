@@ -235,7 +235,9 @@ def _calculate_segments(intersection_points: list[float]) -> list[float]:
         segment_size = intersection_points[i + 1] - intersection_points[i]
         segments.append(round(segment_size, 2))
 
-    logger.debug(f"Calculate segments: {len(intersection_points)} points -> {len(segments)} segments: {segments}")
+    logger.debug(
+        f"Calculate segments: {len(intersection_points)} points -> {len(segments)} segments: {segments}"
+    )
     return segments
 
 
@@ -281,5 +283,7 @@ def _categorize_rotation(angle: float) -> str:
     else:
         result = "other"
 
-    logger.debug(f"Categorize rotation: {angle}° -> normalized={normalized}° -> category={result}")
+    logger.debug(
+        f"Categorize rotation: {angle}° -> normalized={normalized}° -> category={result}"
+    )
     return result

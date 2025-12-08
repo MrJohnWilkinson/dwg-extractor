@@ -9,7 +9,6 @@ This test suite validates:
 
 import os
 from pathlib import Path
-from typing import Iterator
 
 import pandas as pd
 import pytest
@@ -90,9 +89,7 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {
-                BlockLayerKey(block_name="TEST", layer_name="0"): 2
-            },
+            "block_layer_pairs": {BlockLayerKey(block_name="TEST", layer_name="0"): 2},
             "block_rotation_counts": {},
             "block_scale_data": {
                 "TEST": {(1.0, 1.0), (-1.0, 1.0)}
@@ -127,9 +124,7 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {
-                BlockLayerKey(block_name="TEST", layer_name="0"): 2
-            },
+            "block_layer_pairs": {BlockLayerKey(block_name="TEST", layer_name="0"): 2},
             "block_rotation_counts": {},
             "block_scale_data": {
                 "TEST": {(1.0, 1.0), (2.0, 1.0)}
@@ -164,9 +159,7 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {
-                BlockLayerKey(block_name="TEST", layer_name="0"): 2
-            },
+            "block_layer_pairs": {BlockLayerKey(block_name="TEST", layer_name="0"): 2},
             "block_rotation_counts": {},
             "block_scale_data": {"TEST": {(-1.0, 1.0)}},  # Consistent negative X scale
             "block_xdata_apps": {},
@@ -199,9 +192,7 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {
-                BlockLayerKey(block_name="TEST", layer_name="0"): 2
-            },
+            "block_layer_pairs": {BlockLayerKey(block_name="TEST", layer_name="0"): 2},
             "block_rotation_counts": {},
             "block_scale_data": {"TEST": {(1.0, 1.0)}},  # Consistent positive scale
             "block_xdata_apps": {},
@@ -234,9 +225,7 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {
-                BlockLayerKey(block_name="TEST", layer_name="0"): 2
-            },
+            "block_layer_pairs": {BlockLayerKey(block_name="TEST", layer_name="0"): 2},
             "block_rotation_counts": {},
             "block_scale_data": {
                 "TEST": {(1.0, 2.0), (-1.0, 2.0)}
@@ -272,9 +261,7 @@ class TestNegativeScaleTextGeneration:
         data: ExtractionResult = {
             "block_counts": {"TEST": 2},
             "block_entities": {"TEST": 10},
-            "block_layer_pairs": {
-                BlockLayerKey(block_name="TEST", layer_name="0"): 2
-            },
+            "block_layer_pairs": {BlockLayerKey(block_name="TEST", layer_name="0"): 2},
             "block_rotation_counts": {},
             "block_scale_data": {
                 "TEST": {(1.0, 1.0), (-1.0, 2.0)}

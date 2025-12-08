@@ -267,7 +267,9 @@ def extract_color_analysis(doc: Drawing) -> list[ColorAnalysisRecord]:
         msp = doc.modelspace()
         entity_count = 0
         total_entities = sum(1 for _ in msp)
-        logger.debug(f"Color analysis starting with {total_entities} total modelspace entities")
+        logger.debug(
+            f"Color analysis starting with {total_entities} total modelspace entities"
+        )
 
         # Re-iterate since we consumed the iterator
         msp = doc.modelspace()
@@ -519,7 +521,10 @@ def _resolve_dynamic_block_name(
                             logger.debug(
                                 f"Resolved dynamic block name from AcDbBlockRepBTag: {original_name}"
                             )
-                            return (original_name, "Resolved from AcDbBlockRepBTag tag 1000")
+                            return (
+                                original_name,
+                                "Resolved from AcDbBlockRepBTag tag 1000",
+                            )
                     # Group code 1005 contains database handle pointing to original block
                     elif hasattr(tag, "code") and tag.code == 1005:
                         handle = tag.value
@@ -542,7 +547,10 @@ def _resolve_dynamic_block_name(
                                         logger.debug(
                                             f"Resolved dynamic block name from AcDbBlockRepBTag handle {handle}: {original_name}"
                                         )
-                                        return (original_name, f"Resolved from AcDbBlockRepBTag handle {handle}")
+                                        return (
+                                            original_name,
+                                            f"Resolved from AcDbBlockRepBTag handle {handle}",
+                                        )
                             else:
                                 # Handle not found in document - this is an orphaned dynamic block
                                 logger.debug(
@@ -560,7 +568,10 @@ def _resolve_dynamic_block_name(
 
         # If we found an orphaned handle, report it specifically
         if orphaned_handle is not None:
-            return (None, f"Handle {orphaned_handle} not found in document (orphaned dynamic block)")
+            return (
+                None,
+                f"Handle {orphaned_handle} not found in document (orphaned dynamic block)",
+            )
 
         # Fallback: Try AcDbDynamicBlockTrueName (used by some A$C blocks)
         try:
@@ -579,7 +590,10 @@ def _resolve_dynamic_block_name(
                             logger.debug(
                                 f"Resolved dynamic block name from AcDbDynamicBlockTrueName: {original_name}"
                             )
-                            return (original_name, "Resolved from AcDbDynamicBlockTrueName")
+                            return (
+                                original_name,
+                                "Resolved from AcDbDynamicBlockTrueName",
+                            )
         except (DXFError, KeyError):
             # AcDbDynamicBlockTrueName not found in XDATA
             pass
@@ -773,7 +787,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 # Try to resolve original name from XDATA on block record
                 try:
                     block_record = block_def.block_record
-                    resolved_name, resolution_details = _resolve_dynamic_block_name(block_record, doc, block_name)
+                    resolved_name, resolution_details = _resolve_dynamic_block_name(
+                        block_record, doc, block_name
+                    )
                     # Store resolution details for accurate error reporting later
                     anonymous_resolution_details[block_name] = resolution_details
                     if resolved_name:
@@ -792,14 +808,18 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                         continue  # Skip geometry analysis for unresolved *U blocks
                 except (AttributeError, TypeError) as e:
                     logger.debug(f"Error accessing block record for {block_name}: {e}")
-                    anonymous_resolution_details[block_name] = f"Error accessing block record: {e}"
+                    anonymous_resolution_details[block_name] = (
+                        f"Error accessing block record: {e}"
+                    )
                     continue
             # Handle A$C blocks (alternate anonymous block naming convention)
             elif block_name.startswith("A$C"):
                 # Try to resolve original name from XDATA on block record
                 try:
                     block_record = block_def.block_record
-                    resolved_name, resolution_details = _resolve_dynamic_block_name(block_record, doc, block_name)
+                    resolved_name, resolution_details = _resolve_dynamic_block_name(
+                        block_record, doc, block_name
+                    )
                     # Store resolution details for accurate error reporting later
                     anonymous_resolution_details[block_name] = resolution_details
                     if resolved_name:
@@ -822,7 +842,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                     logger.debug(f"Error accessing block record for {block_name}: {e}")
                     # Still process with raw name
                     anonymous_to_resolved[block_name] = block_name
-                    anonymous_resolution_details[block_name] = f"Error accessing block record: {e}"
+                    anonymous_resolution_details[block_name] = (
+                        f"Error accessing block record: {e}"
+                    )
                     effective_name = block_name
             # Skip other anonymous blocks (dimension blocks, hatch patterns, etc.)
             elif block_name.startswith("*"):
@@ -992,7 +1014,9 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                         unresolved_anonymous_blocks.get(anon_key, 0) + 1
                     )
 
-                logger.debug(f"Processing INSERT: block={block_name}, layer={layer_name}")
+                logger.debug(
+                    f"Processing INSERT: block={block_name}, layer={layer_name}"
+                )
                 block_counts[block_name] = block_counts.get(block_name, 0) + 1
                 layer_block_insertion_counts[layer_name] = (
                     layer_block_insertion_counts.get(layer_name, 0) + 1

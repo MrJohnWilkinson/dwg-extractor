@@ -10,7 +10,6 @@ This module contains tests for:
 from pathlib import Path
 
 import ezdxf
-import pytest
 
 from core.extractor import (
     _resolve_entity_color_to_rgb,

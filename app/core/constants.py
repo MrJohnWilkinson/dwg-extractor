@@ -101,6 +101,15 @@ EXCEL_COLUMN_ISSUE_LAYER_NAME: str = "issue_layer_name"
 EXCEL_COLUMN_ISSUE_INSERTION_COUNT: str = "issue_insertion_count"
 EXCEL_COLUMN_ISSUE_DETAILS: str = "issue_details"
 
+# Excel configuration - Content Zone columns
+# See app_docs/005-field-naming-convention.md for naming conventions
+# Domain: block, Attribute: suggested_trim/content_zone (content zone detection results)
+EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT: str = "block_suggested_trim_left"
+EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT: str = "block_suggested_trim_right"
+EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP: str = "block_suggested_trim_top"
+EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM: str = "block_suggested_trim_bottom"
+EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED: str = "block_content_zone_detected"
+
 # Excel configuration - Fill colors for scale highlighting
 # Yellow: Warning color for scale variance with all positive values
 EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE: str = "FFFFFF00"
@@ -118,3 +127,20 @@ MSG_SUCCESS: str = "Extraction complete"
 MSG_ERROR_INVALID_FILE: str = "Invalid or corrupted file"
 MSG_ERROR_NO_BLOCKS: str = "No blocks found in file"
 MSG_ERROR_FILE_NOT_FOUND: str = "File not found"
+
+# Content Zone Detection Thresholds
+# These prevent O(n^3) and exponential DFS hangs on complex blocks
+
+POLYGON_COUNT_THRESHOLD: int = 30
+"""Maximum polygons for content zone net area calculation.
+Blocks with more polygons skip content zone detection.
+Rationale: _calculate_net_areas() is O(n^3) - 102 polygons = 140+ seconds."""
+
+LINE_SEGMENT_THRESHOLD: int = 200
+"""Maximum LINE segments for cycle detection DFS.
+Blocks with more LINE segments skip LINE cycle extraction.
+Rationale: DFS on 967 segments (504 vertices) caused 6+ minute hang."""
+
+CYCLE_DETECTION_TIMEOUT_SECONDS: float = 5.0
+"""Safety timeout for cycle detection algorithm.
+Prevents indefinite hang even if threshold check is bypassed."""

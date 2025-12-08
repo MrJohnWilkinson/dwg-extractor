@@ -4,8 +4,6 @@ Unit tests for the extractor module - HATCH entity extraction functionality.
 This module contains tests for HATCH entity extraction in color analysis.
 """
 
-import ezdxf
-import pytest
 
 from core.extractor import extract_blocks
 

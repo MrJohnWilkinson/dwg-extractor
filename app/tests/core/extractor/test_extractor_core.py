@@ -8,9 +8,6 @@ import ezdxf
 import pytest
 
 from core.extractor import (
-    _clean_mtext_content,
-    _resolve_entity_color_to_rgb,
-    _resolve_entity_color_with_aci,
     extract_blocks,
 )
 from core.geometry import (

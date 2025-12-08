@@ -385,7 +385,9 @@ def _create_block_analysis_sheet(
     block_entities = data["block_entities"]
     block_xdata_apps = data["block_xdata_apps"]
 
-    logger.debug(f"Block Analysis: {len(block_layer_pairs)} block-layer pairs to process")
+    logger.debug(
+        f"Block Analysis: {len(block_layer_pairs)} block-layer pairs to process"
+    )
 
     if block_layer_pairs:
         # Unpack block-layer pairs into DataFrame rows (simplified - no rotations)
@@ -689,7 +691,9 @@ def _create_annotations_analysis_sheet(
 
     annotation_data = data["annotation_data"]
 
-    logger.debug(f"Annotations Analysis: {len(annotation_data)} annotation groups to process")
+    logger.debug(
+        f"Annotations Analysis: {len(annotation_data)} annotation groups to process"
+    )
 
     if annotation_data:
         # Build DataFrame rows from annotation data
