@@ -30,6 +30,15 @@ from dataclasses import dataclass
 from typing import TypedDict
 
 
+Polygon = list[tuple[float, float]]
+"""List of (x, y) vertices forming a closed polygon.
+
+Vertices should be ordered consecutively (clockwise or counter-clockwise).
+The polygon is implicitly closed - the last vertex connects to the first.
+Used for content zone detection and area calculations.
+"""
+
+
 @dataclass(frozen=True)
 class BlockLayerKey:
     """
@@ -181,3 +190,30 @@ class ExtractionIssue(TypedDict):
     layer_name: str
     insertion_count: int
     details: str
+
+
+class ContentZoneData(TypedDict):
+    """
+    Results from content zone detection analysis.
+
+    Contains suggested trim values derived from the detected content zone shape
+    relative to the block's bounding box. The content zone is the closed polygon
+    with the largest net area (own area minus areas of contained polygons).
+
+    Attributes:
+        suggested_trim_left: Distance from block left edge to content zone left edge,
+                            or None if no content zone detected
+        suggested_trim_right: Distance from content zone right edge to block right edge,
+                             or None if no content zone detected
+        suggested_trim_top: Distance from content zone top edge to block top edge,
+                           or None if no content zone detected
+        suggested_trim_bottom: Distance from block bottom edge to content zone bottom edge,
+                              or None if no content zone detected
+        content_zone_detected: True if a valid content zone was found, False otherwise
+    """
+
+    suggested_trim_left: float | None
+    suggested_trim_right: float | None
+    suggested_trim_top: float | None
+    suggested_trim_bottom: float | None
+    content_zone_detected: bool

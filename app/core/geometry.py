@@ -2,22 +2,51 @@
 Geometric calculation utilities for CAD block analysis.
 
 This module provides functions for bounding box calculation, intersection point detection,
-segment analysis, and rotation categorization. These utilities support the extraction and
-analysis of geometric properties from CAD block definitions.
+segment analysis, rotation categorization, and content zone detection. These utilities
+support the extraction and analysis of geometric properties from CAD block definitions.
+
+Content zone detection identifies the primary shape within a block by:
+1. Extracting closed polygons from LWPOLYLINE and LINE entities
+2. Calculating net areas (own area minus contained polygon areas)
+3. Selecting the polygon with the largest net area as the content zone
+4. Deriving trim values from the content zone bounding box
 
 Usage:
-    from core.geometry import _get_block_bounding_box, _categorize_rotation
+    from core.geometry import _get_block_bounding_box, _categorize_rotation, _detect_content_zone
 
     bbox = _get_block_bounding_box(block_def)
     rotation_category = _categorize_rotation(90.5)
+    content_zone = _detect_content_zone(block_def, bbox)
 """
+
+import threading
+import time
+from collections import defaultdict
 
 from ezdxf.layouts import BlockLayout
 
+from .constants import (
+    CYCLE_DETECTION_TIMEOUT_SECONDS,
+    LINE_SEGMENT_THRESHOLD,
+    POLYGON_COUNT_THRESHOLD,
+)
 from .logger import setup_logger
+from .types import ContentZoneData, Polygon
 
 
 logger = setup_logger(__name__)
+
+
+class GeometryAbortedError(Exception):
+    """
+    Exception raised when a geometry operation is aborted.
+
+    This exception is raised when an abort_event is set during long-running
+    geometry operations like cycle detection or net area calculation, allowing
+    the calling code to handle graceful cancellation.
+    """
+
+    pass
 
 
 def _get_block_bounding_box(
@@ -287,3 +316,485 @@ def _categorize_rotation(angle: float) -> str:
         f"Categorize rotation: {angle}° -> normalized={normalized}° -> category={result}"
     )
     return result
+
+
+# =============================================================================
+# Content Zone Detection Functions
+# =============================================================================
+
+
+def _empty_content_zone_data() -> ContentZoneData:
+    """
+    Return an empty ContentZoneData with all trim values as None.
+
+    Returns:
+        ContentZoneData with content_zone_detected=False and all trim values as None.
+    """
+    return ContentZoneData(
+        suggested_trim_left=None,
+        suggested_trim_right=None,
+        suggested_trim_top=None,
+        suggested_trim_bottom=None,
+        content_zone_detected=False,
+    )
+
+
+def _count_line_segments(block_def: BlockLayout) -> int:
+    """
+    Count the number of LINE entities in a block definition.
+
+    Args:
+        block_def: ezdxf block definition object
+
+    Returns:
+        Number of LINE entities in the block.
+    """
+    count = 0
+    for entity in block_def:
+        if entity.dxftype() == "LINE":
+            count += 1
+    return count
+
+
+def _extract_closed_lwpolylines(block_def: BlockLayout) -> list[Polygon]:
+    """
+    Extract closed polygons from LWPOLYLINE entities in a block.
+
+    Only extracts LWPOLYLINE entities that are marked as closed (is_closed=True).
+    Each polygon is a list of (x, y) tuples representing vertices.
+
+    Args:
+        block_def: ezdxf block definition object
+
+    Returns:
+        List of Polygon objects (closed LWPOLYLINE vertices).
+    """
+    polygons: list[Polygon] = []
+
+    for entity in block_def:
+        if entity.dxftype() == "LWPOLYLINE":
+            try:
+                # Check if polyline is closed
+                if entity.closed:  # type: ignore[attr-defined]
+                    points: Polygon = []
+                    for point in entity.get_points():  # type: ignore[attr-defined]
+                        points.append((float(point[0]), float(point[1])))
+                    if len(points) >= 3:  # Need at least 3 points for a polygon
+                        polygons.append(points)
+            except (AttributeError, IndexError):
+                continue
+
+    logger.debug(f"Extracted {len(polygons)} closed LWPOLYLINEs")
+    return polygons
+
+
+def _shoelace_area(polygon: Polygon) -> float:
+    """
+    Calculate the area of a polygon using the shoelace formula.
+
+    The shoelace formula computes the signed area of a simple polygon.
+    This implementation returns the absolute value to handle both
+    clockwise and counter-clockwise vertex orderings.
+
+    Args:
+        polygon: List of (x, y) vertices forming a closed polygon.
+
+    Returns:
+        Absolute area of the polygon. Returns 0.0 for degenerate polygons
+        (fewer than 3 vertices or collinear points).
+
+    Examples:
+        >>> _shoelace_area([(0, 0), (10, 0), (10, 10), (0, 10)])
+        100.0
+        >>> _shoelace_area([(0, 0), (3, 0), (3, 4)])
+        6.0
+    """
+    if len(polygon) < 3:
+        return 0.0
+
+    n = len(polygon)
+    area = 0.0
+
+    for i in range(n):
+        j = (i + 1) % n
+        area += polygon[i][0] * polygon[j][1]
+        area -= polygon[j][0] * polygon[i][1]
+
+    return abs(area) / 2.0
+
+
+def _point_in_polygon(point: tuple[float, float], polygon: Polygon) -> bool:
+    """
+    Determine if a point is inside a polygon using the ray-casting algorithm.
+
+    Casts a horizontal ray from the point to the right and counts how many
+    polygon edges it crosses. An odd count means the point is inside.
+
+    Args:
+        point: (x, y) coordinates of the point to test.
+        polygon: List of (x, y) vertices forming a closed polygon.
+
+    Returns:
+        True if the point is inside the polygon, False otherwise.
+        Points exactly on the boundary may return either True or False.
+    """
+    if len(polygon) < 3:
+        return False
+
+    x, y = point
+    n = len(polygon)
+    inside = False
+
+    j = n - 1
+    for i in range(n):
+        xi, yi = polygon[i]
+        xj, yj = polygon[j]
+
+        # Check if point is between the y-coordinates of the edge
+        if ((yi > y) != (yj > y)) and (x < (xj - xi) * (y - yi) / (yj - yi) + xi):
+            inside = not inside
+
+        j = i
+
+    return inside
+
+
+def _polygon_contains_polygon(outer: Polygon, inner: Polygon) -> bool:
+    """
+    Determine if one polygon completely contains another.
+
+    A polygon is considered to contain another if ALL vertices of the inner
+    polygon are inside the outer polygon.
+
+    Args:
+        outer: The potentially containing polygon.
+        inner: The potentially contained polygon.
+
+    Returns:
+        True if all vertices of inner are inside outer, False otherwise.
+    """
+    if len(outer) < 3 or len(inner) < 3:
+        return False
+
+    # Check if all vertices of inner polygon are inside outer polygon
+    for vertex in inner:
+        if not _point_in_polygon(vertex, outer):
+            return False
+
+    return True
+
+
+def _get_polygon_bbox(polygon: Polygon) -> tuple[float, float, float, float]:
+    """
+    Calculate the bounding box of a polygon.
+
+    Args:
+        polygon: List of (x, y) vertices.
+
+    Returns:
+        Tuple of (min_x, min_y, max_x, max_y).
+        Returns (0, 0, 0, 0) for empty polygons.
+    """
+    if not polygon:
+        return (0.0, 0.0, 0.0, 0.0)
+
+    min_x = min(p[0] for p in polygon)
+    min_y = min(p[1] for p in polygon)
+    max_x = max(p[0] for p in polygon)
+    max_y = max(p[1] for p in polygon)
+
+    return (min_x, min_y, max_x, max_y)
+
+
+def _extract_line_cycles(
+    block_def: BlockLayout,
+    abort_event: threading.Event | None = None,
+) -> list[Polygon]:
+    """
+    Extract closed cycles from LINE segments using iterative DFS.
+
+    Builds an adjacency graph from LINE segment endpoints and uses depth-first
+    search to find all closed cycles (polygons). Includes timeout protection
+    and abort checkpoints for performance safety.
+
+    Args:
+        block_def: ezdxf block definition object
+        abort_event: Optional threading.Event to signal abort request
+
+    Returns:
+        List of Polygon objects representing detected cycles.
+
+    Raises:
+        GeometryAbortedError: If abort_event is set during processing.
+
+    Note:
+        Coordinates are rounded to 2 decimal places for adjacency graph keys,
+        matching the existing segment calculation precision.
+    """
+    start_time = time.perf_counter()
+    iterations = 0
+
+    # Build adjacency graph from LINE segments
+    # Key: (x, y) rounded to 2 decimal places
+    # Value: list of connected (x, y) points
+    graph: dict[tuple[float, float], list[tuple[float, float]]] = defaultdict(list)
+    edges: set[tuple[tuple[float, float], tuple[float, float]]] = set()
+
+    for entity in block_def:
+        if entity.dxftype() == "LINE":
+            start = entity.dxf.start
+            end = entity.dxf.end
+
+            # Round coordinates for tolerance matching
+            p1 = (round(start.x, 2), round(start.y, 2))
+            p2 = (round(end.x, 2), round(end.y, 2))
+
+            if p1 != p2:  # Skip degenerate lines
+                graph[p1].append(p2)
+                graph[p2].append(p1)
+                # Store edge as sorted tuple to avoid duplicates
+                edge = (min(p1, p2), max(p1, p2))
+                edges.add(edge)
+
+    if not graph:
+        return []
+
+    # Find cycles using iterative DFS
+    cycles: list[Polygon] = []
+    visited_cycles: set[frozenset[tuple[float, float]]] = set()
+
+    # Try to find cycles starting from each vertex
+    vertices = list(graph.keys())
+
+    for start_vertex in vertices:
+        iterations += 1
+
+        # Timeout check
+        if time.perf_counter() - start_time > CYCLE_DETECTION_TIMEOUT_SECONDS:
+            logger.warning(
+                f"Cycle detection timeout after {iterations} iterations "
+                f"({CYCLE_DETECTION_TIMEOUT_SECONDS}s)"
+            )
+            break
+
+        # Abort check every 1000 iterations
+        if iterations % 1000 == 0 and abort_event and abort_event.is_set():
+            raise GeometryAbortedError("Cycle detection aborted")
+
+        # DFS to find cycles from this vertex
+        # Stack: (current_vertex, path, visited_edges)
+        stack: list[
+            tuple[
+                tuple[float, float],
+                list[tuple[float, float]],
+                set[tuple[tuple[float, float], tuple[float, float]]],
+            ]
+        ] = [(start_vertex, [start_vertex], set())]
+
+        while stack:
+            iterations += 1
+
+            # Timeout check in inner loop
+            if time.perf_counter() - start_time > CYCLE_DETECTION_TIMEOUT_SECONDS:
+                logger.warning(
+                    f"Cycle detection timeout after {iterations} iterations "
+                    f"({CYCLE_DETECTION_TIMEOUT_SECONDS}s)"
+                )
+                stack.clear()
+                break
+
+            # Abort check every 1000 iterations
+            if iterations % 1000 == 0 and abort_event and abort_event.is_set():
+                raise GeometryAbortedError("Cycle detection aborted")
+
+            current, path, visited_edges = stack.pop()
+
+            for neighbor in graph[current]:
+                edge = (min(current, neighbor), max(current, neighbor))
+
+                if edge in visited_edges:
+                    continue
+
+                if neighbor == start_vertex and len(path) >= 3:
+                    # Found a cycle
+                    cycle_set = frozenset(path)
+                    if cycle_set not in visited_cycles:
+                        visited_cycles.add(cycle_set)
+                        # Convert to Polygon (float tuples)
+                        polygon: Polygon = [(float(p[0]), float(p[1])) for p in path]
+                        cycles.append(polygon)
+                elif neighbor not in path:
+                    # Continue DFS
+                    new_visited = visited_edges | {edge}
+                    new_path = path + [neighbor]
+                    # Limit path length to prevent excessive memory usage
+                    if len(new_path) <= 20:
+                        stack.append((neighbor, new_path, new_visited))
+
+    logger.debug(f"Found {len(cycles)} LINE cycles in {iterations} iterations")
+    return cycles
+
+
+def _calculate_net_areas(
+    polygons: list[Polygon],
+    abort_event: threading.Event | None = None,
+) -> list[tuple[Polygon, float]]:
+    """
+    Calculate net area for each polygon (own area minus contained polygon areas).
+
+    For each polygon, calculates its gross area using the shoelace formula,
+    then subtracts the areas of all polygons it contains. This identifies
+    the "innermost" significant shape when polygons are nested.
+
+    Complexity: O(n^3) where n = polygon count
+    - n polygons to process
+    - n containment checks per polygon
+    - n vertices per containment check
+
+    MUST be protected by POLYGON_COUNT_THRESHOLD check before calling.
+
+    Args:
+        polygons: List of Polygon objects to analyze.
+        abort_event: Optional threading.Event to signal abort request.
+
+    Returns:
+        List of (polygon, net_area) tuples sorted by net_area descending.
+
+    Raises:
+        GeometryAbortedError: If abort_event is set during processing.
+    """
+    if not polygons:
+        return []
+
+    # Calculate gross areas for all polygons
+    gross_areas: list[float] = [_shoelace_area(p) for p in polygons]
+
+    # Calculate net areas (gross minus contained)
+    results: list[tuple[Polygon, float]] = []
+
+    for i, outer in enumerate(polygons):
+        # Abort check every 10 polygons
+        if i % 10 == 0 and abort_event and abort_event.is_set():
+            raise GeometryAbortedError("Net area calculation aborted")
+
+        net_area = gross_areas[i]
+
+        # Subtract areas of contained polygons
+        for j, inner in enumerate(polygons):
+            if i != j and _polygon_contains_polygon(outer, inner):
+                net_area -= gross_areas[j]
+
+        results.append((outer, net_area))
+
+    # Sort by net area descending
+    results.sort(key=lambda x: x[1], reverse=True)
+
+    logger.debug(
+        f"Calculated net areas for {len(polygons)} polygons, "
+        f"largest net area: {results[0][1] if results else 0:.2f}"
+    )
+    return results
+
+
+def _detect_content_zone(
+    block_def: BlockLayout,
+    block_bbox: tuple[float, float, float, float],
+    abort_event: threading.Event | None = None,
+) -> ContentZoneData:
+    """
+    Detect content zone and calculate trim values.
+
+    The content zone is the closed polygon with the largest net area (own area
+    minus areas of contained polygons). Trim values are derived from the
+    content zone bounding box relative to the block bounding box.
+
+    Performance safeguards:
+    - Skips LINE cycle detection if > LINE_SEGMENT_THRESHOLD segments
+    - Skips net area calculation if > POLYGON_COUNT_THRESHOLD polygons
+    - Times out cycle detection after CYCLE_DETECTION_TIMEOUT_SECONDS
+
+    Args:
+        block_def: ezdxf block definition object
+        block_bbox: Block bounding box as (min_x, min_y, max_x, max_y)
+        abort_event: Optional threading.Event to signal abort request
+
+    Returns:
+        ContentZoneData with detected trim values, or empty data if no
+        content zone could be determined.
+
+    Raises:
+        GeometryAbortedError: If abort_event is set during processing.
+    """
+    block_name = block_def.name
+
+    # Extract LWPOLYLINE shapes (always fast)
+    lwpolyline_shapes = _extract_closed_lwpolylines(block_def)
+    logger.debug(f"[{block_name}] Found {len(lwpolyline_shapes)} closed LWPOLYLINEs")
+
+    # Check LINE segment count BEFORE extraction
+    line_count = _count_line_segments(block_def)
+    if line_count > LINE_SEGMENT_THRESHOLD:
+        logger.warning(
+            f"[{block_name}] Skipping LINE cycle detection: "
+            f"{line_count} segments exceeds threshold {LINE_SEGMENT_THRESHOLD}"
+        )
+        line_cycle_shapes: list[Polygon] = []
+    else:
+        line_cycle_shapes = _extract_line_cycles(block_def, abort_event)
+        logger.debug(f"[{block_name}] Found {len(line_cycle_shapes)} LINE cycles")
+
+    # Combine all shapes
+    all_shapes = lwpolyline_shapes + line_cycle_shapes
+    polygon_count = len(all_shapes)
+
+    if polygon_count == 0:
+        logger.debug(f"[{block_name}] No closed shapes found")
+        return _empty_content_zone_data()
+
+    # Check polygon count BEFORE net area calculation
+    if polygon_count > POLYGON_COUNT_THRESHOLD:
+        logger.warning(
+            f"[{block_name}] Skipping content zone: "
+            f"{polygon_count} polygons exceeds threshold {POLYGON_COUNT_THRESHOLD}"
+        )
+        return _empty_content_zone_data()
+
+    # Calculate net areas (O(n^3) but bounded by threshold)
+    net_areas = _calculate_net_areas(all_shapes, abort_event)
+
+    if not net_areas:
+        return _empty_content_zone_data()
+
+    # Find polygon with largest net area
+    content_zone_polygon, largest_net_area = net_areas[0]
+
+    # Skip if content zone has zero or negative area
+    if largest_net_area <= 0:
+        logger.debug(
+            f"[{block_name}] Content zone has non-positive area: {largest_net_area}"
+        )
+        return _empty_content_zone_data()
+
+    # Get content zone bbox
+    cz_min_x, cz_min_y, cz_max_x, cz_max_y = _get_polygon_bbox(content_zone_polygon)
+    block_min_x, block_min_y, block_max_x, block_max_y = block_bbox
+
+    # Calculate trim values
+    trim_left = round(cz_min_x - block_min_x, 2)
+    trim_right = round(block_max_x - cz_max_x, 2)
+    trim_top = round(block_max_y - cz_max_y, 2)
+    trim_bottom = round(cz_min_y - block_min_y, 2)
+
+    logger.debug(
+        f"[{block_name}] Content zone detected: "
+        f"trim_left={trim_left}, trim_right={trim_right}, "
+        f"trim_top={trim_top}, trim_bottom={trim_bottom}"
+    )
+
+    return ContentZoneData(
+        suggested_trim_left=trim_left,
+        suggested_trim_right=trim_right,
+        suggested_trim_top=trim_top,
+        suggested_trim_bottom=trim_bottom,
+        content_zone_detected=True,
+    )
