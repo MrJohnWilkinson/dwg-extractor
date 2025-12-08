@@ -22,8 +22,12 @@ class TestContentZoneThresholds:
     """Tests for content zone detection threshold constants."""
 
     def test_polygon_threshold_reasonable(self) -> None:
-        """Threshold should be between 10 and 100."""
-        assert 10 <= POLYGON_COUNT_THRESHOLD <= 100
+        """Threshold should be between 10 and 1000.
+
+        With Shapely's efficient GEOS-based operations, the threshold can be
+        much higher than the original O(n^3) implementation. 500 is conservative.
+        """
+        assert 10 <= POLYGON_COUNT_THRESHOLD <= 1000
 
     def test_line_threshold_reasonable(self) -> None:
         """Threshold should be between 50 and 500."""

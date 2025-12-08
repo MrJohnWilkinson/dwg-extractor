@@ -133,10 +133,11 @@ MSG_ABORTED: str = "Extraction aborted"
 # Content Zone Detection Thresholds
 # These prevent O(n^3) and exponential DFS hangs on complex blocks
 
-POLYGON_COUNT_THRESHOLD: int = 30
+POLYGON_COUNT_THRESHOLD: int = 500
 """Maximum polygons for content zone net area calculation.
 Blocks with more polygons skip content zone detection.
-Rationale: _calculate_net_areas() is O(n^3) - 102 polygons = 140+ seconds."""
+Rationale: With Shapely's efficient GEOS operations, can handle 500 polygons
+in reasonable time (previously 30 with O(n^3) manual calculation)."""
 
 LINE_SEGMENT_THRESHOLD: int = 200
 """Maximum LINE segments for cycle detection DFS.

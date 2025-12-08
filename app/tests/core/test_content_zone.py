@@ -430,7 +430,12 @@ class TestNetAreaCalculation:
         assert results[1][1] == 3600.0
 
     def test_net_area_multiple_nested(self) -> None:
-        """Handle multiple levels of nesting."""
+        """Handle multiple levels of nesting with Shapely difference.
+
+        Uses Shapely's geometric difference() operation which correctly handles
+        nested containment: when medium is subtracted from large, small is already
+        removed (since small is inside medium), avoiding double-subtraction.
+        """
         large: Polygon = [(0, 0), (200, 0), (200, 150), (0, 150)]  # Area = 30000
         medium: Polygon = [(20, 20), (180, 20), (180, 130), (20, 130)]  # Area = 17600
         small: Polygon = [(50, 50), (150, 50), (150, 100), (50, 100)]  # Area = 5000
@@ -439,16 +444,17 @@ class TestNetAreaCalculation:
         results = _calculate_net_areas(polygons)
 
         # small: 5000 (nothing inside)
-        # medium: 17600 - 5000 = 12600 (contains small)
-        # large: 30000 - 17600 - 5000 = 7400 (contains both medium AND small)
+        # medium: difference(medium, small) = 17600 - 5000 = 12600
+        # large: difference(large, medium) = 30000 - 17600 = 12400
+        #   (small is inside medium, so already excluded by medium subtraction)
         assert len(results) == 3
         # Sorted by net area descending
         # medium has largest net area (12600)
-        # large has second (7400)
+        # large has second (12400)
         # small has third (5000)
         net_areas = [r[1] for r in results]
         assert 12600.0 in net_areas
-        assert 7400.0 in net_areas
+        assert 12400.0 in net_areas
         assert 5000.0 in net_areas
 
     def test_net_area_disjoint_polygons(self) -> None:

@@ -25,6 +25,7 @@ from ezdxf.layouts import BlockLayout
 from shapely import Point
 from shapely import Polygon as ShapelyPolygon
 from shapely.geometry import LineString
+from shapely.geometry.base import BaseGeometry
 from shapely.ops import polygonize, unary_union
 
 from .constants import (
@@ -574,18 +575,16 @@ def _calculate_net_areas(
     abort_event: threading.Event | None = None,
 ) -> list[tuple[Polygon, float]]:
     """
-    Calculate net area for each polygon (own area minus contained polygon areas).
+    Calculate net area for each polygon using Shapely geometric difference.
 
-    For each polygon, calculates its gross area using the shoelace formula,
-    then subtracts the areas of all polygons it contains. This identifies
-    the "innermost" significant shape when polygons are nested.
+    For each polygon, calculates its area after subtracting any contained
+    polygons using Shapely's difference() operation. This provides accurate
+    net areas even for complex nested polygon arrangements.
 
-    Complexity: O(n^3) where n = polygon count
+    Complexity: O(n^2) with efficient GEOS-based operations
     - n polygons to process
-    - n containment checks per polygon
-    - n vertices per containment check
-
-    MUST be protected by POLYGON_COUNT_THRESHOLD check before calling.
+    - n containment checks per polygon (GEOS optimized)
+    - difference() operations are efficient for contained polygons
 
     Args:
         polygons: List of Polygon objects to analyze.
@@ -600,27 +599,25 @@ def _calculate_net_areas(
     if not polygons:
         return []
 
-    # Calculate gross areas for all polygons
-    gross_areas: list[float] = [_shoelace_area(p) for p in polygons]
+    if abort_event and abort_event.is_set():
+        raise GeometryAbortedError("Net area calculation aborted")
 
-    # Calculate net areas (gross minus contained)
+    shapely_polys = [ShapelyPolygon(p) for p in polygons]
     results: list[tuple[Polygon, float]] = []
 
-    for i, outer in enumerate(polygons):
-        # Abort check every 10 polygons
-        if i % 10 == 0 and abort_event and abort_event.is_set():
-            raise GeometryAbortedError("Net area calculation aborted")
+    for i, (poly, shapely_poly) in enumerate(zip(polygons, shapely_polys)):
+        if not shapely_poly.is_valid:
+            results.append((poly, 0.0))
+            continue
 
-        net_area = gross_areas[i]
+        # Subtract all contained polygons using difference
+        net_poly: BaseGeometry = shapely_poly
+        for j, other in enumerate(shapely_polys):
+            if i != j and shapely_poly.contains(other):
+                net_poly = net_poly.difference(other)
 
-        # Subtract areas of contained polygons
-        for j, inner in enumerate(polygons):
-            if i != j and _polygon_contains_polygon(outer, inner):
-                net_area -= gross_areas[j]
+        results.append((poly, abs(net_poly.area)))
 
-        results.append((outer, net_area))
-
-    # Sort by net area descending
     results.sort(key=lambda x: x[1], reverse=True)
 
     logger.debug(
