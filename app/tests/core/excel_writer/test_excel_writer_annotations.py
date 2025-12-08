@@ -137,6 +137,7 @@ class TestAnnotationsAnalysisSheet:
             "color_analysis_data": [],
             "extraction_issues": [],
             "block_trimming_data": {},
+            "block_content_zone_data": {},
         }
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")

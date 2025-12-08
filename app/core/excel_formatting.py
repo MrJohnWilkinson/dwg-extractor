@@ -202,6 +202,11 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     ws.column_dimensions["K"].width = 20  # block_native_height
     ws.column_dimensions["L"].width = 40  # block_vertical_segments
     ws.column_dimensions["M"].width = 40  # block_horizontal_segments
+    ws.column_dimensions["N"].width = 12  # block_suggested_trim_left
+    ws.column_dimensions["O"].width = 12  # block_suggested_trim_right
+    ws.column_dimensions["P"].width = 12  # block_suggested_trim_top
+    ws.column_dimensions["Q"].width = 12  # block_suggested_trim_bottom
+    ws.column_dimensions["R"].width = 15  # block_content_zone_detected
 
     # Enable text wrapping on header row
     alignment = Alignment(wrap_text=True, vertical="top")

@@ -82,6 +82,29 @@ def sample_extraction_data() -> ExtractionResult:
                 "horizontal_segments": [25.0],
             },
         },
+        "block_content_zone_data": {
+            "VALVE": {
+                "suggested_trim_left": 10.0,
+                "suggested_trim_right": 10.0,
+                "suggested_trim_top": 5.0,
+                "suggested_trim_bottom": 5.0,
+                "content_zone_detected": True,
+            },
+            "PIPE": {
+                "suggested_trim_left": 20.0,
+                "suggested_trim_right": 20.0,
+                "suggested_trim_top": 10.0,
+                "suggested_trim_bottom": 10.0,
+                "content_zone_detected": True,
+            },
+            "TAG": {
+                "suggested_trim_left": None,
+                "suggested_trim_right": None,
+                "suggested_trim_top": None,
+                "suggested_trim_bottom": None,
+                "content_zone_detected": False,
+            },
+        },
     }
 
 
@@ -140,6 +163,15 @@ def annotation_extraction_data() -> ExtractionResult:
                 "native_height": 5.0,
                 "vertical_segments": [10.0],
                 "horizontal_segments": [5.0],
+            }
+        },
+        "block_content_zone_data": {
+            "VALVE": {
+                "suggested_trim_left": 1.0,
+                "suggested_trim_right": 1.0,
+                "suggested_trim_top": 0.5,
+                "suggested_trim_bottom": 0.5,
+                "content_zone_detected": True,
             }
         },
     }
@@ -205,6 +237,7 @@ def color_analysis_data() -> ExtractionResult:
         ],
         "extraction_issues": [],
         "block_trimming_data": {},
+        "block_content_zone_data": {},
     }
 
 
@@ -255,6 +288,15 @@ def extraction_issues_data() -> ExtractionResult:
                 "horizontal_segments": [5.0, 40.0, 5.0],
             },
         },
+        "block_content_zone_data": {
+            "VALVE": {
+                "suggested_trim_left": 10.0,
+                "suggested_trim_right": 10.0,
+                "suggested_trim_top": 5.0,
+                "suggested_trim_bottom": 5.0,
+                "content_zone_detected": True,
+            },
+        },
     }
 
 
@@ -288,6 +330,15 @@ def no_issues_data() -> ExtractionResult:
                 "native_height": 50.0,
                 "vertical_segments": [10.0, 80.0, 10.0],
                 "horizontal_segments": [5.0, 40.0, 5.0],
+            },
+        },
+        "block_content_zone_data": {
+            "VALVE": {
+                "suggested_trim_left": 10.0,
+                "suggested_trim_right": 10.0,
+                "suggested_trim_top": 5.0,
+                "suggested_trim_bottom": 5.0,
+                "content_zone_detected": True,
             },
         },
     }

@@ -24,6 +24,7 @@ from .constants import SUPPORTED_EXTENSIONS
 from .geometry import (
     _calculate_segments,
     _categorize_rotation,
+    _detect_content_zone,
     _get_block_bounding_box,
     _get_intersection_points,
 )
@@ -35,6 +36,7 @@ from .types import (
     BlockTrimmingData,
     ColorAnalysisRecord,
     ColorEntityKey,
+    ContentZoneData,
     ExtractionIssue,
 )
 
@@ -647,6 +649,11 @@ class ExtractionResult(TypedDict):
                           Example: [{'issue_type': 'Unresolved Anonymous Block', 'block_name': '*U3',
                                     'layer_name': 'FIXTURES', 'insertion_count': 5,
                                     'details': 'No AcDbBlockRepBTag XDATA found'}]
+        block_content_zone_data: Dictionary mapping block names to their content zone detection results.
+                                Each block entry contains ContentZoneData with suggested_trim_left, suggested_trim_right,
+                                suggested_trim_top, suggested_trim_bottom (all float | None), and content_zone_detected (bool).
+                                Example: {'SHELF_4FT': {'suggested_trim_left': 10.0, 'suggested_trim_right': 10.0,
+                                          'suggested_trim_top': 5.0, 'suggested_trim_bottom': 5.0, 'content_zone_detected': True}}
 
     Examples:
         block_layer_pairs: {BlockLayerKey('DOOR', 'WALLS'): 5, BlockLayerKey('WINDOW', 'WALLS'): 8}
@@ -674,6 +681,7 @@ class ExtractionResult(TypedDict):
     block_trimming_data: dict[str, BlockTrimmingData]
     color_analysis_data: list[ColorAnalysisRecord]
     extraction_issues: list[ExtractionIssue]
+    block_content_zone_data: dict[str, ContentZoneData]
 
 
 def extract_blocks(file_path: str) -> ExtractionResult:
@@ -750,6 +758,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
         annotation_data: dict[AnnotationKey, int] = {}
         entity_type_counts: dict[str, int] = {}
         block_trimming_data: dict[str, BlockTrimmingData] = {}
+        block_content_zone_data: dict[str, ContentZoneData] = {}
         extraction_issues: list[ExtractionIssue] = []
 
         # Mapping from anonymous block names (*U1, *U2, etc.) to resolved original names
@@ -871,6 +880,10 @@ def extract_blocks(file_path: str) -> ExtractionResult:
                 "vertical_segments": vertical_segments,
                 "horizontal_segments": horizontal_segments,
             }
+
+            # Detect content zone for trim value suggestions
+            content_zone_result = _detect_content_zone(block_def, bbox)
+            block_content_zone_data[effective_name] = content_zone_result
 
         logger.info(f"Analyzed {len(block_entities)} block definitions")
         logger.info(
@@ -1172,6 +1185,7 @@ def extract_blocks(file_path: str) -> ExtractionResult:
             "block_trimming_data": block_trimming_data,
             "color_analysis_data": color_analysis_data,
             "extraction_issues": extraction_issues,
+            "block_content_zone_data": block_content_zone_data,
         }
 
         return result

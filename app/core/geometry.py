@@ -506,6 +506,44 @@ def _get_polygon_bbox(polygon: Polygon) -> tuple[float, float, float, float]:
     return (min_x, min_y, max_x, max_y)
 
 
+def _get_union_bounding_box(
+    polygons: list[Polygon],
+) -> tuple[float, float, float, float]:
+    """
+    Calculate the union bounding box encompassing all input polygons.
+
+    The union bounding box is the minimum axis-aligned rectangle that contains
+    all vertices of all input polygons. This is used when multiple shapes tie
+    for maximum net area to derive trim values from the combined area.
+
+    Args:
+        polygons: List of Polygon objects to calculate union bbox for.
+
+    Returns:
+        Tuple of (min_x, min_y, max_x, max_y) representing the union bounding box.
+        Returns (0, 0, 0, 0) for empty input.
+
+    Examples:
+        >>> poly1 = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        >>> poly2 = [(20, 20), (30, 20), (30, 30), (20, 30)]
+        >>> _get_union_bounding_box([poly1, poly2])
+        (0.0, 0.0, 30.0, 30.0)
+    """
+    if not polygons:
+        return (0.0, 0.0, 0.0, 0.0)
+
+    union_min_x, union_min_y, union_max_x, union_max_y = _get_polygon_bbox(polygons[0])
+
+    for polygon in polygons[1:]:
+        min_x, min_y, max_x, max_y = _get_polygon_bbox(polygon)
+        union_min_x = min(union_min_x, min_x)
+        union_min_y = min(union_min_y, min_y)
+        union_max_x = max(union_max_x, max_x)
+        union_max_y = max(union_max_y, max_y)
+
+    return (union_min_x, union_min_y, union_max_x, union_max_y)
+
+
 def _extract_line_cycles(
     block_def: BlockLayout,
     abort_event: threading.Event | None = None,
@@ -765,18 +803,27 @@ def _detect_content_zone(
     if not net_areas:
         return _empty_content_zone_data()
 
-    # Find polygon with largest net area
-    content_zone_polygon, largest_net_area = net_areas[0]
+    # Find maximum net area value (already sorted descending)
+    max_net_area = net_areas[0][1]
 
     # Skip if content zone has zero or negative area
-    if largest_net_area <= 0:
+    if max_net_area <= 0:
         logger.debug(
-            f"[{block_name}] Content zone has non-positive area: {largest_net_area}"
+            f"[{block_name}] Content zone has non-positive area: {max_net_area}"
         )
         return _empty_content_zone_data()
 
-    # Get content zone bbox
-    cz_min_x, cz_min_y, cz_max_x, cz_max_y = _get_polygon_bbox(content_zone_polygon)
+    # Find all shapes tied for maximum net area
+    tied_shapes = [shape for shape, net_area in net_areas if net_area == max_net_area]
+
+    # Determine content zone bounding box
+    if len(tied_shapes) == 1:
+        cz_min_x, cz_min_y, cz_max_x, cz_max_y = _get_polygon_bbox(tied_shapes[0])
+    else:
+        cz_min_x, cz_min_y, cz_max_x, cz_max_y = _get_union_bounding_box(tied_shapes)
+        logger.debug(
+            f"[{block_name}] Content zone: union of {len(tied_shapes)} tied shapes"
+        )
     block_min_x, block_min_y, block_max_x, block_max_y = block_bbox
 
     # Calculate trim values

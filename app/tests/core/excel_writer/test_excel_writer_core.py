@@ -22,6 +22,7 @@ import pytest
 from openpyxl import load_workbook
 
 from core.constants import (
+    EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
@@ -36,6 +37,10 @@ from core.constants import (
     EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
     EXCEL_COLUMN_BLOCK_SCALE_X,
     EXCEL_COLUMN_BLOCK_SCALE_Y,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP,
     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_XDATA_APPS,
     EXCEL_COLUMN_ENTITY_TYPE_COUNT,
@@ -269,6 +274,7 @@ class TestExcelWriter:
             "color_analysis_data": [],
             "extraction_issues": [],
             "block_trimming_data": {},
+            "block_content_zone_data": {},
         }
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(empty_data, output_path)
@@ -367,7 +373,7 @@ class TestExcelWriter:
     def test_block_geometry_analysis_sheet_consolidated(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test Block Geometry Analysis sheet has all 13 columns consolidated."""
+        """Test Block Geometry Analysis sheet has all 18 columns consolidated."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -388,12 +394,17 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT),
             format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS),
             format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED),
         ]
 
         assert list(df.columns) == expected_columns
 
-        # Verify exactly 13 columns
-        assert len(df.columns) == 13
+        # Verify exactly 18 columns (13 original + 5 content zone)
+        assert len(df.columns) == 18
 
         # Verify sort by block_name alphabetical
         block_names = df[format_header(EXCEL_COLUMN_BLOCK_NAME)].tolist()
@@ -482,6 +493,7 @@ class TestExcelWriter:
             "color_analysis_data": [],
             "extraction_issues": [],
             "block_trimming_data": {},
+            "block_content_zone_data": {},
         }
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -491,7 +503,7 @@ class TestExcelWriter:
 
         # Should have headers but no data rows
         assert len(df) == 0
-        assert len(df.columns) == 13
+        assert len(df.columns) == 18
 
     def test_block_trimming_analysis_auto_filter(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -651,7 +663,7 @@ class TestExcelWriter:
         assert ws.column_dimensions["M"].width == 40  # block_horizontal_segments
 
     def test_block_geometry_analysis_empty_data(self, temp_dir: str) -> None:
-        """Test that empty block_layer_pairs creates sheet with all 13 column headers."""
+        """Test that empty block_layer_pairs creates sheet with all 18 column headers."""
         empty_data: ExtractionResult = {
             "block_counts": {},
             "block_entities": {},
@@ -668,6 +680,7 @@ class TestExcelWriter:
             "color_analysis_data": [],
             "extraction_issues": [],
             "block_trimming_data": {},
+            "block_content_zone_data": {},
         }
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -678,7 +691,7 @@ class TestExcelWriter:
         # Should have headers but no data rows
         assert len(df) == 0
 
-        # Verify all 13 column headers (formatted)
+        # Verify all 18 column headers (formatted)
         expected_columns = [
             format_header(EXCEL_COLUMN_BLOCK_NAME),
             format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
@@ -693,6 +706,11 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT),
             format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS),
             format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED),
         ]
         assert list(df.columns) == expected_columns
 
@@ -728,6 +746,7 @@ class TestExcelWriter:
                 }
                 # ANONYMOUS block intentionally missing from block_trimming_data
             },
+            "block_content_zone_data": {},
         }
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -806,7 +825,7 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT),
         ]
 
-        # Block Geometry Analysis sheet - 13 columns
+        # Block Geometry Analysis sheet - 18 columns (13 original + 5 content zone)
         df_geometry = pd.read_excel(
             excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
         )
@@ -824,12 +843,17 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT),
             format_header(EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS),
             format_header(EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP),
+            format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM),
+            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED),
         ]
 
     def test_spec_010_consolidated_geometry_sheet(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test spec 010: Block Geometry Analysis sheet has consolidated 13 columns with scales and rotations."""
+        """Test spec 010: Block Geometry Analysis sheet has consolidated 18 columns with scales, rotations, and content zone."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -838,8 +862,8 @@ class TestExcelWriter:
         )
         df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
 
-        # Verify Block Geometry Analysis has exactly 13 columns
-        assert len(df_geometry.columns) == 13
+        # Verify Block Geometry Analysis has exactly 18 columns (13 original + 5 content zone)
+        assert len(df_geometry.columns) == 18
 
         # Verify scale columns present (formatted)
         assert format_header(EXCEL_COLUMN_BLOCK_SCALE_X) in df_geometry.columns
@@ -1134,6 +1158,7 @@ class TestExcelWriter:
                         "horizontal_segments": [4.0],
                     },
                 },
+                "block_content_zone_data": {},
             }
 
             output_path = os.path.join(temp_dir, "test_xdata.dxf")
@@ -1219,6 +1244,7 @@ class TestExcelWriter:
             "color_analysis_data": [],
             "extraction_issues": [],
             "block_trimming_data": {},
+            "block_content_zone_data": {},
         }
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(empty_data, output_path)
@@ -1252,3 +1278,98 @@ class TestExcelWriter:
         assert wb[EXCEL_SHEET_LAYER_ANALYSIS].freeze_panes == "A2"
         assert wb[EXCEL_SHEET_ENTITY_SUMMARY].freeze_panes == "A2"
         assert wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS].freeze_panes == "A2"
+
+
+class TestContentZoneExcelOutput:
+    """Tests for content zone columns in Excel output."""
+
+    def test_content_zone_columns_in_output(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Excel output includes all 5 content zone columns."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Check headers include content zone columns
+        headers = [cell.value for cell in ws[1]]
+        assert format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT) in headers
+        assert format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT) in headers
+        assert format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP) in headers
+        assert format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM) in headers
+        assert format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED) in headers
+
+    def test_content_zone_values_populated(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Content zone values are populated in Excel output."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Get header column indices
+        headers = [cell.value for cell in ws[1]]
+        trim_left_col = (
+            headers.index(format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT)) + 1
+        )
+        detected_col = (
+            headers.index(format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED)) + 1
+        )
+
+        # Find VALVE row (should have content zone detected)
+        block_name_col = headers.index(format_header(EXCEL_COLUMN_BLOCK_NAME)) + 1
+        valve_row = None
+        for row_idx in range(2, ws.max_row + 1):
+            if ws.cell(row=row_idx, column=block_name_col).value == "VALVE":
+                valve_row = row_idx
+                break
+
+        assert valve_row is not None, "VALVE row not found"
+        assert ws.cell(row=valve_row, column=trim_left_col).value == 10.0
+        assert ws.cell(row=valve_row, column=detected_col).value == "TRUE"
+
+    def test_detection_flag_false_for_undetected(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Content zone detected shows FALSE when detection failed."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        # Get header column indices
+        headers = [cell.value for cell in ws[1]]
+        detected_col = (
+            headers.index(format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED)) + 1
+        )
+        block_name_col = headers.index(format_header(EXCEL_COLUMN_BLOCK_NAME)) + 1
+
+        # Find TAG row (should have content zone NOT detected based on fixture)
+        tag_row = None
+        for row_idx in range(2, ws.max_row + 1):
+            if ws.cell(row=row_idx, column=block_name_col).value == "TAG":
+                tag_row = row_idx
+                break
+
+        assert tag_row is not None, "TAG row not found"
+        assert ws.cell(row=tag_row, column=detected_col).value == "FALSE"
+
+    def test_content_zone_column_count(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Block Geometry Analysis sheet has 18 columns (13 original + 5 content zone)."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
+
+        headers = [cell.value for cell in ws[1]]
+        # Filter out None values for accurate count
+        headers = [h for h in headers if h is not None]
+        assert len(headers) == 18

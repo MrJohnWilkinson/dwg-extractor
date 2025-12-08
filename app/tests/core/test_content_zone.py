@@ -34,6 +34,7 @@ from core.geometry import (
     _extract_line_cycles,
     _get_block_bounding_box,
     _get_polygon_bbox,
+    _get_union_bounding_box,
     _point_in_polygon,
     _polygon_contains_polygon,
     _shoelace_area,
@@ -748,3 +749,131 @@ class TestTypeAnnotations:
             assert len(vertex) == 2
             assert isinstance(vertex[0], float)
             assert isinstance(vertex[1], float)
+
+
+class TestUnionBoundingBox:
+    """Tests for _get_union_bounding_box() function."""
+
+    def test_empty_input(self) -> None:
+        """Empty list returns zero bbox."""
+        result = _get_union_bounding_box([])
+        assert result == (0.0, 0.0, 0.0, 0.0)
+
+    def test_single_polygon(self) -> None:
+        """Single polygon returns its bbox."""
+        polygon: Polygon = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+        result = _get_union_bounding_box([polygon])
+        assert result == (0.0, 0.0, 10.0, 10.0)
+
+    def test_multiple_non_overlapping(self) -> None:
+        """Non-overlapping polygons return union bbox."""
+        poly1: Polygon = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+        poly2: Polygon = [(90.0, 90.0), (100.0, 90.0), (100.0, 100.0), (90.0, 100.0)]
+        result = _get_union_bounding_box([poly1, poly2])
+        assert result == (0.0, 0.0, 100.0, 100.0)
+
+    def test_overlapping_polygons(self) -> None:
+        """Overlapping polygons return correct union bbox."""
+        poly1: Polygon = [(0.0, 0.0), (50.0, 0.0), (50.0, 50.0), (0.0, 50.0)]
+        poly2: Polygon = [(25.0, 25.0), (75.0, 25.0), (75.0, 75.0), (25.0, 75.0)]
+        result = _get_union_bounding_box([poly1, poly2])
+        assert result == (0.0, 0.0, 75.0, 75.0)
+
+    def test_four_corner_polygons(self) -> None:
+        """Four corner polygons return full span bbox."""
+        # Bottom-left
+        poly1: Polygon = [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+        # Bottom-right
+        poly2: Polygon = [(90.0, 0.0), (100.0, 0.0), (100.0, 10.0), (90.0, 10.0)]
+        # Top-left
+        poly3: Polygon = [(0.0, 90.0), (10.0, 90.0), (10.0, 100.0), (0.0, 100.0)]
+        # Top-right
+        poly4: Polygon = [(90.0, 90.0), (100.0, 90.0), (100.0, 100.0), (90.0, 100.0)]
+
+        result = _get_union_bounding_box([poly1, poly2, poly3, poly4])
+        assert result == (0.0, 0.0, 100.0, 100.0)
+
+
+class TestTiedShapeHandling:
+    """Tests for tied shape handling in content zone detection."""
+
+    def test_single_max_area_uses_shape_bbox(self) -> None:
+        """Single shape with max area uses its bounding box."""
+        doc = ezdxf.new()
+        block = doc.blocks.new("SINGLE_MAX")
+        # Large rectangle (80x80 = 6400 sq units)
+        block.add_lwpolyline(
+            [(10, 10), (90, 10), (90, 90), (10, 90)],
+            close=True,
+        )
+        # Small rectangle (10x10 = 100 sq units)
+        block.add_lwpolyline(
+            [(0, 0), (10, 0), (10, 10), (0, 10)],
+            close=True,
+        )
+
+        bbox = (0.0, 0.0, 100.0, 100.0)
+        result = _detect_content_zone(block, bbox)
+
+        assert result["content_zone_detected"] is True
+        # Should use large rectangle's bbox for trim values
+        assert result["suggested_trim_left"] == 10.0
+        assert result["suggested_trim_right"] == 10.0
+        assert result["suggested_trim_top"] == 10.0
+        assert result["suggested_trim_bottom"] == 10.0
+
+    def test_tied_shapes_use_union_bbox(self) -> None:
+        """Multiple tied shapes use union bounding box."""
+        doc = ezdxf.readfile("app/tests/assets/equal_area_test.dxf")
+        block = doc.blocks.get("EQUAL_CORNERS")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(block, bbox)
+
+        assert result["content_zone_detected"] is True
+        # Union of 4 corner rectangles should span full block
+        # Trim values should be 0 since union covers 0-100 in both dimensions
+        assert result["suggested_trim_left"] == 0.0
+        assert result["suggested_trim_right"] == 0.0
+        assert result["suggested_trim_top"] == 0.0
+        assert result["suggested_trim_bottom"] == 0.0
+
+    def test_single_large_rectangle_trimming(self) -> None:
+        """Single large rectangle from test file calculates correct trim values."""
+        doc = ezdxf.readfile("app/tests/assets/equal_area_test.dxf")
+        block = doc.blocks.get("SINGLE_LARGE")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(block, bbox)
+
+        assert result["content_zone_detected"] is True
+        # Single rectangle from (10,10) to (90,90) within 0-100 bbox
+        assert result["suggested_trim_left"] == 10.0
+        assert result["suggested_trim_right"] == 10.0
+        assert result["suggested_trim_top"] == 10.0
+        assert result["suggested_trim_bottom"] == 10.0
+
+    def test_two_equal_rectangles_union(self) -> None:
+        """Two equal rectangles produce union bbox."""
+        doc = ezdxf.new()
+        block = doc.blocks.new("TWO_EQUAL")
+        # Left rectangle (10x10 = 100 sq units)
+        block.add_lwpolyline(
+            [(0, 45), (10, 45), (10, 55), (0, 55)],
+            close=True,
+        )
+        # Right rectangle (10x10 = 100 sq units)
+        block.add_lwpolyline(
+            [(90, 45), (100, 45), (100, 55), (90, 55)],
+            close=True,
+        )
+
+        bbox = (0.0, 0.0, 100.0, 100.0)
+        result = _detect_content_zone(block, bbox)
+
+        assert result["content_zone_detected"] is True
+        # Union spans from x=0 to x=100, y=45 to y=55
+        assert result["suggested_trim_left"] == 0.0
+        assert result["suggested_trim_right"] == 0.0
+        assert result["suggested_trim_top"] == 45.0
+        assert result["suggested_trim_bottom"] == 45.0

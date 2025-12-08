@@ -28,6 +28,7 @@ from .constants import (
     EXCEL_COLUMN_ANNOTATION_COUNT,
     EXCEL_COLUMN_ANNOTATION_LAYER_NAME,
     EXCEL_COLUMN_ANNOTATION_TYPE,
+    EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
@@ -42,6 +43,10 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
     EXCEL_COLUMN_BLOCK_SCALE_X,
     EXCEL_COLUMN_BLOCK_SCALE_Y,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT,
+    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP,
     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_XDATA_APPS,
     EXCEL_COLUMN_COLOR_ANNOTATION_CONTENTS,
@@ -529,6 +534,7 @@ def _create_block_geometry_analysis_sheet(
     block_trimming_data = data["block_trimming_data"]
     block_rotation_counts = data["block_rotation_counts"]
     block_scale_data = data["block_scale_data"]
+    block_content_zone_data = data.get("block_content_zone_data", {})
 
     logger.debug(
         f"Block Geometry Analysis: {len(block_layer_pairs)} pairs, {len(block_trimming_data)} geometry records"
@@ -635,6 +641,21 @@ def _create_block_geometry_analysis_sheet(
                 else ""
             )
 
+            # Get content zone data for this block
+            content_zone = block_content_zone_data.get(key.block_name)
+            if content_zone and content_zone["content_zone_detected"]:
+                trim_left: float | str = content_zone["suggested_trim_left"] or ""
+                trim_right: float | str = content_zone["suggested_trim_right"] or ""
+                trim_top: float | str = content_zone["suggested_trim_top"] or ""
+                trim_bottom: float | str = content_zone["suggested_trim_bottom"] or ""
+                detected = "TRUE"
+            else:
+                trim_left = ""
+                trim_right = ""
+                trim_top = ""
+                trim_bottom = ""
+                detected = "FALSE" if content_zone else ""
+
             rows.append(
                 {
                     EXCEL_COLUMN_BLOCK_NAME: key.block_name,
@@ -650,6 +671,11 @@ def _create_block_geometry_analysis_sheet(
                     EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: native_height,
                     EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS: vertical_segments_str,
                     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS: horizontal_segments_str,
+                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT: trim_left,
+                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT: trim_right,
+                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP: trim_top,
+                    EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM: trim_bottom,
+                    EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED: detected,
                 }
             )
 
@@ -657,7 +683,7 @@ def _create_block_geometry_analysis_sheet(
         # Sort by block_name alphabetically
         df.sort_values(by=EXCEL_COLUMN_BLOCK_NAME, ascending=True, inplace=True)
     else:
-        # Create empty DataFrame with headers only (all 13 columns)
+        # Create empty DataFrame with headers only (all 18 columns)
         df = pd.DataFrame(
             columns=[
                 EXCEL_COLUMN_BLOCK_NAME,
@@ -673,6 +699,11 @@ def _create_block_geometry_analysis_sheet(
                 EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
                 EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
                 EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
             ]
         )
 
