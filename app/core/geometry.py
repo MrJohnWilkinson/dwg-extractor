@@ -559,8 +559,16 @@ def _extract_line_cycles(
     if abort_event and abort_event.is_set():
         raise GeometryAbortedError("Cycle detection aborted")
 
-    # Polygonize finds all closed polygons from line segments
-    polygons = list(polygonize(lines))
+    # Use unary_union to split lines at T-junctions AND crossing points
+    merged = unary_union(lines)
+    if merged.is_empty:
+        return []
+
+    # Handle both single LineString and MultiLineString
+    line_segments = list(merged.geoms) if hasattr(merged, 'geoms') else [merged]
+
+    # Polygonize now works correctly with split segments
+    polygons = list(polygonize(line_segments))
 
     # Convert to internal Polygon format
     result: list[Polygon] = []
