@@ -13,9 +13,12 @@ import ezdxf
 import pytest
 
 from core.geometry import (
+    GeometryAbortedError,
     _calculate_segments,
     _categorize_rotation,
+    _extract_all_edges,
     _extract_line_cycles,
+    _extract_paint_bucket_regions,
     _get_block_bounding_box,
     _get_intersection_points,
 )
@@ -533,3 +536,122 @@ class TestExtractLineCycles:
 
         # Should produce 6 polygons (3 rows x 2 columns)
         assert len(polygons) == 6
+
+
+class TestExtractAllEdges:
+    """Test suite for _extract_all_edges function."""
+
+    def test_extracts_line_entities(self) -> None:
+        """Test extraction of LINE entities as edges."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="LINE_TEST")
+        block.add_line((0, 0), (100, 0))
+        block.add_line((100, 0), (100, 50))
+
+        edges = _extract_all_edges(block)
+
+        assert len(edges) == 2
+
+    def test_extracts_closed_lwpolyline_edges(self) -> None:
+        """Test extraction of closed LWPOLYLINE as individual edges."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CLOSED_POLY_TEST")
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
+
+        edges = _extract_all_edges(block)
+
+        # 4 edges: 3 between consecutive points + 1 closing edge
+        assert len(edges) == 4
+
+    def test_extracts_open_lwpolyline_edges(self) -> None:
+        """Test extraction of open LWPOLYLINE (no closing edge)."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="OPEN_POLY_TEST")
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 50)], close=False)
+
+        edges = _extract_all_edges(block)
+
+        # 2 edges between 3 consecutive points, no closing edge
+        assert len(edges) == 2
+
+    def test_empty_block_returns_empty_list(self) -> None:
+        """Test that empty block returns empty edge list."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="EMPTY_TEST")
+
+        edges = _extract_all_edges(block)
+
+        assert edges == []
+
+
+class TestExtractPaintBucketRegions:
+    """Test suite for _extract_paint_bucket_regions function."""
+
+    def test_rectangle_with_vertical_divider(self) -> None:
+        """Test rectangle split by vertical divider produces 2 regions."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="RECT_DIVIDER")
+
+        # Closed LWPOLYLINE rectangle
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
+        # LINE divider at midpoint
+        block.add_line((50, 0), (50, 50))
+
+        regions = _extract_paint_bucket_regions(block)
+
+        # Should produce 2 regions (left and right)
+        assert len(regions) == 2
+
+    def test_rectangle_with_grid_dividers(self) -> None:
+        """Test rectangle with cross dividers produces 4 regions."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="RECT_GRID")
+
+        # Closed LWPOLYLINE rectangle
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 100), (0, 100)], close=True)
+        # Horizontal divider
+        block.add_line((0, 50), (100, 50))
+        # Vertical divider
+        block.add_line((50, 0), (50, 100))
+
+        regions = _extract_paint_bucket_regions(block)
+
+        # Should produce 4 regions (2x2 grid)
+        assert len(regions) == 4
+
+    def test_lines_only_rectangle(self) -> None:
+        """Test that LINE-only rectangle still works."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="LINES_RECT")
+
+        block.add_line((0, 0), (100, 0))
+        block.add_line((100, 0), (100, 50))
+        block.add_line((100, 50), (0, 50))
+        block.add_line((0, 50), (0, 0))
+
+        regions = _extract_paint_bucket_regions(block)
+
+        assert len(regions) == 1
+
+    def test_empty_block_returns_empty_list(self) -> None:
+        """Test that empty block returns empty region list."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="EMPTY_TEST")
+
+        regions = _extract_paint_bucket_regions(block)
+
+        assert regions == []
+
+    def test_abort_event_raises_error(self) -> None:
+        """Test that set abort_event raises GeometryAbortedError."""
+        import threading
+
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="ABORT_TEST")
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
+
+        abort_event = threading.Event()
+        abort_event.set()
+
+        with pytest.raises(GeometryAbortedError):
+            _extract_paint_bucket_regions(block, abort_event)

@@ -372,6 +372,92 @@ def _count_line_segments(block_def: BlockLayout) -> int:
     return count
 
 
+def _extract_all_edges(block_def: BlockLayout) -> list[LineString]:
+    """
+    Extract ALL edges from block as LineStrings for unified polygonize.
+
+    Extracts edges from:
+    - LINE entities (start to end as single edge)
+    - LWPOLYLINE/POLYLINE entities (all vertices as edges, closing edge if closed)
+
+    Args:
+        block_def: ezdxf block definition object
+
+    Returns:
+        List of LineString objects representing all edges in the block.
+    """
+    edges: list[LineString] = []
+
+    for entity in block_def:
+        if entity.dxftype() == "LINE":
+            start = entity.dxf.start
+            end = entity.dxf.end
+            edges.append(LineString([(start.x, start.y), (end.x, end.y)]))
+
+        elif entity.dxftype() in ("LWPOLYLINE", "POLYLINE"):
+            try:
+                points = [(float(p[0]), float(p[1])) for p in entity.get_points()]  # type: ignore[attr-defined]
+                # Convert polyline to edge segments
+                for i in range(len(points) - 1):
+                    edges.append(LineString([points[i], points[i + 1]]))
+                # Add closing edge if closed
+                if hasattr(entity, "closed") and entity.closed and len(points) >= 2:
+                    edges.append(LineString([points[-1], points[0]]))
+            except (AttributeError, IndexError):
+                continue
+
+    logger.debug(f"Extracted {len(edges)} edges from block")
+    return edges
+
+
+def _extract_paint_bucket_regions(
+    block_def: BlockLayout,
+    abort_event: threading.Event | None = None,
+) -> list[Polygon]:
+    """
+    Extract all visual regions using paint-bucket algorithm.
+
+    Combines all edges (LWPOLYLINE + LINE) into a unified edge set,
+    splits at intersections using unary_union, and finds all closed
+    regions using polygonize.
+
+    Args:
+        block_def: ezdxf block definition object
+        abort_event: Optional threading.Event to signal abort request
+
+    Returns:
+        List of Polygon objects (coordinate tuples) representing all visual regions.
+
+    Raises:
+        GeometryAbortedError: If abort_event is set during processing.
+    """
+    edges = _extract_all_edges(block_def)
+
+    if not edges:
+        return []
+
+    if abort_event and abort_event.is_set():
+        raise GeometryAbortedError("Region detection aborted")
+
+    # Merge and split at all intersections
+    merged = unary_union(edges)
+    if merged.is_empty:
+        return []
+
+    line_segments = list(merged.geoms) if hasattr(merged, "geoms") else [merged]
+    polygons = list(polygonize(line_segments))
+
+    # Convert to internal Polygon format
+    result: list[Polygon] = []
+    for poly in polygons:
+        if poly.is_valid and not poly.is_empty:
+            coords = list(poly.exterior.coords)[:-1]
+            result.append([(float(x), float(y)) for x, y in coords])
+
+    logger.debug(f"Found {len(result)} paint-bucket regions")
+    return result
+
+
 def _extract_closed_lwpolylines(block_def: BlockLayout) -> list[Polygon]:
     """
     Extract closed polygons from LWPOLYLINE entities in a block.
