@@ -15,6 +15,7 @@ import pytest
 from core.geometry import (
     _calculate_segments,
     _categorize_rotation,
+    _extract_line_cycles,
     _get_block_bounding_box,
     _get_intersection_points,
 )
@@ -445,3 +446,90 @@ class TestCategorizeRotation:
     ) -> None:
         """Test rotation categorization with parametrized test cases."""
         assert _categorize_rotation(rotation) == expected_category
+
+
+class TestExtractLineCycles:
+    """
+    Test suite for _extract_line_cycles function.
+
+    These tests verify polygon detection from LINE entities, including:
+    - Simple closed rectangles from 4 lines
+    - T-junctions where a divider splits a polygon into two
+    - Crossing lines that form no closed region
+    - Grid patterns with multiple T-junctions and crossings
+    """
+
+    def test_simple_rectangle_from_lines(self) -> None:
+        """Test that 4 lines forming a rectangle produce exactly 1 polygon."""
+        # Create a block with 4 lines forming a 100x50 rectangle
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="SIMPLE_RECT")
+
+        # Add rectangle lines: (0,0)-(100,0), (100,0)-(100,50), (100,50)-(0,50), (0,50)-(0,0)
+        block.add_line((0, 0), (100, 0))  # Bottom
+        block.add_line((100, 0), (100, 50))  # Right
+        block.add_line((100, 50), (0, 50))  # Top
+        block.add_line((0, 50), (0, 0))  # Left
+
+        polygons = _extract_line_cycles(block)
+
+        assert len(polygons) == 1
+
+    def test_t_junction_creates_two_polygons(self) -> None:
+        """Test that T-junction (vertical divider) splits rectangle into 2 polygons."""
+        # Create a block with rectangle + vertical divider at midpoint
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="T_JUNCTION")
+
+        # Rectangle lines: (0,0)-(100,0), (100,0)-(100,50), (100,50)-(0,50), (0,50)-(0,0)
+        block.add_line((0, 0), (100, 0))  # Bottom
+        block.add_line((100, 0), (100, 50))  # Right
+        block.add_line((100, 50), (0, 50))  # Top
+        block.add_line((0, 50), (0, 0))  # Left
+
+        # Divider line: (50,0)-(50,50) - creates T-junctions at top and bottom
+        block.add_line((50, 0), (50, 50))
+
+        polygons = _extract_line_cycles(block)
+
+        # Should produce 2 polygons (left and right halves)
+        assert len(polygons) == 2
+
+    def test_crossing_lines_no_closed_region(self) -> None:
+        """Test that crossing lines (X pattern) produce 0 polygons."""
+        # Create a block with two diagonal lines forming an X pattern
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CROSSING_X")
+
+        # Lines: (0,0)-(100,100), (100,0)-(0,100)
+        block.add_line((0, 0), (100, 100))  # Diagonal bottom-left to top-right
+        block.add_line((100, 0), (0, 100))  # Diagonal bottom-right to top-left
+
+        polygons = _extract_line_cycles(block)
+
+        # No closed region formed by just two crossing lines
+        assert len(polygons) == 0
+
+    def test_grid_pattern_multiple_polygons(self) -> None:
+        """Test that grid pattern (3x2) produces exactly 6 polygons."""
+        # Create a block with rectangle + 2 horizontal lines + 1 vertical divider
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="GRID_PATTERN")
+
+        # Rectangle: (0,0)-(150,90) perimeter
+        block.add_line((0, 0), (150, 0))  # Bottom
+        block.add_line((150, 0), (150, 90))  # Right
+        block.add_line((150, 90), (0, 90))  # Top
+        block.add_line((0, 90), (0, 0))  # Left
+
+        # Horizontal dividers at y=30 and y=60
+        block.add_line((0, 30), (150, 30))
+        block.add_line((0, 60), (150, 60))
+
+        # Vertical divider at x=75
+        block.add_line((75, 0), (75, 90))
+
+        polygons = _extract_line_cycles(block)
+
+        # Should produce 6 polygons (3 rows x 2 columns)
+        assert len(polygons) == 6
