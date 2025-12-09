@@ -655,3 +655,84 @@ class TestExtractPaintBucketRegions:
 
         with pytest.raises(GeometryAbortedError):
             _extract_paint_bucket_regions(block, abort_event)
+
+    def test_multiple_horizontal_dividers(self) -> None:
+        """Test rectangle with 3 horizontal dividers produces 4 rows."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="HORIZ_DIVIDERS")
+
+        # 100x100 closed rectangle
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 100), (0, 100)], close=True)
+        # 3 horizontal LINE dividers at y=25, y=50, y=75
+        block.add_line((0, 25), (100, 25))
+        block.add_line((0, 50), (100, 50))
+        block.add_line((0, 75), (100, 75))
+
+        regions = _extract_paint_bucket_regions(block)
+
+        # Should produce 4 horizontal rows
+        assert len(regions) == 4
+
+    def test_multiple_vertical_dividers(self) -> None:
+        """Test rectangle with 2 vertical dividers produces 3 columns."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="VERT_DIVIDERS")
+
+        # 100x50 closed rectangle
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
+        # 2 vertical LINE dividers at x=33, x=66
+        block.add_line((33, 0), (33, 50))
+        block.add_line((66, 0), (66, 50))
+
+        regions = _extract_paint_bucket_regions(block)
+
+        # Should produce 3 vertical columns
+        assert len(regions) == 3
+
+    def test_open_lwpolyline_with_closing_line(self) -> None:
+        """Test open U-shape LWPOLYLINE with closing LINE forms 1 region."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="U_SHAPE_CLOSED")
+
+        # Open U-shape LWPOLYLINE: bottom-left, top-left, top-right, bottom-right
+        block.add_lwpolyline([(0, 0), (0, 50), (100, 50), (100, 0)], close=False)
+        # Closing LINE from bottom-right to bottom-left
+        block.add_line((100, 0), (0, 0))
+
+        regions = _extract_paint_bucket_regions(block)
+
+        # Should produce 1 closed region (rectangle)
+        assert len(regions) == 1
+
+    def test_nested_rectangles(self) -> None:
+        """Test outer rectangle with inner rectangle produces 2 regions."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="NESTED_RECTS")
+
+        # Outer 100x100 closed rectangle
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 100), (0, 100)], close=True)
+        # Inner 50x50 closed rectangle centered at (25,25) to (75,75)
+        block.add_lwpolyline([(25, 25), (75, 25), (75, 75), (25, 75)], close=True)
+
+        regions = _extract_paint_bucket_regions(block)
+
+        # Should produce 2 regions: inner rectangle + outer ring
+        assert len(regions) == 2
+
+    def test_complex_grid_3x2(self) -> None:
+        """Test 3 columns x 2 rows grid produces 6 regions."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="GRID_3X2")
+
+        # 150x100 closed rectangle
+        block.add_lwpolyline([(0, 0), (150, 0), (150, 100), (0, 100)], close=True)
+        # 2 vertical LINE dividers at x=50, x=100
+        block.add_line((50, 0), (50, 100))
+        block.add_line((100, 0), (100, 100))
+        # 1 horizontal LINE divider at y=50
+        block.add_line((0, 50), (150, 50))
+
+        regions = _extract_paint_bucket_regions(block)
+
+        # Should produce 6 regions (3 columns x 2 rows)
+        assert len(regions) == 6
