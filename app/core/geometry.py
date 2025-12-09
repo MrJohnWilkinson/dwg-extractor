@@ -737,7 +737,7 @@ def _detect_content_zone(
     content zone bounding box relative to the block bounding box.
 
     Performance safeguards:
-    - Skips LINE cycle detection if > LINE_SEGMENT_THRESHOLD segments (5000)
+    - Skips region detection if > LINE_SEGMENT_THRESHOLD edges (5000)
     - Skips net area calculation if > POLYGON_COUNT_THRESHOLD polygons (500)
 
     Args:
@@ -754,25 +754,28 @@ def _detect_content_zone(
     """
     block_name = block_def.name
 
-    # Extract LWPOLYLINE shapes (always fast)
-    lwpolyline_shapes = _extract_closed_lwpolylines(block_def)
-    logger.debug(f"[{block_name}] Found {len(lwpolyline_shapes)} closed LWPOLYLINEs")
-
-    # Check LINE segment count BEFORE extraction
-    line_count = _count_line_segments(block_def)
-    if line_count > LINE_SEGMENT_THRESHOLD:
+    # Count edges for threshold check
+    edge_count = len(_extract_all_edges(block_def))
+    if edge_count > LINE_SEGMENT_THRESHOLD:
         logger.warning(
-            f"[{block_name}] Skipping LINE cycle detection: "
-            f"{line_count} segments exceeds threshold {LINE_SEGMENT_THRESHOLD}"
+            f"[{block_name}] Skipping region detection: "
+            f"{edge_count} edges exceeds threshold {LINE_SEGMENT_THRESHOLD}"
         )
-        line_cycle_shapes: list[Polygon] = []
-    else:
-        line_cycle_shapes = _extract_line_cycles(block_def, abort_event)
-        logger.debug(f"[{block_name}] Found {len(line_cycle_shapes)} LINE cycles")
+        return ContentZoneData(
+            suggested_trim_left=None,
+            suggested_trim_right=None,
+            suggested_trim_top=None,
+            suggested_trim_bottom=None,
+            content_zone_detected=False,
+            content_zone_width=None,
+            content_zone_height=None,
+            polygon_count=0,
+        )
 
-    # Combine all shapes
-    all_shapes = lwpolyline_shapes + line_cycle_shapes
+    # Use paint-bucket algorithm for accurate region detection
+    all_shapes = _extract_paint_bucket_regions(block_def, abort_event)
     polygon_count = len(all_shapes)
+    logger.debug(f"[{block_name}] Found {polygon_count} paint-bucket regions")
 
     if polygon_count == 0:
         logger.debug(f"[{block_name}] No closed shapes found")
