@@ -24,9 +24,15 @@ import customtkinter as ctk
 
 from core.constants import (
     DEFAULT_GAP_BRIDGE_TOLERANCE,
+    DEFAULT_MIN_AREA_FILTER,
+    DEFAULT_MIN_SIDE_FILTER,
     DEFAULT_PRECISION_FIX_TOLERANCE,
     GAP_BRIDGE_MAX,
     GAP_BRIDGE_MIN,
+    MIN_AREA_FILTER_MAX,
+    MIN_AREA_FILTER_MIN,
+    MIN_SIDE_FILTER_MAX,
+    MIN_SIDE_FILTER_MIN,
     MSG_ABORTED,
     MSG_ABORTING,
     MSG_ERROR_FILE_NOT_FOUND,
@@ -82,6 +88,14 @@ class DXFExtractorApp(ctk.CTk):
         self.precision_fix_amount_var = ctk.StringVar(value="0.01")
         self.gap_bridge_var = ctk.BooleanVar(value=False)
         self.gap_bridge_amount_var = ctk.StringVar(value="100.0")
+
+        # Min Area Filter settings
+        self.min_area_filter_var = ctk.BooleanVar(value=False)
+        self.min_area_filter_amount_var = ctk.StringVar(value="100.0")
+
+        # Min Side Filter settings
+        self.min_side_filter_var = ctk.BooleanVar(value=False)
+        self.min_side_filter_amount_var = ctk.StringVar(value="10.0")
 
         # Create UI
         self._create_widgets()
@@ -253,6 +267,70 @@ class DXFExtractorApp(ctk.CTk):
         )
         self.gap_bridge_entry.pack(side="left")
 
+        # Third separator
+        separator3 = ctk.CTkFrame(self.main_frame, height=1, fg_color="gray50")
+        separator3.pack(fill="x", pady=5)
+
+        # Min Area Filter row frame
+        min_area_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        min_area_frame.pack(pady=(5, 10))
+
+        self.min_area_filter_checkbox = ctk.CTkCheckBox(
+            min_area_frame,
+            text="Min Area Filter",
+            variable=self.min_area_filter_var,
+            command=self._on_min_area_filter_toggle,
+            font=ctk.CTkFont(size=12),
+        )
+        self.min_area_filter_checkbox.pack(side="left", padx=(0, 10))
+
+        min_area_amount_label = ctk.CTkLabel(
+            min_area_frame,
+            text="Amount:",
+            font=ctk.CTkFont(size=12),
+        )
+        min_area_amount_label.pack(side="left", padx=(0, 5))
+
+        self.min_area_filter_entry = ctk.CTkEntry(
+            min_area_frame,
+            width=80,
+            textvariable=self.min_area_filter_amount_var,
+            state="disabled",
+        )
+        self.min_area_filter_entry.pack(side="left")
+
+        # Fourth separator
+        separator4 = ctk.CTkFrame(self.main_frame, height=1, fg_color="gray50")
+        separator4.pack(fill="x", pady=5)
+
+        # Min Side Filter row frame
+        min_side_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        min_side_frame.pack(pady=(5, 10))
+
+        self.min_side_filter_checkbox = ctk.CTkCheckBox(
+            min_side_frame,
+            text="Min Side Filter",
+            variable=self.min_side_filter_var,
+            command=self._on_min_side_filter_toggle,
+            font=ctk.CTkFont(size=12),
+        )
+        self.min_side_filter_checkbox.pack(side="left", padx=(0, 10))
+
+        min_side_amount_label = ctk.CTkLabel(
+            min_side_frame,
+            text="Amount:",
+            font=ctk.CTkFont(size=12),
+        )
+        min_side_amount_label.pack(side="left", padx=(0, 5))
+
+        self.min_side_filter_entry = ctk.CTkEntry(
+            min_side_frame,
+            width=80,
+            textvariable=self.min_side_filter_amount_var,
+            state="disabled",
+        )
+        self.min_side_filter_entry.pack(side="left")
+
         # Progress bar
         self.progress_bar = ctk.CTkProgressBar(self.main_frame, width=400, height=20)
         self.progress_bar.pack(pady=(0, 15))
@@ -385,12 +463,22 @@ class DXFExtractorApp(ctk.CTk):
             precision_fix_enabled = self.precision_fix_var.get()
             precision_fix_amount = self._get_precision_fix_amount()
 
+            # Get filter settings
+            min_area_filter_enabled = self.min_area_filter_var.get()
+            min_area_filter_amount = self._get_min_area_filter_amount()
+            min_side_filter_enabled = self.min_side_filter_var.get()
+            min_side_filter_amount = self._get_min_side_filter_amount()
+
             self.logger.info(
                 f"Extraction settings: unit_override={unit_override}, "
                 f"gap_bridge_enabled={gap_bridge_enabled}, "
                 f"gap_bridge_amount={gap_bridge_amount}, "
                 f"precision_fix_enabled={precision_fix_enabled}, "
-                f"precision_fix_amount={precision_fix_amount}"
+                f"precision_fix_amount={precision_fix_amount}, "
+                f"min_area_filter_enabled={min_area_filter_enabled}, "
+                f"min_area_filter_amount={min_area_filter_amount}, "
+                f"min_side_filter_enabled={min_side_filter_enabled}, "
+                f"min_side_filter_amount={min_side_filter_amount}"
             )
 
             # Step 1: Load file
@@ -407,6 +495,10 @@ class DXFExtractorApp(ctk.CTk):
                 gap_bridge_amount=gap_bridge_amount,
                 precision_fix_enabled=precision_fix_enabled,
                 precision_fix_amount=precision_fix_amount,
+                min_area_filter_enabled=min_area_filter_enabled,
+                min_area_filter_amount=min_area_filter_amount,
+                min_side_filter_enabled=min_side_filter_enabled,
+                min_side_filter_amount=min_side_filter_amount,
             )
 
             # Check for empty results
@@ -574,6 +666,12 @@ class DXFExtractorApp(ctk.CTk):
         # Update gap bridge default if enabled
         if self.gap_bridge_var.get():
             self._update_gap_bridge_default()
+        # Update min area filter default if enabled
+        if self.min_area_filter_var.get():
+            self._update_min_area_filter_default()
+        # Update min side filter default if enabled
+        if self.min_side_filter_var.get():
+            self._update_min_side_filter_default()
 
     def _on_precision_fix_toggle(self) -> None:
         """Handle precision fix checkbox toggle."""
@@ -616,6 +714,46 @@ class DXFExtractorApp(ctk.CTk):
         self.gap_bridge_amount_var.set(str(default_amount))
         self.logger.debug(f"Gap bridge default updated to {default_amount}")
 
+    def _on_min_area_filter_toggle(self) -> None:
+        """Handle min area filter checkbox toggle."""
+        enabled = self.min_area_filter_var.get()
+        self.logger.debug(f"Min area filter toggled: {enabled}")
+
+        if enabled:
+            self.min_area_filter_entry.configure(state="normal")
+            self._update_min_area_filter_default()
+        else:
+            self.min_area_filter_entry.configure(state="disabled")
+
+    def _on_min_side_filter_toggle(self) -> None:
+        """Handle min side filter checkbox toggle."""
+        enabled = self.min_side_filter_var.get()
+        self.logger.debug(f"Min side filter toggled: {enabled}")
+
+        if enabled:
+            self.min_side_filter_entry.configure(state="normal")
+            self._update_min_side_filter_default()
+        else:
+            self.min_side_filter_entry.configure(state="disabled")
+
+    def _update_min_area_filter_default(self) -> None:
+        """Update min area filter amount to default for selected unit."""
+        selection = self.unit_selection_var.get()
+        insunits = UNIT_SELECTION_OPTIONS.get(selection, -1)
+        effective_units = insunits if insunits != -1 else 4  # Default to mm
+        default_amount = DEFAULT_MIN_AREA_FILTER.get(effective_units, 100.0)
+        self.min_area_filter_amount_var.set(str(default_amount))
+        self.logger.debug(f"Min area filter default updated to {default_amount}")
+
+    def _update_min_side_filter_default(self) -> None:
+        """Update min side filter amount to default for selected unit."""
+        selection = self.unit_selection_var.get()
+        insunits = UNIT_SELECTION_OPTIONS.get(selection, -1)
+        effective_units = insunits if insunits != -1 else 4  # Default to mm
+        default_amount = DEFAULT_MIN_SIDE_FILTER.get(effective_units, 10.0)
+        self.min_side_filter_amount_var.set(str(default_amount))
+        self.logger.debug(f"Min side filter default updated to {default_amount}")
+
     def _get_selected_unit_override(self) -> int | None:
         """Get the $INSUNITS value for selected unit, or None for auto."""
         selection = self.unit_selection_var.get()
@@ -650,6 +788,36 @@ class DXFExtractorApp(ctk.CTk):
                 return None
         except ValueError:
             self.logger.warning("Invalid precision fix amount")
+            return None
+
+    def _get_min_area_filter_amount(self) -> float | None:
+        """Get validated min area filter amount, or None if invalid/disabled."""
+        if not self.min_area_filter_var.get():
+            return None
+        try:
+            amount = float(self.min_area_filter_amount_var.get())
+            if MIN_AREA_FILTER_MIN <= amount <= MIN_AREA_FILTER_MAX:
+                return amount
+            else:
+                self.logger.warning(f"Min area filter amount {amount} out of range")
+                return None
+        except ValueError:
+            self.logger.warning("Invalid min area filter amount")
+            return None
+
+    def _get_min_side_filter_amount(self) -> float | None:
+        """Get validated min side filter amount, or None if invalid/disabled."""
+        if not self.min_side_filter_var.get():
+            return None
+        try:
+            amount = float(self.min_side_filter_amount_var.get())
+            if MIN_SIDE_FILTER_MIN <= amount <= MIN_SIDE_FILTER_MAX:
+                return amount
+            else:
+                self.logger.warning(f"Min side filter amount {amount} out of range")
+                return None
+        except ValueError:
+            self.logger.warning("Invalid min side filter amount")
             return None
 
     def _on_log_level_change(self, value: str) -> None:
