@@ -23,6 +23,9 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
 from core.constants import (
+    DEFAULT_GAP_BRIDGE_TOLERANCE,
+    GAP_BRIDGE_MAX,
+    GAP_BRIDGE_MIN,
     MSG_ABORTED,
     MSG_ABORTING,
     MSG_ERROR_FILE_NOT_FOUND,
@@ -31,6 +34,7 @@ from core.constants import (
     MSG_PROCESSING,
     MSG_SELECT_FILE,
     MSG_SUCCESS,
+    UNIT_SELECTION_OPTIONS,
 )
 from core.excel_writer import write_excel
 from core.extractor import ExtractionAbortedError, extract_blocks
@@ -68,6 +72,11 @@ class DXFExtractorApp(ctk.CTk):
         self.log_queue: queue.Queue[tuple[int, str]] = queue.Queue(maxsize=1000)
         self.queue_handler = create_queue_handler(self.log_queue)
         logging.getLogger().addHandler(self.queue_handler)
+
+        # Unit selection and gap bridge settings
+        self.unit_selection_var = ctk.StringVar(value="DXF/DWG")
+        self.gap_bridge_var = ctk.BooleanVar(value=False)
+        self.gap_bridge_amount_var = ctk.StringVar(value="100.0")
 
         # Create UI
         self._create_widgets()
@@ -138,6 +147,47 @@ class DXFExtractorApp(ctk.CTk):
             hover_color="darkred",
         )
         # Don't pack - will be shown during extraction
+
+        # Options frame for unit selection and gap bridge
+        options_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        options_frame.pack(pady=(0, 15))
+
+        # Unit selection label
+        unit_label = ctk.CTkLabel(
+            options_frame,
+            text="Units:",
+            font=ctk.CTkFont(size=12),
+        )
+        unit_label.pack(side="left", padx=(0, 5))
+
+        # Unit selection dropdown
+        self.unit_dropdown = ctk.CTkOptionMenu(
+            options_frame,
+            values=list(UNIT_SELECTION_OPTIONS.keys()),
+            variable=self.unit_selection_var,
+            width=100,
+            command=self._on_unit_change,
+        )
+        self.unit_dropdown.pack(side="left", padx=(0, 20))
+
+        # Gap bridge checkbox
+        self.gap_bridge_checkbox = ctk.CTkCheckBox(
+            options_frame,
+            text="Gap Bridge:",
+            variable=self.gap_bridge_var,
+            command=self._on_gap_bridge_toggle,
+            font=ctk.CTkFont(size=12),
+        )
+        self.gap_bridge_checkbox.pack(side="left", padx=(0, 5))
+
+        # Gap bridge amount entry
+        self.gap_bridge_entry = ctk.CTkEntry(
+            options_frame,
+            width=80,
+            textvariable=self.gap_bridge_amount_var,
+            state="disabled",
+        )
+        self.gap_bridge_entry.pack(side="left")
 
         # Progress bar
         self.progress_bar = ctk.CTkProgressBar(self.main_frame, width=400, height=20)
@@ -264,6 +314,17 @@ class DXFExtractorApp(ctk.CTk):
             self.logger.info(f"Debug log: {log_path}")
             self._update_progress(0.1, f"Logging to: {log_filename}")
 
+            # Get user settings
+            unit_override = self._get_selected_unit_override()
+            gap_bridge_enabled = self.gap_bridge_var.get()
+            gap_bridge_amount = self._get_gap_bridge_amount()
+
+            self.logger.info(
+                f"Extraction settings: unit_override={unit_override}, "
+                f"gap_bridge_enabled={gap_bridge_enabled}, "
+                f"gap_bridge_amount={gap_bridge_amount}"
+            )
+
             # Step 1: Load file
             self._update_progress(0.2, "Loading file...")
 
@@ -271,7 +332,11 @@ class DXFExtractorApp(ctk.CTk):
             self._update_progress(0.5, "Analyzing CAD file...")
 
             extraction_result = extract_blocks(
-                self.selected_file_path, self.abort_event
+                self.selected_file_path,
+                self.abort_event,
+                unit_override=unit_override,
+                gap_bridge_enabled=gap_bridge_enabled,
+                gap_bridge_amount=gap_bridge_amount,
             )
 
             # Check for empty results
@@ -429,6 +494,55 @@ class DXFExtractorApp(ctk.CTk):
                 break
 
         self.after(100, self._poll_log_queue)
+
+    def _on_unit_change(self, value: str) -> None:
+        """Handle unit dropdown selection change."""
+        self.logger.debug(f"Unit selection changed to: {value}")
+        # Update gap bridge default if gap bridging is enabled
+        if hasattr(self, "gap_bridge_var") and self.gap_bridge_var.get():
+            self._update_gap_bridge_default()
+
+    def _on_gap_bridge_toggle(self) -> None:
+        """Handle gap bridge checkbox toggle."""
+        enabled = self.gap_bridge_var.get()
+        self.logger.debug(f"Gap bridge toggled: {enabled}")
+
+        if enabled:
+            self.gap_bridge_entry.configure(state="normal")
+            self._update_gap_bridge_default()
+        else:
+            self.gap_bridge_entry.configure(state="disabled")
+
+    def _update_gap_bridge_default(self) -> None:
+        """Update gap bridge amount to default for selected unit."""
+        selection = self.unit_selection_var.get()
+        insunits = UNIT_SELECTION_OPTIONS.get(selection, -1)
+        # Use detected units fallback if auto
+        effective_units = insunits if insunits != -1 else 4  # Default to mm
+        default_amount = DEFAULT_GAP_BRIDGE_TOLERANCE.get(effective_units, 100.0)
+        self.gap_bridge_amount_var.set(str(default_amount))
+        self.logger.debug(f"Gap bridge default updated to {default_amount}")
+
+    def _get_selected_unit_override(self) -> int | None:
+        """Get the $INSUNITS value for selected unit, or None for auto."""
+        selection = self.unit_selection_var.get()
+        insunits = UNIT_SELECTION_OPTIONS.get(selection, -1)
+        return None if insunits == -1 else insunits
+
+    def _get_gap_bridge_amount(self) -> float | None:
+        """Get validated gap bridge amount, or None if invalid/disabled."""
+        if not self.gap_bridge_var.get():
+            return None
+        try:
+            amount = float(self.gap_bridge_amount_var.get())
+            if GAP_BRIDGE_MIN <= amount <= GAP_BRIDGE_MAX:
+                return amount
+            else:
+                self.logger.warning(f"Gap bridge amount {amount} out of range")
+                return None
+        except ValueError:
+            self.logger.warning("Invalid gap bridge amount")
+            return None
 
     def _on_log_level_change(self, value: str) -> None:
         """Handle log level dropdown change.
