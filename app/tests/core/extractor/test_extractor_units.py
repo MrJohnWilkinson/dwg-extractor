@@ -419,3 +419,95 @@ class TestExtractBlocksToleranceEdgeCases:
         assert result is not None
         # Empty file should have empty block counts
         assert result["block_counts"] == {}
+
+
+class TestGetSnapTolerancesIndependence:
+    """Tests verifying precision_fix_enabled and gap_bridge_enabled are independent."""
+
+    def test_gap_bridge_unaffected_by_precision_fix_enabled(self) -> None:
+        """Gap bridge tolerance should be the same regardless of precision_fix setting."""
+        detected_units = 4  # Millimeters
+        override_units = None
+        gap_bridge_enabled = True
+        gap_bridge_amount = 2.0
+
+        # Test with precision fix enabled
+        _, gap_on = get_snap_tolerances(
+            detected_units,
+            override_units,
+            gap_bridge_enabled,
+            gap_bridge_amount,
+            precision_fix_enabled=True,
+        )
+
+        # Test with precision fix disabled
+        _, gap_off = get_snap_tolerances(
+            detected_units,
+            override_units,
+            gap_bridge_enabled,
+            gap_bridge_amount,
+            precision_fix_enabled=False,
+        )
+
+        # Gap bridge should be identical regardless of precision_fix setting
+        assert gap_on == gap_off == 2.0
+
+    def test_precision_fix_unaffected_by_gap_bridge_enabled(self) -> None:
+        """Precision tolerance should be the same regardless of gap_bridge setting."""
+        detected_units = 4  # Millimeters
+        override_units = None
+
+        # Test with gap bridge enabled
+        precision_on, _ = get_snap_tolerances(
+            detected_units,
+            override_units,
+            gap_bridge_enabled=True,
+            gap_bridge_amount=1.0,
+            precision_fix_enabled=True,
+        )
+
+        # Test with gap bridge disabled
+        precision_off, _ = get_snap_tolerances(
+            detected_units,
+            override_units,
+            gap_bridge_enabled=False,
+            gap_bridge_amount=None,
+            precision_fix_enabled=True,
+        )
+
+        # Precision tolerance should be identical regardless of gap_bridge setting
+        assert precision_on == precision_off == PRECISION_SNAP_TOLERANCE[4]
+
+    def test_all_four_combinations(self) -> None:
+        """Test all four combinations of precision_fix and gap_bridge settings."""
+        detected_units = 1  # Inches
+        override_units = None
+        custom_gap = 0.05
+
+        # Both disabled
+        p1, g1 = get_snap_tolerances(
+            detected_units, override_units, False, None, precision_fix_enabled=False
+        )
+        assert p1 == 0.0
+        assert g1 == 0.0
+
+        # Precision only
+        p2, g2 = get_snap_tolerances(
+            detected_units, override_units, False, None, precision_fix_enabled=True
+        )
+        assert p2 == PRECISION_SNAP_TOLERANCE[1]
+        assert g2 == 0.0
+
+        # Gap bridge only
+        p3, g3 = get_snap_tolerances(
+            detected_units, override_units, True, custom_gap, precision_fix_enabled=False
+        )
+        assert p3 == 0.0
+        assert g3 == custom_gap
+
+        # Both enabled
+        p4, g4 = get_snap_tolerances(
+            detected_units, override_units, True, custom_gap, precision_fix_enabled=True
+        )
+        assert p4 == PRECISION_SNAP_TOLERANCE[1]
+        assert g4 == custom_gap
