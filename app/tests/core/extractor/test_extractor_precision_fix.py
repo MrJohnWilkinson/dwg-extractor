@@ -13,8 +13,7 @@ from pathlib import Path
 
 from core.constants import (
     DEFAULT_GAP_BRIDGE_TOLERANCE,
-    DEFAULT_PRECISION_SNAP_TOLERANCE,
-    PRECISION_SNAP_TOLERANCE,
+    DEFAULT_PRECISION_FIX_TOLERANCE,
 )
 from core.extractor import extract_blocks, get_snap_tolerances
 
@@ -24,10 +23,19 @@ ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 
 
 class TestPrecisionFixToggle:
-    """Tests for precision_fix_enabled parameter in get_snap_tolerances()."""
+    """Tests for precision_fix_enabled parameter in get_snap_tolerances().
+
+    NOTE: This class now tests with DEFAULT_PRECISION_FIX_TOLERANCE (practical CAD scale)
+    instead of the old PRECISION_SNAP_TOLERANCE (nanometer scale). The function now uses
+    the new larger tolerances by default for better coordinate precision error correction.
+    """
 
     def test_precision_fix_enabled_returns_calculated_tolerance(self) -> None:
-        """When precision_fix_enabled=True, should return calculated tolerance for unit."""
+        """When precision_fix_enabled=True, should return calculated tolerance for unit.
+
+        Uses DEFAULT_PRECISION_FIX_TOLERANCE which has practical CAD-scale tolerances
+        (e.g., 0.01mm for millimeters instead of 1e-6mm).
+        """
         detected_units = 4  # Millimeters
         override_units = None
         gap_bridge_enabled = False
@@ -41,8 +49,8 @@ class TestPrecisionFixToggle:
             precision_fix_enabled=True,
         )
 
-        # Should use mm precision tolerance
-        assert precision == PRECISION_SNAP_TOLERANCE[4]
+        # Should use mm precision tolerance from new DEFAULT_PRECISION_FIX_TOLERANCE
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[4]
         assert precision > 0.0
         assert gap_bridge == 0.0
 
@@ -66,7 +74,11 @@ class TestPrecisionFixToggle:
         assert gap_bridge == 0.0
 
     def test_default_precision_fix_enabled_backward_compatible(self) -> None:
-        """Default value of precision_fix_enabled should be True (backward compatible)."""
+        """Default value of precision_fix_enabled should be True (backward compatible).
+
+        Note: The returned tolerance value has changed to use DEFAULT_PRECISION_FIX_TOLERANCE
+        (practical CAD scale) instead of PRECISION_SNAP_TOLERANCE (nanometer scale).
+        """
         detected_units = 4  # Millimeters
         override_units = None
         gap_bridge_enabled = False
@@ -78,7 +90,8 @@ class TestPrecisionFixToggle:
         )
 
         # Should behave as if precision_fix_enabled=True (backward compatible)
-        assert precision == PRECISION_SNAP_TOLERANCE[4]
+        # Now uses DEFAULT_PRECISION_FIX_TOLERANCE instead of PRECISION_SNAP_TOLERANCE
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[4]
         assert precision > 0.0
 
     def test_precision_fix_disabled_with_all_units(self) -> None:
@@ -95,7 +108,10 @@ class TestPrecisionFixToggle:
             )
 
     def test_precision_fix_enabled_with_all_units(self) -> None:
-        """When precision_fix_enabled=True, should return correct tolerance for all units."""
+        """When precision_fix_enabled=True, should return correct tolerance for all units.
+
+        Uses DEFAULT_PRECISION_FIX_TOLERANCE which has practical CAD-scale tolerances.
+        """
         supported_units = [0, 1, 2, 4, 5, 6]
 
         for unit_code in supported_units:
@@ -103,7 +119,8 @@ class TestPrecisionFixToggle:
                 unit_code, None, False, None, precision_fix_enabled=True
             )
 
-            expected = PRECISION_SNAP_TOLERANCE[unit_code]
+            # Now uses DEFAULT_PRECISION_FIX_TOLERANCE
+            expected = DEFAULT_PRECISION_FIX_TOLERANCE[unit_code]
             assert precision == expected, (
                 f"Unit {unit_code} should have {expected} precision when enabled"
             )
@@ -167,8 +184,8 @@ class TestPrecisionFixGapBridgeInteraction:
             precision_fix_enabled=True,
         )
 
-        # Precision should use mm tolerance
-        assert precision == PRECISION_SNAP_TOLERANCE[4]
+        # Precision should use mm tolerance from DEFAULT_PRECISION_FIX_TOLERANCE
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[4]
         assert precision > 0.0
         # Gap bridge should be 0.0 when disabled
         assert gap_bridge == 0.0
@@ -189,7 +206,7 @@ class TestPrecisionFixGapBridgeInteraction:
         )
 
         # Both should have positive values
-        assert precision == PRECISION_SNAP_TOLERANCE[4]
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[4]
         assert precision > 0.0
         assert gap_bridge == DEFAULT_GAP_BRIDGE_TOLERANCE[4]
         assert gap_bridge > 0.0
@@ -238,7 +255,7 @@ class TestPrecisionFixGapBridgeInteraction:
         )
 
         # Precision should differ based on enabled/disabled
-        assert precision_on == PRECISION_SNAP_TOLERANCE[1]
+        assert precision_on == DEFAULT_PRECISION_FIX_TOLERANCE[1]
         assert precision_off == 0.0
 
         # Gap bridge should be the same regardless of precision fix setting
@@ -283,8 +300,8 @@ class TestPrecisionFixWithUnitOverride:
         )
 
         # Should use meter tolerance (override), not mm
-        assert precision == PRECISION_SNAP_TOLERANCE[6]
-        assert precision != PRECISION_SNAP_TOLERANCE[4]
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[6]
+        assert precision != DEFAULT_PRECISION_FIX_TOLERANCE[4]
 
     def test_precision_fix_disabled_override_minus_one(self) -> None:
         """Precision fix disabled with -1 override (auto) should return 0.0."""
@@ -326,7 +343,11 @@ class TestPrecisionFixUnknownUnits:
         assert gap_bridge == 0.0
 
     def test_precision_fix_enabled_unknown_unit_uses_fallback(self) -> None:
-        """Precision fix enabled with unknown unit should use fallback tolerance."""
+        """Precision fix enabled with unknown unit should use fallback tolerance.
+
+        When unit code is unknown, falls back to DEFAULT_PRECISION_FIX_TOLERANCE[0]
+        (unitless default of 0.01).
+        """
         detected_units = 99  # Unknown unit code
         override_units = None
         gap_bridge_enabled = False
@@ -340,8 +361,8 @@ class TestPrecisionFixUnknownUnits:
             precision_fix_enabled=True,
         )
 
-        # Should use default fallback tolerance
-        assert precision == DEFAULT_PRECISION_SNAP_TOLERANCE
+        # Should use unitless fallback from DEFAULT_PRECISION_FIX_TOLERANCE
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[0]
         assert precision > 0.0
 
 
@@ -446,3 +467,198 @@ class TestExtractBlocksPrecisionFixEdgeCases:
 
         # Block counts should be identical
         assert result_enabled["block_counts"] == result_disabled["block_counts"]
+
+
+class TestPrecisionFixAmountParameter:
+    """Tests for precision_fix_amount parameter in get_snap_tolerances().
+
+    The precision_fix_amount parameter allows users to specify a custom precision
+    tolerance value instead of using the default from DEFAULT_PRECISION_FIX_TOLERANCE.
+    """
+
+    def test_custom_amount_used_when_provided_and_positive(self) -> None:
+        """When precision_fix_amount is provided and > 0, that value is used."""
+        detected_units = 4  # Millimeters
+        custom_amount = 0.05  # 5x the default mm tolerance
+
+        precision, gap_bridge = get_snap_tolerances(
+            detected_units,
+            None,
+            False,
+            None,
+            precision_fix_enabled=True,
+            precision_fix_amount=custom_amount,
+        )
+
+        # Should use custom amount, not default
+        assert precision == custom_amount
+        assert precision != DEFAULT_PRECISION_FIX_TOLERANCE[4]
+
+    def test_default_used_when_amount_is_none(self) -> None:
+        """When precision_fix_amount is None, use default from DEFAULT_PRECISION_FIX_TOLERANCE."""
+        detected_units = 4  # Millimeters
+
+        precision, gap_bridge = get_snap_tolerances(
+            detected_units,
+            None,
+            False,
+            None,
+            precision_fix_enabled=True,
+            precision_fix_amount=None,
+        )
+
+        # Should use default tolerance
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[4]
+
+    def test_default_used_when_amount_is_zero(self) -> None:
+        """When precision_fix_amount is 0.0, use default from DEFAULT_PRECISION_FIX_TOLERANCE."""
+        detected_units = 4  # Millimeters
+
+        precision, gap_bridge = get_snap_tolerances(
+            detected_units,
+            None,
+            False,
+            None,
+            precision_fix_enabled=True,
+            precision_fix_amount=0.0,
+        )
+
+        # Should use default tolerance (0.0 is treated as "use default")
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[4]
+
+    def test_default_used_when_amount_is_negative(self) -> None:
+        """When precision_fix_amount is negative, use default from DEFAULT_PRECISION_FIX_TOLERANCE."""
+        detected_units = 4  # Millimeters
+
+        precision, gap_bridge = get_snap_tolerances(
+            detected_units,
+            None,
+            False,
+            None,
+            precision_fix_enabled=True,
+            precision_fix_amount=-1.0,
+        )
+
+        # Should use default tolerance (negative is treated as "use default")
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[4]
+
+    def test_custom_amount_with_all_unit_types(self) -> None:
+        """Custom amount should work regardless of unit type (bypasses unit-specific default)."""
+        supported_units = [0, 1, 2, 4, 5, 6]
+        custom_amount = 0.123
+
+        for unit_code in supported_units:
+            precision, _ = get_snap_tolerances(
+                unit_code,
+                None,
+                False,
+                None,
+                precision_fix_enabled=True,
+                precision_fix_amount=custom_amount,
+            )
+
+            # All should use the same custom amount regardless of unit
+            assert precision == custom_amount, (
+                f"Unit {unit_code} should use custom amount {custom_amount}"
+            )
+
+    def test_custom_amount_with_unit_override(self) -> None:
+        """Custom amount should be used even with unit override specified."""
+        detected_units = 4  # Millimeters
+        override_units = 6  # Override to Meters
+        custom_amount = 0.02
+
+        precision, _ = get_snap_tolerances(
+            detected_units,
+            override_units,
+            False,
+            None,
+            precision_fix_enabled=True,
+            precision_fix_amount=custom_amount,
+        )
+
+        # Should use custom amount, not meter default
+        assert precision == custom_amount
+        assert precision != DEFAULT_PRECISION_FIX_TOLERANCE[6]
+
+    def test_custom_amount_ignored_when_precision_fix_disabled(self) -> None:
+        """When precision_fix_enabled=False, custom amount is ignored and 0.0 is returned."""
+        detected_units = 4  # Millimeters
+        custom_amount = 0.05
+
+        precision, gap_bridge = get_snap_tolerances(
+            detected_units,
+            None,
+            False,
+            None,
+            precision_fix_enabled=False,
+            precision_fix_amount=custom_amount,
+        )
+
+        # Should return 0.0 when disabled, ignoring custom amount
+        assert precision == 0.0
+        assert precision != custom_amount
+
+    def test_small_custom_amount(self) -> None:
+        """Very small custom amounts should work correctly."""
+        detected_units = 4  # Millimeters
+        custom_amount = 1e-9  # Very small
+
+        precision, _ = get_snap_tolerances(
+            detected_units,
+            None,
+            False,
+            None,
+            precision_fix_enabled=True,
+            precision_fix_amount=custom_amount,
+        )
+
+        assert precision == custom_amount
+
+    def test_large_custom_amount(self) -> None:
+        """Large custom amounts should work correctly."""
+        detected_units = 4  # Millimeters
+        custom_amount = 5.0  # Large (within PRECISION_FIX_MAX)
+
+        precision, _ = get_snap_tolerances(
+            detected_units,
+            None,
+            False,
+            None,
+            precision_fix_enabled=True,
+            precision_fix_amount=custom_amount,
+        )
+
+        assert precision == custom_amount
+
+    def test_custom_precision_with_custom_gap_bridge(self) -> None:
+        """Both custom precision_fix_amount and gap_bridge_amount should work together."""
+        detected_units = 4  # Millimeters
+        custom_precision = 0.025
+        custom_gap = 1.5
+
+        precision, gap_bridge = get_snap_tolerances(
+            detected_units,
+            None,
+            True,  # gap_bridge_enabled
+            custom_gap,
+            precision_fix_enabled=True,
+            precision_fix_amount=custom_precision,
+        )
+
+        # Both should use custom values
+        assert precision == custom_precision
+        assert gap_bridge == custom_gap
+
+    def test_backward_compatibility_no_precision_fix_amount_param(self) -> None:
+        """Function should work without precision_fix_amount parameter (backward compatible)."""
+        detected_units = 4  # Millimeters
+
+        # Call without precision_fix_amount
+        precision, gap_bridge = get_snap_tolerances(
+            detected_units, None, False, None, precision_fix_enabled=True
+        )
+
+        # Should use default from DEFAULT_PRECISION_FIX_TOLERANCE
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[4]
+        assert precision > 0.0

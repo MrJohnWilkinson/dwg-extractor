@@ -222,3 +222,34 @@ GAP_BRIDGE_MIN: float = 0.0
 GAP_BRIDGE_MAX: float = 10000.0
 """Maximum gap bridge amount. Large value allows extreme cases while
 preventing overflow issues in calculations."""
+
+# Stage 1: User-configurable precision fix tolerances at practical CAD scale
+# These are 4-5 orders of magnitude larger than PRECISION_SNAP_TOLERANCE
+# to fix both floating-point artifacts AND small coordinate precision errors
+# common in CAD drawings (e.g., 0.001mm coordinate differences)
+DEFAULT_PRECISION_FIX_TOLERANCE: dict[int, float] = {
+    0: 0.01,  # Unitless: use mm-equivalent default
+    1: 0.0005,  # Inches: 0.5 mils (half a thousandth)
+    2: 0.00005,  # Feet: ~0.5 mils in feet
+    4: 0.01,  # Millimeters: 0.01mm (10 micrometers) - typical CAD precision
+    5: 0.001,  # Centimeters: 0.001cm = 0.01mm
+    6: 0.00001,  # Meters: 0.00001m = 0.01mm
+}
+"""Stage 1 user-configurable precision fix tolerances at practical CAD scale.
+These tolerances are significantly larger than PRECISION_SNAP_TOLERANCE to fix
+both floating-point artifacts AND small coordinate precision errors common in
+CAD drawings. Values represent typical CAD drawing precision for each unit system:
+- MM: 0.01mm (10 micrometers) - typical CAD precision
+- IN: 0.0005in (0.5 mils) - half a thousandth
+- FT: 0.00005ft (~0.5 mils in feet)
+- CM: 0.001cm = 0.01mm
+- M: 0.00001m = 0.01mm
+- Unitless: 0.01 (mm-equivalent default)"""
+
+# Precision fix amount input constraints for GUI slider/input
+PRECISION_FIX_MIN: float = 0.0
+"""Minimum precision fix amount (0 = use default tolerance for unit)."""
+
+PRECISION_FIX_MAX: float = 10.0
+"""Maximum precision fix amount. Conservative limit to prevent
+unreasonably large tolerance values that could merge distinct geometry."""

@@ -9,6 +9,7 @@ Tests cover:
 
 from core.constants import (
     DEFAULT_GAP_BRIDGE_TOLERANCE,
+    DEFAULT_PRECISION_FIX_TOLERANCE,
     DEFAULT_PRECISION_SNAP_TOLERANCE,
     DXF_INSUNITS_MAP,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
@@ -20,6 +21,8 @@ from core.constants import (
     GAP_BRIDGE_MIN,
     LINE_SEGMENT_THRESHOLD,
     POLYGON_COUNT_THRESHOLD,
+    PRECISION_FIX_MAX,
+    PRECISION_FIX_MIN,
     PRECISION_SNAP_TOLERANCE,
     UNIT_SELECTION_OPTIONS,
 )
@@ -134,3 +137,100 @@ class TestDrawingUnitConstants:
         )
         assert GAP_BRIDGE_MIN >= 0.0, "GAP_BRIDGE_MIN must be non-negative"
         assert GAP_BRIDGE_MAX > 0.0, "GAP_BRIDGE_MAX must be positive"
+
+
+class TestPrecisionFixToleranceConstants:
+    """Tests for user-configurable precision fix tolerance constants."""
+
+    def test_default_precision_fix_tolerance_has_all_supported_units(self) -> None:
+        """DEFAULT_PRECISION_FIX_TOLERANCE should have all supported unit codes.
+
+        Supported codes: 0 (Unitless), 1 (Inches), 2 (Feet), 4 (MM), 5 (CM), 6 (M).
+        """
+        expected_codes = {0, 1, 2, 4, 5, 6}
+        actual_codes = set(DEFAULT_PRECISION_FIX_TOLERANCE.keys())
+        assert actual_codes == expected_codes, (
+            f"Expected codes {expected_codes}, got {actual_codes}"
+        )
+
+    def test_default_precision_fix_tolerance_values_in_reasonable_range(self) -> None:
+        """DEFAULT_PRECISION_FIX_TOLERANCE values should be between 1e-6 and 1.0.
+
+        These are practical CAD tolerances, larger than PRECISION_SNAP_TOLERANCE
+        but still small enough to not merge distinct geometry.
+        """
+        for code, tolerance in DEFAULT_PRECISION_FIX_TOLERANCE.items():
+            assert 1e-6 <= tolerance <= 1.0, (
+                f"Precision fix tolerance for code {code} is {tolerance}, "
+                "expected between 1e-6 and 1.0"
+            )
+
+    def test_default_precision_fix_tolerance_appropriate_scale(self) -> None:
+        """DEFAULT_PRECISION_FIX_TOLERANCE should be at practical CAD scale.
+
+        The new tolerances are designed to be equivalent to approximately 0.01mm
+        across unit systems, which is larger than the nanometer-scale values in
+        PRECISION_SNAP_TOLERANCE for most units (MM, IN, Unitless).
+
+        Note: For meters and feet, the old tolerances were already relatively
+        large (0.0001m = 0.1mm, 0.00001ft = 0.003mm), so the new values may be
+        smaller in absolute terms but are more consistently scaled.
+        """
+        # For MM, IN, and Unitless, new tolerances should be significantly larger
+        units_with_larger_tolerance = [0, 1, 4]  # Unitless, Inches, Millimeters
+        for code in units_with_larger_tolerance:
+            new_tolerance = DEFAULT_PRECISION_FIX_TOLERANCE[code]
+            old_tolerance = PRECISION_SNAP_TOLERANCE.get(code, DEFAULT_PRECISION_SNAP_TOLERANCE)
+            assert new_tolerance > old_tolerance, (
+                f"Unit {code}: new tolerance {new_tolerance} should be > "
+                f"old tolerance {old_tolerance}"
+            )
+
+        # All new tolerances should be consistent with ~0.01mm equivalent
+        # MM: 0.01, CM: 0.001 (= 0.01mm), M: 0.00001 (= 0.01mm), IN: 0.0005 (~0.0127mm)
+        assert DEFAULT_PRECISION_FIX_TOLERANCE[4] == 0.01  # MM
+        assert DEFAULT_PRECISION_FIX_TOLERANCE[5] == 0.001  # CM = 0.01mm
+        assert DEFAULT_PRECISION_FIX_TOLERANCE[6] == 0.00001  # M = 0.01mm
+
+    def test_precision_fix_min_less_than_max(self) -> None:
+        """PRECISION_FIX_MIN should be less than PRECISION_FIX_MAX."""
+        assert PRECISION_FIX_MIN < PRECISION_FIX_MAX, (
+            f"PRECISION_FIX_MIN ({PRECISION_FIX_MIN}) must be < "
+            f"PRECISION_FIX_MAX ({PRECISION_FIX_MAX})"
+        )
+
+    def test_precision_fix_min_non_negative(self) -> None:
+        """PRECISION_FIX_MIN must be non-negative (>= 0.0)."""
+        assert PRECISION_FIX_MIN >= 0.0, (
+            f"PRECISION_FIX_MIN must be >= 0.0, got {PRECISION_FIX_MIN}"
+        )
+
+    def test_precision_fix_max_positive(self) -> None:
+        """PRECISION_FIX_MAX must be positive (> 0.0)."""
+        assert PRECISION_FIX_MAX > 0.0, (
+            f"PRECISION_FIX_MAX must be > 0.0, got {PRECISION_FIX_MAX}"
+        )
+
+    def test_precision_fix_max_reasonable_limit(self) -> None:
+        """PRECISION_FIX_MAX should be a reasonable value (10.0 as per spec)."""
+        assert PRECISION_FIX_MAX == 10.0, (
+            f"PRECISION_FIX_MAX should be 10.0, got {PRECISION_FIX_MAX}"
+        )
+
+    def test_default_precision_fix_tolerance_mm_value(self) -> None:
+        """MM tolerance should be 0.01mm (10 micrometers)."""
+        assert DEFAULT_PRECISION_FIX_TOLERANCE[4] == 0.01, (
+            f"MM tolerance should be 0.01, got {DEFAULT_PRECISION_FIX_TOLERANCE[4]}"
+        )
+
+    def test_default_precision_fix_tolerance_inch_value(self) -> None:
+        """Inch tolerance should be 0.0005in (0.5 mils)."""
+        assert DEFAULT_PRECISION_FIX_TOLERANCE[1] == 0.0005, (
+            f"Inch tolerance should be 0.0005, got {DEFAULT_PRECISION_FIX_TOLERANCE[1]}"
+        )
+
+    def test_default_precision_fix_tolerance_meter_value(self) -> None:
+        """Meter tolerance should be 0.00001m (= 0.01mm)."""
+        assert DEFAULT_PRECISION_FIX_TOLERANCE[6] == 0.00001, (
+            f"Meter tolerance should be 0.00001, got {DEFAULT_PRECISION_FIX_TOLERANCE[6]}"
+        )

@@ -23,9 +23,8 @@ from ezdxf.document import Drawing
 
 from .constants import (
     DEFAULT_GAP_BRIDGE_TOLERANCE,
-    DEFAULT_PRECISION_SNAP_TOLERANCE,
+    DEFAULT_PRECISION_FIX_TOLERANCE,
     DXF_INSUNITS_MAP,
-    PRECISION_SNAP_TOLERANCE,
     SUPPORTED_EXTENSIONS,
 )
 from .geometry import (
@@ -117,6 +116,7 @@ def get_snap_tolerances(
     gap_bridge_enabled: bool,
     gap_bridge_amount: float | None,
     precision_fix_enabled: bool = True,
+    precision_fix_amount: float | None = None,
 ) -> tuple[float, float]:
     """
     Calculate appropriate snap tolerances based on units and user settings.
@@ -133,33 +133,39 @@ def get_snap_tolerances(
         precision_fix_enabled: Whether precision fix (Stage 1) snapping is enabled.
                                When False, precision_tolerance is set to 0.0.
                                Defaults to True for backward compatibility.
+        precision_fix_amount: Custom precision fix amount. If provided and > 0, this value
+                              is used directly as the precision tolerance. If None, 0, or
+                              negative, the default from DEFAULT_PRECISION_FIX_TOLERANCE is
+                              used instead of the old PRECISION_SNAP_TOLERANCE values.
+                              Defaults to None.
 
     Returns:
         Tuple of (precision_tolerance, gap_bridge_tolerance):
-        - precision_tolerance: Returns value appropriate for the effective unit when enabled,
-                               or 0.0 when precision_fix_enabled=False
+        - precision_tolerance: Returns user-specified amount if provided and > 0,
+                               otherwise returns default from DEFAULT_PRECISION_FIX_TOLERANCE
+                               for the effective unit when enabled, or 0.0 when disabled
         - gap_bridge_tolerance: Returns 0.0 if disabled, otherwise returns user amount or default
 
     Examples:
-        >>> # Auto-detect units (mm), gap bridging disabled
+        >>> # Auto-detect units (mm), gap bridging disabled, default precision tolerance
         >>> get_snap_tolerances(4, None, False, None)
-        (1e-6, 0.0)
+        (0.01, 0.0)  # Uses new DEFAULT_PRECISION_FIX_TOLERANCE[4]
 
         >>> # Override to inches, gap bridging enabled with default
         >>> get_snap_tolerances(4, 1, True, None)
-        (1e-6, 0.01)  # Uses inch default (0.01)
+        (0.0005, 0.01)  # Uses inch default from DEFAULT_PRECISION_FIX_TOLERANCE
 
-        >>> # Override to meters, gap bridging with custom amount
-        >>> get_snap_tolerances(4, 6, True, 0.005)
-        (1e-4, 0.005)  # Uses meter precision tolerance and custom gap
+        >>> # Custom precision fix amount
+        >>> get_snap_tolerances(4, None, False, None, precision_fix_amount=0.05)
+        (0.05, 0.0)  # Uses custom precision amount
 
-        >>> # Auto-detect (override=-1), gap bridging with custom amount
-        >>> get_snap_tolerances(4, -1, True, 1.0)
-        (1e-6, 1.0)  # Uses mm precision tolerance and custom gap
-
-        >>> # Precision fix disabled
-        >>> get_snap_tolerances(4, None, False, None, precision_fix_enabled=False)
+        >>> # Precision fix disabled (ignores precision_fix_amount)
+        >>> get_snap_tolerances(4, None, False, None, precision_fix_enabled=False, precision_fix_amount=0.05)
         (0.0, 0.0)  # Precision tolerance is 0.0 when disabled
+
+        >>> # precision_fix_amount=0 uses default
+        >>> get_snap_tolerances(4, None, False, None, precision_fix_amount=0.0)
+        (0.01, 0.0)  # Uses DEFAULT_PRECISION_FIX_TOLERANCE[4] when amount is 0
     """
     # Determine effective units: use override if provided and not -1
     if override_units is not None and override_units != -1:
@@ -173,12 +179,20 @@ def get_snap_tolerances(
             f"Using detected units: {DXF_INSUNITS_MAP.get(effective_units, f'Unknown ({effective_units})')}"
         )
 
-    # Calculate precision tolerance from PRECISION_SNAP_TOLERANCE dict with fallback
+    # Calculate precision tolerance
     # When precision_fix_enabled=False, set to 0.0 to disable Stage 1 snapping
     if precision_fix_enabled:
-        precision_tolerance = PRECISION_SNAP_TOLERANCE.get(
-            effective_units, DEFAULT_PRECISION_SNAP_TOLERANCE
-        )
+        if precision_fix_amount is not None and precision_fix_amount > 0:
+            # Use user-specified custom amount
+            precision_tolerance = precision_fix_amount
+            logger.debug(f"Using custom precision fix amount: {precision_tolerance}")
+        else:
+            # Use new DEFAULT_PRECISION_FIX_TOLERANCE dict with fallback
+            precision_tolerance = DEFAULT_PRECISION_FIX_TOLERANCE.get(
+                effective_units,
+                DEFAULT_PRECISION_FIX_TOLERANCE.get(0, 0.01),  # Fallback to unitless
+            )
+            logger.debug(f"Using default precision fix tolerance: {precision_tolerance}")
     else:
         precision_tolerance = 0.0
 

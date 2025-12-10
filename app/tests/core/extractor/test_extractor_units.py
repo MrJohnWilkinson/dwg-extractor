@@ -12,8 +12,7 @@ from unittest.mock import MagicMock
 
 from core.constants import (
     DEFAULT_GAP_BRIDGE_TOLERANCE,
-    DEFAULT_PRECISION_SNAP_TOLERANCE,
-    PRECISION_SNAP_TOLERANCE,
+    DEFAULT_PRECISION_FIX_TOLERANCE,
 )
 from core.extractor import _get_drawing_units, extract_blocks, get_snap_tolerances
 
@@ -114,10 +113,18 @@ class TestGetDrawingUnits:
 
 
 class TestGetSnapTolerances:
-    """Tests for get_snap_tolerances function."""
+    """Tests for get_snap_tolerances function.
+
+    NOTE: These tests now use DEFAULT_PRECISION_FIX_TOLERANCE (practical CAD scale)
+    instead of PRECISION_SNAP_TOLERANCE (nanometer scale). The function now uses
+    the new larger tolerances by default for better coordinate precision error correction.
+    """
 
     def test_auto_detect_uses_detected_units(self) -> None:
-        """When override is None, should use detected units for tolerance calculation."""
+        """When override is None, should use detected units for tolerance calculation.
+
+        Uses DEFAULT_PRECISION_FIX_TOLERANCE which has practical CAD-scale tolerances.
+        """
         detected_units = 4  # Millimeters
         override_units = None
         gap_bridge_enabled = False
@@ -127,8 +134,8 @@ class TestGetSnapTolerances:
             detected_units, override_units, gap_bridge_enabled, gap_bridge_amount
         )
 
-        # Should use mm tolerance
-        assert precision == PRECISION_SNAP_TOLERANCE[4]
+        # Should use mm tolerance from DEFAULT_PRECISION_FIX_TOLERANCE
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[4]
         assert gap_bridge == 0.0
 
     def test_override_minus_one_uses_detected_units(self) -> None:
@@ -142,8 +149,8 @@ class TestGetSnapTolerances:
             detected_units, override_units, gap_bridge_enabled, gap_bridge_amount
         )
 
-        # Should use mm tolerance (detected)
-        assert precision == PRECISION_SNAP_TOLERANCE[4]
+        # Should use mm tolerance (detected) from DEFAULT_PRECISION_FIX_TOLERANCE
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[4]
         assert gap_bridge == 0.0
 
     def test_override_replaces_detected_units(self) -> None:
@@ -157,8 +164,8 @@ class TestGetSnapTolerances:
             detected_units, override_units, gap_bridge_enabled, gap_bridge_amount
         )
 
-        # Should use meter tolerance (override)
-        assert precision == PRECISION_SNAP_TOLERANCE[6]
+        # Should use meter tolerance (override) from DEFAULT_PRECISION_FIX_TOLERANCE
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[6]
         assert gap_bridge == 0.0
 
     def test_gap_bridge_disabled_returns_zero(self) -> None:
@@ -230,7 +237,10 @@ class TestGetSnapTolerances:
         assert gap_bridge == DEFAULT_GAP_BRIDGE_TOLERANCE[4]
 
     def test_unknown_unit_uses_fallback_tolerance(self) -> None:
-        """When unit code is unknown, should use fallback tolerances."""
+        """When unit code is unknown, should use fallback tolerances.
+
+        Falls back to DEFAULT_PRECISION_FIX_TOLERANCE[0] (unitless default of 0.01).
+        """
         detected_units = 99  # Unknown unit code
         override_units = None
         gap_bridge_enabled = True
@@ -240,13 +250,16 @@ class TestGetSnapTolerances:
             detected_units, override_units, gap_bridge_enabled, gap_bridge_amount
         )
 
-        # Should use default fallback tolerance
-        assert precision == DEFAULT_PRECISION_SNAP_TOLERANCE
+        # Should use unitless fallback from DEFAULT_PRECISION_FIX_TOLERANCE
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[0]
         # Should use unitless (0) default for gap bridge
         assert gap_bridge == DEFAULT_GAP_BRIDGE_TOLERANCE[0]
 
     def test_all_supported_units_have_tolerances(self) -> None:
-        """All supported unit codes should return valid tolerances."""
+        """All supported unit codes should return valid tolerances.
+
+        Uses DEFAULT_PRECISION_FIX_TOLERANCE which has practical CAD-scale tolerances.
+        """
         supported_units = [0, 1, 2, 4, 5, 6]
 
         for unit_code in supported_units:
@@ -256,7 +269,7 @@ class TestGetSnapTolerances:
 
             assert precision > 0, f"Unit {unit_code} should have positive precision tolerance"
             assert gap_bridge > 0, f"Unit {unit_code} should have positive gap bridge default"
-            assert precision == PRECISION_SNAP_TOLERANCE[unit_code]
+            assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[unit_code]
             assert gap_bridge == DEFAULT_GAP_BRIDGE_TOLERANCE[unit_code]
 
     def test_override_with_gap_bridge_custom_amount(self) -> None:
@@ -270,8 +283,8 @@ class TestGetSnapTolerances:
             detected_units, override_units, gap_bridge_enabled, gap_bridge_amount
         )
 
-        # Should use inch precision tolerance
-        assert precision == PRECISION_SNAP_TOLERANCE[1]
+        # Should use inch precision tolerance from DEFAULT_PRECISION_FIX_TOLERANCE
+        assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[1]
         # Should use custom amount
         assert gap_bridge == 0.05
 
@@ -453,7 +466,10 @@ class TestGetSnapTolerancesIndependence:
         assert gap_on == gap_off == 2.0
 
     def test_precision_fix_unaffected_by_gap_bridge_enabled(self) -> None:
-        """Precision tolerance should be the same regardless of gap_bridge setting."""
+        """Precision tolerance should be the same regardless of gap_bridge setting.
+
+        Uses DEFAULT_PRECISION_FIX_TOLERANCE which has practical CAD-scale tolerances.
+        """
         detected_units = 4  # Millimeters
         override_units = None
 
@@ -476,10 +492,13 @@ class TestGetSnapTolerancesIndependence:
         )
 
         # Precision tolerance should be identical regardless of gap_bridge setting
-        assert precision_on == precision_off == PRECISION_SNAP_TOLERANCE[4]
+        assert precision_on == precision_off == DEFAULT_PRECISION_FIX_TOLERANCE[4]
 
     def test_all_four_combinations(self) -> None:
-        """Test all four combinations of precision_fix and gap_bridge settings."""
+        """Test all four combinations of precision_fix and gap_bridge settings.
+
+        Uses DEFAULT_PRECISION_FIX_TOLERANCE which has practical CAD-scale tolerances.
+        """
         detected_units = 1  # Inches
         override_units = None
         custom_gap = 0.05
@@ -495,7 +514,7 @@ class TestGetSnapTolerancesIndependence:
         p2, g2 = get_snap_tolerances(
             detected_units, override_units, False, None, precision_fix_enabled=True
         )
-        assert p2 == PRECISION_SNAP_TOLERANCE[1]
+        assert p2 == DEFAULT_PRECISION_FIX_TOLERANCE[1]
         assert g2 == 0.0
 
         # Gap bridge only
@@ -509,5 +528,5 @@ class TestGetSnapTolerancesIndependence:
         p4, g4 = get_snap_tolerances(
             detected_units, override_units, True, custom_gap, precision_fix_enabled=True
         )
-        assert p4 == PRECISION_SNAP_TOLERANCE[1]
+        assert p4 == DEFAULT_PRECISION_FIX_TOLERANCE[1]
         assert g4 == custom_gap
