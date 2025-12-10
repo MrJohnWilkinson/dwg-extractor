@@ -28,7 +28,7 @@ from shapely import Point
 from shapely import Polygon as ShapelyPolygon
 from shapely.geometry import LineString
 from shapely.geometry.base import BaseGeometry
-from shapely.ops import polygonize, unary_union
+from shapely.ops import polygonize, snap, unary_union
 
 from .constants import (
     ARC_FLATTENING_SAGITTA,
@@ -515,17 +515,30 @@ def _extract_all_edges(block_def: BlockLayout) -> list[LineString]:
 def _extract_paint_bucket_regions(
     block_def: BlockLayout,
     abort_event: threading.Event | None = None,
+    precision_tolerance: float = 1e-6,
+    gap_bridge_tolerance: float = 0.0,
 ) -> list[Polygon]:
     """
     Extract all visual regions using paint-bucket algorithm.
 
     Combines all edges (LWPOLYLINE + LINE) into a unified edge set,
-    splits at intersections using unary_union, and finds all closed
-    regions using polygonize.
+    splits at intersections using unary_union, applies two-stage
+    coordinate snapping, and finds all closed regions using polygonize.
+
+    Two-stage snapping:
+    - Stage 1 (Precision): Automatically fixes floating-point artifacts at
+      line endpoints using a very small tolerance (nanometer scale).
+    - Stage 2 (Gap Bridge): Optionally bridges intentional design gaps when
+      gap_bridge_tolerance > 0.
 
     Args:
         block_def: ezdxf block definition object
         abort_event: Optional threading.Event to signal abort request
+        precision_tolerance: Stage 1 snap tolerance for fixing floating-point
+            artifacts. Default 1e-6 (appropriate for most unit systems).
+            Set to 0 to disable Stage 1 snapping.
+        gap_bridge_tolerance: Stage 2 snap tolerance for bridging intentional
+            gaps. Default 0.0 (disabled). Set > 0 to bridge gaps up to this size.
 
     Returns:
         List of Polygon objects (coordinate tuples) representing all visual regions.
@@ -545,6 +558,16 @@ def _extract_paint_bucket_regions(
     merged = unary_union(edges)
     if merged.is_empty:
         return []
+
+    # Stage 1: Precision snapping to fix floating-point artifacts
+    if precision_tolerance > 0:
+        merged = snap(merged, merged, precision_tolerance)
+        logger.debug(f"Applied Stage 1 precision snap: tolerance={precision_tolerance}")
+
+    # Stage 2: Gap bridging for intentional design gaps (when enabled)
+    if gap_bridge_tolerance > 0:
+        merged = snap(merged, merged, gap_bridge_tolerance)
+        logger.debug(f"Applied Stage 2 gap bridge: tolerance={gap_bridge_tolerance}")
 
     line_segments = list(merged.geoms) if hasattr(merged, "geoms") else [merged]
     polygons = list(polygonize(line_segments))
@@ -830,6 +853,8 @@ def _detect_content_zone(
     block_def: BlockLayout,
     block_bbox: tuple[float, float, float, float],
     abort_event: threading.Event | None = None,
+    precision_tolerance: float = 1e-6,
+    gap_bridge_tolerance: float = 0.0,
 ) -> ContentZoneData:
     """
     Detect content zone and calculate trim values.
@@ -837,6 +862,10 @@ def _detect_content_zone(
     The content zone is the closed polygon with the largest net area (own area
     minus areas of contained polygons). Trim values are derived from the
     content zone bounding box relative to the block bounding box.
+
+    Two-stage coordinate snapping is applied during region detection:
+    - Stage 1 (Precision): Automatically fixes floating-point artifacts
+    - Stage 2 (Gap Bridge): Optionally bridges intentional gaps when enabled
 
     Performance safeguards:
     - Skips region detection if > LINE_SEGMENT_THRESHOLD edges (5000)
@@ -846,6 +875,10 @@ def _detect_content_zone(
         block_def: ezdxf block definition object
         block_bbox: Block bounding box as (min_x, min_y, max_x, max_y)
         abort_event: Optional threading.Event to signal abort request
+        precision_tolerance: Stage 1 snap tolerance for fixing floating-point
+            artifacts. Default 1e-6. Set to 0 to disable Stage 1 snapping.
+        gap_bridge_tolerance: Stage 2 snap tolerance for bridging intentional
+            gaps. Default 0.0 (disabled). Set > 0 to bridge gaps.
 
     Returns:
         ContentZoneData with detected trim values, or empty data if no
@@ -875,7 +908,9 @@ def _detect_content_zone(
         )
 
     # Use paint-bucket algorithm for accurate region detection
-    all_shapes = _extract_paint_bucket_regions(block_def, abort_event)
+    all_shapes = _extract_paint_bucket_regions(
+        block_def, abort_event, precision_tolerance, gap_bridge_tolerance
+    )
     polygon_count = len(all_shapes)
     logger.debug(f"[{block_name}] Found {polygon_count} paint-bucket regions")
 
