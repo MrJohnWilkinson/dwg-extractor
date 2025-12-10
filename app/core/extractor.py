@@ -23,6 +23,8 @@ from ezdxf.document import Drawing
 
 from .constants import (
     DEFAULT_GAP_BRIDGE_TOLERANCE,
+    DEFAULT_MIN_AREA_FILTER,
+    DEFAULT_MIN_SIDE_FILTER,
     DEFAULT_PRECISION_FIX_TOLERANCE,
     DXF_INSUNITS_MAP,
     SUPPORTED_EXTENSIONS,
@@ -218,6 +220,91 @@ def get_snap_tolerances(
     )
 
     return (precision_tolerance, gap_bridge_tolerance)
+
+
+def get_filter_values(
+    detected_units: int,
+    override_units: int | None,
+    min_area_enabled: bool,
+    min_area_amount: float | None,
+    min_side_enabled: bool,
+    min_side_amount: float | None,
+) -> tuple[float, float]:
+    """
+    Calculate min area and min side filter values based on settings.
+
+    This function computes filter values for polygon filtering in content zone detection:
+    - When a filter is disabled, returns 0.0 (no filtering)
+    - When enabled with a positive amount, uses that amount
+    - When enabled without an amount (None, 0, or negative), uses unit-specific default
+
+    Args:
+        detected_units: The unit code detected from the DXF file's $INSUNITS header
+        override_units: User-selected unit override. If None or -1, use detected_units
+        min_area_enabled: Whether minimum area filtering is enabled
+        min_area_amount: Custom min area amount. If None or <= 0, use default for unit
+        min_side_enabled: Whether minimum side filtering is enabled
+        min_side_amount: Custom min side amount. If None or <= 0, use default for unit
+
+    Returns:
+        Tuple of (min_area, min_side):
+        - min_area: Returns 0.0 if disabled, user amount if provided and > 0,
+                    otherwise default from DEFAULT_MIN_AREA_FILTER for the effective unit
+        - min_side: Returns 0.0 if disabled, user amount if provided and > 0,
+                    otherwise default from DEFAULT_MIN_SIDE_FILTER for the effective unit
+
+    Examples:
+        >>> # Both filters disabled
+        >>> get_filter_values(4, None, False, None, False, None)
+        (0.0, 0.0)
+
+        >>> # Area filter enabled with default, side filter disabled
+        >>> get_filter_values(4, None, True, None, False, None)
+        (100.0, 0.0)  # Uses DEFAULT_MIN_AREA_FILTER[4]
+
+        >>> # Both enabled with custom amounts
+        >>> get_filter_values(4, None, True, 50.0, True, 5.0)
+        (50.0, 5.0)
+
+        >>> # Unit override affects default values
+        >>> get_filter_values(4, 1, True, None, True, None)
+        (0.01, 0.5)  # Uses inch defaults from constants
+    """
+    # Determine effective units: use override if provided and not -1
+    if override_units is not None and override_units != -1:
+        effective_units = override_units
+        logger.debug(
+            f"Using override units for filters: {DXF_INSUNITS_MAP.get(effective_units, f'Unknown ({effective_units})')}"
+        )
+    else:
+        effective_units = detected_units
+        logger.debug(
+            f"Using detected units for filters: {DXF_INSUNITS_MAP.get(effective_units, f'Unknown ({effective_units})')}"
+        )
+
+    # Calculate min area filter value
+    if not min_area_enabled:
+        min_area = 0.0
+    elif min_area_amount is not None and min_area_amount > 0:
+        min_area = min_area_amount
+        logger.debug(f"Using custom min area filter amount: {min_area}")
+    else:
+        min_area = DEFAULT_MIN_AREA_FILTER.get(effective_units, 100.0)
+        logger.debug(f"Using default min area filter: {min_area}")
+
+    # Calculate min side filter value
+    if not min_side_enabled:
+        min_side = 0.0
+    elif min_side_amount is not None and min_side_amount > 0:
+        min_side = min_side_amount
+        logger.debug(f"Using custom min side filter amount: {min_side}")
+    else:
+        min_side = DEFAULT_MIN_SIDE_FILTER.get(effective_units, 10.0)
+        logger.debug(f"Using default min side filter: {min_side}")
+
+    logger.debug(f"Calculated filter values: min_area={min_area}, min_side={min_side}")
+
+    return (min_area, min_side)
 
 
 def _clean_mtext_content(entity: Any) -> str:
@@ -868,6 +955,10 @@ def extract_blocks(
     gap_bridge_amount: float | None = None,
     precision_fix_enabled: bool = True,
     precision_fix_amount: float | None = None,
+    min_area_filter_enabled: bool = False,
+    min_area_filter_amount: float | None = None,
+    min_side_filter_enabled: bool = False,
+    min_side_filter_amount: float | None = None,
 ) -> ExtractionResult:
     """
     Extract comprehensive CAD analysis from a DXF file.
@@ -903,6 +994,20 @@ def extract_blocks(
                               for the unit. If None, 0, or negative, uses the
                               default from DEFAULT_PRECISION_FIX_TOLERANCE.
                               Defaults to None.
+        min_area_filter_enabled: Enable minimum area filtering for content zone detection.
+                                 When True, polygons with area below threshold are filtered out.
+                                 Defaults to False.
+        min_area_filter_amount: Custom minimum area threshold. If provided and > 0, this value
+                                is used. If None, 0, or negative, uses the default from
+                                DEFAULT_MIN_AREA_FILTER for the effective unit.
+                                Defaults to None.
+        min_side_filter_enabled: Enable minimum side filtering for content zone detection.
+                                 When True, polygons with shortest side below threshold are
+                                 filtered out. Defaults to False.
+        min_side_filter_amount: Custom minimum side threshold. If provided and > 0, this value
+                                is used. If None, 0, or negative, uses the default from
+                                DEFAULT_MIN_SIDE_FILTER for the effective unit.
+                                Defaults to None.
 
     Returns:
         ExtractionResult TypedDict containing all analysis data.
@@ -928,6 +1033,16 @@ def extract_blocks(
 
         >>> # With custom precision fix amount
         >>> result = extract_blocks('drawing.dxf', precision_fix_amount=0.05)
+
+        >>> # With polygon filtering enabled
+        >>> result = extract_blocks('drawing.dxf', min_area_filter_enabled=True)
+
+        >>> # With custom filter amounts
+        >>> result = extract_blocks('drawing.dxf',
+        ...     min_area_filter_enabled=True,
+        ...     min_area_filter_amount=50.0,
+        ...     min_side_filter_enabled=True,
+        ...     min_side_filter_amount=5.0)
     """
     logger.info(f"Starting block extraction from {file_path}")
 
@@ -969,6 +1084,21 @@ def extract_blocks(
             f"(units={'auto' if unit_override in (None, -1) else unit_override}, "
             f"precision_fix={'enabled' if precision_fix_enabled else 'disabled'}, "
             f"precision_fix_amount={precision_fix_amount})"
+        )
+
+        # Calculate polygon filter values
+        min_area, min_side = get_filter_values(
+            detected_units,
+            unit_override,
+            min_area_filter_enabled,
+            min_area_filter_amount,
+            min_side_filter_enabled,
+            min_side_filter_amount,
+        )
+        logger.info(
+            f"Using polygon filters: min_area={min_area}, min_side={min_side} "
+            f"(area_filter={'enabled' if min_area_filter_enabled else 'disabled'}, "
+            f"side_filter={'enabled' if min_side_filter_enabled else 'disabled'})"
         )
 
         msp = doc.modelspace()
@@ -1123,6 +1253,8 @@ def extract_blocks(
                 abort_event,
                 precision_tolerance,
                 gap_bridge_tolerance,
+                min_area,
+                min_side,
             )
             block_content_zone_data[effective_name] = content_zone_result
 
