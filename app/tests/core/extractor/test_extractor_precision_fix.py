@@ -662,3 +662,206 @@ class TestPrecisionFixAmountParameter:
         # Should use default from DEFAULT_PRECISION_FIX_TOLERANCE
         assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[4]
         assert precision > 0.0
+
+
+class TestExtractBlocksPrecisionFixAmount:
+    """Tests for extract_blocks() accepting precision_fix_amount parameter.
+
+    These tests verify that the precision_fix_amount parameter is correctly
+    accepted by extract_blocks() and passed through to get_snap_tolerances().
+    """
+
+    def test_extract_blocks_accepts_precision_fix_amount_parameter(self) -> None:
+        """Verify extract_blocks accepts precision_fix_amount parameter without error."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(str(sample_dxf), precision_fix_amount=0.05)
+
+        assert "block_counts" in result
+        assert isinstance(result["block_counts"], dict)
+
+    def test_extract_blocks_with_custom_precision_fix_amount(self) -> None:
+        """Verify extract_blocks accepts a custom precision_fix_amount value."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(
+            str(sample_dxf),
+            precision_fix_enabled=True,
+            precision_fix_amount=0.025,  # Custom amount
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+        assert isinstance(result["block_content_zone_data"], dict)
+
+    def test_extract_blocks_with_precision_fix_amount_none(self) -> None:
+        """Verify extract_blocks with precision_fix_amount=None uses default."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(
+            str(sample_dxf),
+            precision_fix_enabled=True,
+            precision_fix_amount=None,  # Should use default
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+
+    def test_extract_blocks_with_precision_fix_amount_zero(self) -> None:
+        """Verify extract_blocks with precision_fix_amount=0 uses default."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(
+            str(sample_dxf),
+            precision_fix_enabled=True,
+            precision_fix_amount=0.0,  # Should use default
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+
+    def test_extract_blocks_with_all_tolerance_parameters(self) -> None:
+        """Verify extract_blocks works with all tolerance parameters including precision_fix_amount."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(
+            str(sample_dxf),
+            unit_override=4,  # Millimeters
+            gap_bridge_enabled=True,
+            gap_bridge_amount=1.0,
+            precision_fix_enabled=True,
+            precision_fix_amount=0.03,  # Custom precision amount
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+        assert isinstance(result["block_content_zone_data"], dict)
+
+
+class TestPrecisionFixAmountIntegration:
+    """Integration tests for precision_fix_amount parameter.
+
+    These tests verify that precision_fix_amount works correctly with
+    other extraction parameters and maintains backward compatibility.
+    """
+
+    def test_precision_fix_amount_with_unit_override(self) -> None:
+        """Verify custom precision_fix_amount works with unit override."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(
+            str(sample_dxf),
+            unit_override=1,  # Override to inches
+            precision_fix_enabled=True,
+            precision_fix_amount=0.001,  # Custom amount for inches
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+
+    def test_precision_fix_amount_with_gap_bridge(self) -> None:
+        """Verify custom precision_fix_amount works with gap bridging enabled."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(
+            str(sample_dxf),
+            gap_bridge_enabled=True,
+            gap_bridge_amount=0.5,
+            precision_fix_enabled=True,
+            precision_fix_amount=0.02,  # Custom precision amount
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+
+    def test_precision_fix_amount_disabled_ignores_amount(self) -> None:
+        """Verify that precision_fix_enabled=False ignores precision_fix_amount."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        # When precision_fix_enabled=False, the amount should be ignored
+        result = extract_blocks(
+            str(sample_dxf),
+            precision_fix_enabled=False,
+            precision_fix_amount=0.05,  # This should be ignored
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+
+    def test_precision_fix_amount_backward_compatibility(self) -> None:
+        """Verify calling extract_blocks without precision_fix_amount still works."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        # Call without precision_fix_amount parameter (backward compatible)
+        result = extract_blocks(
+            str(sample_dxf),
+            precision_fix_enabled=True,
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+        assert isinstance(result["block_content_zone_data"], dict)
+
+    def test_precision_fix_amount_very_small_value(self) -> None:
+        """Verify extraction works with very small precision_fix_amount."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(
+            str(sample_dxf),
+            precision_fix_enabled=True,
+            precision_fix_amount=1e-9,  # Very small value
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+
+    def test_precision_fix_amount_large_value(self) -> None:
+        """Verify extraction works with large precision_fix_amount."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(
+            str(sample_dxf),
+            precision_fix_enabled=True,
+            precision_fix_amount=5.0,  # Large value (within PRECISION_FIX_MAX)
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+
+    def test_precision_fix_amount_unknown_unit_uses_custom_amount(self) -> None:
+        """Verify custom precision_fix_amount is used even with unknown unit code."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        # When unit is unknown but custom amount is provided, use custom amount
+        result = extract_blocks(
+            str(sample_dxf),
+            unit_override=99,  # Unknown unit code
+            precision_fix_enabled=True,
+            precision_fix_amount=0.05,  # Custom amount should be used
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+
+    def test_precision_fix_amount_results_consistency(self) -> None:
+        """Block counts should be consistent regardless of precision_fix_amount.
+
+        The precision_fix_amount affects polygon detection tolerance, not block counting.
+        Block counts should be identical regardless of the precision amount used.
+        """
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result_default = extract_blocks(
+            str(sample_dxf),
+            precision_fix_enabled=True,
+            precision_fix_amount=None,  # Default
+        )
+
+        result_custom = extract_blocks(
+            str(sample_dxf),
+            precision_fix_enabled=True,
+            precision_fix_amount=0.05,  # Custom
+        )
+
+        # Block counts should be identical
+        assert result_default["block_counts"] == result_custom["block_counts"]

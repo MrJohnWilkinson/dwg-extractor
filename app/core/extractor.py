@@ -867,6 +867,7 @@ def extract_blocks(
     gap_bridge_enabled: bool = False,
     gap_bridge_amount: float | None = None,
     precision_fix_enabled: bool = True,
+    precision_fix_amount: float | None = None,
 ) -> ExtractionResult:
     """
     Extract comprehensive CAD analysis from a DXF file.
@@ -897,6 +898,11 @@ def extract_blocks(
                                applies precision tolerance to fix floating-point
                                artifacts. When False, disables precision snapping.
                                Defaults to True for backward compatibility.
+        precision_fix_amount: Custom precision fix amount. If provided and > 0,
+                              this value is used instead of the default tolerance
+                              for the unit. If None, 0, or negative, uses the
+                              default from DEFAULT_PRECISION_FIX_TOLERANCE.
+                              Defaults to None.
 
     Returns:
         ExtractionResult TypedDict containing all analysis data.
@@ -919,6 +925,9 @@ def extract_blocks(
         {'Piping': 200, 'Equipment': 31}
         >>> result['block_trimming_data']
         {'SHELF_4FT': {'native_width': 1200.0, 'native_height': 600.0, 'vertical_segments': [50.0, 1100.0, 50.0], 'horizontal_segments': [25.0, 550.0, 25.0]}}
+
+        >>> # With custom precision fix amount
+        >>> result = extract_blocks('drawing.dxf', precision_fix_amount=0.05)
     """
     logger.info(f"Starting block extraction from {file_path}")
 
@@ -952,12 +961,14 @@ def extract_blocks(
             gap_bridge_enabled,
             gap_bridge_amount,
             precision_fix_enabled,
+            precision_fix_amount,
         )
         logger.info(
             f"Using tolerances: precision={precision_tolerance}, "
             f"gap_bridge={gap_bridge_tolerance} "
             f"(units={'auto' if unit_override in (None, -1) else unit_override}, "
-            f"precision_fix={'enabled' if precision_fix_enabled else 'disabled'})"
+            f"precision_fix={'enabled' if precision_fix_enabled else 'disabled'}, "
+            f"precision_fix_amount={precision_fix_amount})"
         )
 
         msp = doc.modelspace()

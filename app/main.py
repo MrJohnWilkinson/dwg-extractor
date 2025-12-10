@@ -383,12 +383,14 @@ class DXFExtractorApp(ctk.CTk):
             gap_bridge_enabled = self.gap_bridge_var.get()
             gap_bridge_amount = self._get_gap_bridge_amount()
             precision_fix_enabled = self.precision_fix_var.get()
+            precision_fix_amount = self._get_precision_fix_amount()
 
             self.logger.info(
                 f"Extraction settings: unit_override={unit_override}, "
                 f"gap_bridge_enabled={gap_bridge_enabled}, "
                 f"gap_bridge_amount={gap_bridge_amount}, "
-                f"precision_fix_enabled={precision_fix_enabled}"
+                f"precision_fix_enabled={precision_fix_enabled}, "
+                f"precision_fix_amount={precision_fix_amount}"
             )
 
             # Step 1: Load file
@@ -404,6 +406,7 @@ class DXFExtractorApp(ctk.CTk):
                 gap_bridge_enabled=gap_bridge_enabled,
                 gap_bridge_amount=gap_bridge_amount,
                 precision_fix_enabled=precision_fix_enabled,
+                precision_fix_amount=precision_fix_amount,
             )
 
             # Check for empty results
