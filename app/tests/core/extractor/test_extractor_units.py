@@ -4,8 +4,10 @@ Tests for unit detection and tolerance calculation functions.
 Tests cover:
 - _get_drawing_units() function for reading $INSUNITS from DXF header
 - get_snap_tolerances() function for calculating appropriate tolerances
+- extract_blocks() tolerance parameter passing
 """
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 from core.constants import (
@@ -13,7 +15,11 @@ from core.constants import (
     DEFAULT_PRECISION_SNAP_TOLERANCE,
     PRECISION_SNAP_TOLERANCE,
 )
-from core.extractor import _get_drawing_units, get_snap_tolerances
+from core.extractor import _get_drawing_units, extract_blocks, get_snap_tolerances
+
+
+# Test assets directory
+ASSETS_DIR = Path(__file__).parent.parent.parent / "assets"
 
 
 class TestGetDrawingUnits:
@@ -268,3 +274,148 @@ class TestGetSnapTolerances:
         assert precision == PRECISION_SNAP_TOLERANCE[1]
         # Should use custom amount
         assert gap_bridge == 0.05
+
+
+class TestExtractBlocksToleranceParameters:
+    """Tests for extract_blocks() tolerance parameter acceptance."""
+
+    def test_extract_blocks_accepts_unit_override_parameter(self) -> None:
+        """Verify extract_blocks accepts unit_override parameter without error."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        # Should not raise any exception
+        result = extract_blocks(str(sample_dxf), unit_override=4)
+
+        assert "block_counts" in result
+
+    def test_extract_blocks_accepts_gap_bridge_enabled_parameter(self) -> None:
+        """Verify extract_blocks accepts gap_bridge_enabled parameter without error."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        # Should not raise any exception
+        result = extract_blocks(str(sample_dxf), gap_bridge_enabled=True)
+
+        assert "block_counts" in result
+
+    def test_extract_blocks_accepts_gap_bridge_amount_parameter(self) -> None:
+        """Verify extract_blocks accepts gap_bridge_amount parameter without error."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        # Should not raise any exception
+        result = extract_blocks(str(sample_dxf), gap_bridge_amount=1.0)
+
+        assert "block_counts" in result
+
+    def test_extract_blocks_default_parameters_work(self) -> None:
+        """Verify extract_blocks works without new parameters (backward compatibility)."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        # Should work exactly as before with no new parameters
+        result = extract_blocks(str(sample_dxf))
+
+        assert "block_counts" in result
+        assert "block_content_zone_data" in result
+
+
+class TestExtractBlocksToleranceIntegration:
+    """Integration tests for extract_blocks() tolerance parameter propagation."""
+
+    def test_extract_blocks_with_unit_override(self) -> None:
+        """Call extract_blocks with unit_override=4 (mm), verify no errors."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(str(sample_dxf), unit_override=4)
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+        assert isinstance(result["block_content_zone_data"], dict)
+
+    def test_extract_blocks_with_gap_bridge_enabled(self) -> None:
+        """Call extract_blocks with gap_bridge_enabled=True, verify no errors."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(str(sample_dxf), gap_bridge_enabled=True)
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+
+    def test_extract_blocks_with_custom_gap_amount(self) -> None:
+        """Call extract_blocks with gap_bridge_amount=1.0, verify no errors."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(
+            str(sample_dxf), gap_bridge_enabled=True, gap_bridge_amount=1.0
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+
+    def test_extract_blocks_with_all_tolerance_params(self) -> None:
+        """Call extract_blocks with all three new params set."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        result = extract_blocks(
+            str(sample_dxf),
+            unit_override=1,  # Inches
+            gap_bridge_enabled=True,
+            gap_bridge_amount=0.05,
+        )
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+        assert isinstance(result["block_content_zone_data"], dict)
+
+
+class TestExtractBlocksToleranceEdgeCases:
+    """Edge case tests for extract_blocks() tolerance parameters."""
+
+    def test_extract_blocks_unit_override_minus_one_uses_auto(self) -> None:
+        """Verify -1 behaves like None (auto-detect)."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        # Both should produce the same results
+        result_auto = extract_blocks(str(sample_dxf), unit_override=None)
+        result_minus_one = extract_blocks(str(sample_dxf), unit_override=-1)
+
+        # Results should be equivalent (same block counts)
+        assert result_auto["block_counts"] == result_minus_one["block_counts"]
+
+    def test_extract_blocks_gap_bridge_disabled_ignores_amount(self) -> None:
+        """Verify amount is ignored when gap bridging is disabled."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        # These should produce equivalent results since gap bridging is disabled
+        result_no_amount = extract_blocks(
+            str(sample_dxf), gap_bridge_enabled=False, gap_bridge_amount=None
+        )
+        result_with_amount = extract_blocks(
+            str(sample_dxf), gap_bridge_enabled=False, gap_bridge_amount=100.0
+        )
+
+        # Block counts should be the same regardless of amount when disabled
+        assert result_no_amount["block_counts"] == result_with_amount["block_counts"]
+
+    def test_extract_blocks_invalid_unit_uses_fallback(self) -> None:
+        """Test with unsupported unit code (99) - should use fallback tolerance."""
+        sample_dxf = ASSETS_DIR / "sample_drawing.dxf"
+
+        # Should not raise an exception with unknown unit code
+        result = extract_blocks(str(sample_dxf), unit_override=99)
+
+        assert result is not None
+        assert isinstance(result["block_counts"], dict)
+
+    def test_extract_blocks_empty_file_with_tolerance_params(self) -> None:
+        """Verify extraction works on empty DXF file with tolerance parameters."""
+        empty_dxf = ASSETS_DIR / "empty_drawing.dxf"
+
+        result = extract_blocks(
+            str(empty_dxf),
+            unit_override=4,
+            gap_bridge_enabled=True,
+            gap_bridge_amount=1.0,
+        )
+
+        assert result is not None
+        # Empty file should have empty block counts
+        assert result["block_counts"] == {}

@@ -832,6 +832,9 @@ class ExtractionResult(TypedDict):
 def extract_blocks(
     file_path: str,
     abort_event: threading.Event | None = None,
+    unit_override: int | None = None,
+    gap_bridge_enabled: bool = False,
+    gap_bridge_amount: float | None = None,
 ) -> ExtractionResult:
     """
     Extract comprehensive CAD analysis from a DXF file.
@@ -851,6 +854,13 @@ def extract_blocks(
         abort_event: Optional threading.Event to signal abort request.
                      When set, extraction will stop at the next checkpoint
                      and raise ExtractionAbortedError.
+        unit_override: User-selected unit override. -1 for auto-detect, or
+                       $INSUNITS value (0=Unitless, 1=IN, 2=FT, 4=MM, 5=CM,
+                       6=M). None = auto.
+        gap_bridge_enabled: Enable Stage 2 gap bridging. When True, applies
+                            gap bridge tolerance to bridge intentional gaps.
+        gap_bridge_amount: Custom gap bridge tolerance. None = use default
+                           for unit.
 
     Returns:
         ExtractionResult TypedDict containing all analysis data.
@@ -897,6 +907,21 @@ def extract_blocks(
         logger.debug(f"Loading DXF file: {file_path}")
         doc = ezdxf.readfile(file_path)
         logger.debug(f"DXF file loaded successfully: {file_path}")
+
+        # Detect drawing units and calculate tolerances
+        detected_units = _get_drawing_units(doc)
+        precision_tolerance, gap_bridge_tolerance = get_snap_tolerances(
+            detected_units,
+            unit_override,
+            gap_bridge_enabled,
+            gap_bridge_amount,
+        )
+        logger.info(
+            f"Using tolerances: precision={precision_tolerance}, "
+            f"gap_bridge={gap_bridge_tolerance} "
+            f"(units={'auto' if unit_override in (None, -1) else unit_override})"
+        )
+
         msp = doc.modelspace()
 
         # Initialize result dictionaries
@@ -1043,7 +1068,13 @@ def extract_blocks(
             }
 
             # Detect content zone for trim value suggestions
-            content_zone_result = _detect_content_zone(block_def, bbox, abort_event)
+            content_zone_result = _detect_content_zone(
+                block_def,
+                bbox,
+                abort_event,
+                precision_tolerance,
+                gap_bridge_tolerance,
+            )
             block_content_zone_data[effective_name] = content_zone_result
 
         logger.info(f"Analyzed {len(block_entities)} block definitions")
