@@ -19,6 +19,7 @@ Usage:
     content_zone = _detect_content_zone(block_def, bbox)
 """
 
+import math
 import threading
 from typing import Any
 
@@ -51,6 +52,112 @@ def _from_shapely_polygon(shapely_poly: ShapelyPolygon) -> Polygon:
     """Convert Shapely Polygon to internal Polygon type."""
     coords = list(shapely_poly.exterior.coords)[:-1]  # Exclude closing point
     return [(float(x), float(y)) for x, y in coords]
+
+
+def calculate_polygon_area(polygon: Polygon) -> float:
+    """
+    Calculate the surface area of a polygon.
+
+    Uses Shapely for accurate area calculation. This is the public API
+    for area calculation, suitable for use in polygon filtering.
+
+    Args:
+        polygon: List of (x, y) vertices from _extract_paint_bucket_regions()
+
+    Returns:
+        Area in DXF drawing units squared (always positive).
+        Returns 0.0 for degenerate polygons (fewer than 3 vertices).
+
+    Examples:
+        >>> calculate_polygon_area([(0, 0), (10, 0), (10, 10), (0, 10)])
+        100.0
+        >>> calculate_polygon_area([(0, 0), (3, 0), (3, 4)])
+        6.0
+    """
+    if len(polygon) < 3:
+        return 0.0
+    shapely_poly = ShapelyPolygon(polygon)
+    return abs(shapely_poly.area)
+
+
+def calculate_shortest_straight_side(
+    polygon: Polygon,
+    angle_tolerance: float = 1.0,
+) -> float:
+    """
+    Calculate the shortest straight side of a polygon.
+
+    Merges consecutive collinear edges into single sides before
+    finding the minimum. This correctly handles cases where a single
+    straight side is represented as multiple LINE segments in the DXF
+    (e.g., LINE1 Part1 + LINE1 Part2 being counted as one side).
+
+    Args:
+        polygon: List of (x, y) vertices (closed polygon, no repeat of first point)
+        angle_tolerance: Maximum angle deviation to consider edges collinear (degrees).
+                        Default 1.0 degree handles minor coordinate variations.
+
+    Returns:
+        Length of shortest straight side in DXF drawing units.
+        Returns 0.0 for degenerate polygons (fewer than 3 vertices).
+
+    Examples:
+        >>> calculate_shortest_straight_side([(0, 0), (100, 0), (100, 50), (0, 50)])
+        50.0
+        >>> # Rectangle with split bottom edge - still finds 50 as shortest
+        >>> calculate_shortest_straight_side([(0, 0), (50, 0), (100, 0), (100, 50), (0, 50)])
+        50.0
+    """
+    if len(polygon) < 3:
+        return 0.0
+
+    # Close the polygon by appending first vertex
+    vertices = polygon + [polygon[0]]
+
+    def edge_angle(p1: tuple[float, float], p2: tuple[float, float]) -> float:
+        """Calculate angle of edge in degrees (0-180 range)."""
+        dx = p2[0] - p1[0]
+        dy = p2[1] - p1[1]
+        angle = math.degrees(math.atan2(dy, dx))
+        return angle % 180
+
+    def edge_length(p1: tuple[float, float], p2: tuple[float, float]) -> float:
+        """Calculate Euclidean distance between two points."""
+        return math.sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2)
+
+    def angles_collinear(a1: float, a2: float, tolerance: float) -> bool:
+        """Check if two angles are within tolerance (handles wraparound)."""
+        diff = abs(a1 - a2)
+        return diff <= tolerance or abs(diff - 180) <= tolerance
+
+    # Build list of merged straight sides
+    straight_sides: list[float] = []
+
+    i = 0
+    while i < len(vertices) - 1:
+        # Start a new side
+        side_start = vertices[i]
+        current_angle = edge_angle(vertices[i], vertices[i + 1])
+
+        # Extend side while consecutive edges are collinear
+        j = i + 1
+        while j < len(vertices) - 1:
+            next_angle = edge_angle(vertices[j], vertices[j + 1])
+            if angles_collinear(current_angle, next_angle, angle_tolerance):
+                j += 1
+            else:
+                break
+
+        # Calculate total length of merged side
+        side_end = vertices[j]
+        side_length = edge_length(side_start, side_end)
+
+        if side_length > 1e-9:  # Ignore degenerate edges
+            straight_sides.append(side_length)
+
+        i = j
+
+    return min(straight_sides) if straight_sides else 0.0
 
 
 class GeometryAbortedError(Exception):

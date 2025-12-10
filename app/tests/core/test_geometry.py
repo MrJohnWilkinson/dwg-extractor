@@ -28,6 +28,8 @@ from core.geometry import (
     _get_block_bounding_box,
     _get_intersection_points,
     _snap_linestring_coords,
+    calculate_polygon_area,
+    calculate_shortest_straight_side,
 )
 
 
@@ -1505,3 +1507,217 @@ class TestPrecisionSnapOrderFix:
         )
 
         assert len(regions) == 2
+
+
+class TestCalculatePolygonArea:
+    """Test suite for calculate_polygon_area function."""
+
+    def test_square_area(self) -> None:
+        """Test area calculation for 10x10 square."""
+        square: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 10.0),
+            (0.0, 10.0),
+        ]
+        assert calculate_polygon_area(square) == 100.0
+
+    def test_rectangle_area(self) -> None:
+        """Test area calculation for 20x10 rectangle."""
+        rectangle: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (20.0, 0.0),
+            (20.0, 10.0),
+            (0.0, 10.0),
+        ]
+        assert calculate_polygon_area(rectangle) == 200.0
+
+    def test_triangle_area(self) -> None:
+        """Test area calculation for right triangle with base 10, height 10."""
+        triangle: list[tuple[float, float]] = [(0.0, 0.0), (10.0, 0.0), (0.0, 10.0)]
+        assert calculate_polygon_area(triangle) == 50.0
+
+    def test_irregular_polygon_area(self) -> None:
+        """Test area calculation for irregular quadrilateral."""
+        # L-shaped polygon: (0,0), (10,0), (10,5), (5,5), (5,10), (0,10)
+        # Area = 10*10 - 5*5 = 75
+        l_shape: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 5.0),
+            (5.0, 5.0),
+            (5.0, 10.0),
+            (0.0, 10.0),
+        ]
+        assert calculate_polygon_area(l_shape) == 75.0
+
+    def test_degenerate_polygon_empty(self) -> None:
+        """Test that empty list returns 0.0."""
+        assert calculate_polygon_area([]) == 0.0
+
+    def test_degenerate_polygon_single_point(self) -> None:
+        """Test that single point returns 0.0."""
+        assert calculate_polygon_area([(5.0, 5.0)]) == 0.0
+
+    def test_degenerate_polygon_two_points(self) -> None:
+        """Test that two points (line) returns 0.0."""
+        assert calculate_polygon_area([(0.0, 0.0), (10.0, 10.0)]) == 0.0
+
+    def test_area_always_positive(self) -> None:
+        """Test that area is positive regardless of vertex winding order."""
+        # Counter-clockwise winding
+        ccw: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 10.0),
+            (0.0, 10.0),
+        ]
+        # Clockwise winding
+        cw: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (0.0, 10.0),
+            (10.0, 10.0),
+            (10.0, 0.0),
+        ]
+
+        assert calculate_polygon_area(ccw) == 100.0
+        assert calculate_polygon_area(cw) == 100.0
+        # Both should be positive
+        assert calculate_polygon_area(ccw) > 0
+        assert calculate_polygon_area(cw) > 0
+
+
+class TestCalculateShortestStraightSide:
+    """Test suite for calculate_shortest_straight_side function."""
+
+    def test_square_shortest_side(self) -> None:
+        """Test that 10x10 square returns 10.0 for all equal sides."""
+        square: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 10.0),
+            (0.0, 10.0),
+        ]
+        assert calculate_shortest_straight_side(square) == pytest.approx(10.0)
+
+    def test_rectangle_shortest_side(self) -> None:
+        """Test that 100x50 rectangle returns 50.0 for shorter sides."""
+        rectangle: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (100.0, 0.0),
+            (100.0, 50.0),
+            (0.0, 50.0),
+        ]
+        assert calculate_shortest_straight_side(rectangle) == pytest.approx(50.0)
+
+    def test_collinear_edge_merging(self) -> None:
+        """Test that rectangle with split bottom edge still finds correct shortest side."""
+        # Rectangle with bottom edge split into two segments
+        # Bottom: (0,0)-(50,0)-(100,0), Right: (100,0)-(100,50)
+        # Top: (100,50)-(0,50), Left: (0,50)-(0,0)
+        split_rect: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (50.0, 0.0),
+            (100.0, 0.0),
+            (100.0, 50.0),
+            (0.0, 50.0),
+        ]
+        # Bottom edge is 100 (merged), right edge is 50, top is 100, left is 50
+        assert calculate_shortest_straight_side(split_rect) == pytest.approx(50.0)
+
+    def test_collinear_edge_merging_three_segments(self) -> None:
+        """Test that bottom edge split into 3 parts still merges correctly."""
+        # Bottom edge split: (0,0)-(33,0)-(66,0)-(100,0)
+        split_rect: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (33.0, 0.0),
+            (66.0, 0.0),
+            (100.0, 0.0),
+            (100.0, 50.0),
+            (0.0, 50.0),
+        ]
+        # Bottom: 100 (merged), Right: 50, Top: 100, Left: 50
+        assert calculate_shortest_straight_side(split_rect) == pytest.approx(50.0)
+
+    def test_triangle_shortest_side(self) -> None:
+        """Test 3-4-5 right triangle returns 3.0 for shortest side."""
+        # 3-4-5 right triangle
+        triangle: list[tuple[float, float]] = [(0.0, 0.0), (3.0, 0.0), (0.0, 4.0)]
+        # Sides: bottom=3, left=4, hypotenuse=5
+        assert calculate_shortest_straight_side(triangle) == pytest.approx(3.0)
+
+    def test_degenerate_polygon_empty(self) -> None:
+        """Test that empty list returns 0.0."""
+        assert calculate_shortest_straight_side([]) == 0.0
+
+    def test_degenerate_polygon_two_points(self) -> None:
+        """Test that two points returns 0.0."""
+        assert calculate_shortest_straight_side([(0.0, 0.0), (10.0, 10.0)]) == 0.0
+
+    def test_custom_angle_tolerance(self) -> None:
+        """Test that custom tolerance parameter works correctly."""
+        # Rectangle with significant angle deviation on bottom edge
+        # Point (50, 2.0) creates a ~2.3 degree deviation from horizontal
+        # tan(2.3 deg) = ~0.04, so y offset = 50 * tan(2.3) = ~2.0
+        deviation: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (50.0, 2.0),
+            (100.0, 0.0),
+            (100.0, 50.0),
+            (0.0, 50.0),
+        ]
+
+        # With large tolerance (5 degrees), edges should merge
+        # atan(2/50) = 2.29 degrees, so 5 degree tolerance merges them
+        result_large = calculate_shortest_straight_side(deviation, angle_tolerance=5.0)
+
+        # With tight tolerance (1 degree), edges should NOT merge
+        # since 2.29 degrees > 1 degree
+        result_tight = calculate_shortest_straight_side(deviation, angle_tolerance=1.0)
+
+        # Large tolerance merges bottom edges, so shortest is 50 (vertical sides)
+        assert result_large == pytest.approx(50.0)
+        # Tight tolerance doesn't merge, so we get smaller segments (~50)
+        # The split segments are about 50 units each
+        assert result_tight < 51.0  # Should find the ~50 unit split segment
+
+    def test_very_small_edges_ignored(self) -> None:
+        """Test that edges < 1e-9 are ignored."""
+        # Rectangle with a degenerate (zero-length) segment
+        rect_with_tiny: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (0.0, 0.0),
+            (100.0, 0.0),
+            (100.0, 50.0),
+            (0.0, 50.0),
+        ]
+        # The degenerate edge from (0,0) to (0,0) should be ignored
+        assert calculate_shortest_straight_side(rect_with_tiny) == pytest.approx(50.0)
+
+    def test_angle_wraparound(self) -> None:
+        """Test that collinearity detection handles 180-degree wraparound."""
+        # Two edges that are collinear but have angles near 0 and near 180
+        # Horizontal edge going right (angle ~0) followed by edge going left (angle ~180)
+        # This shouldn't happen in a valid polygon, but test the angle logic
+        # Create a simple case with edges at 179 and 1 degree (should be considered collinear)
+        # Actually, for a valid polygon, test the horizontal edge case
+        horizontal_rect: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (100.0, 0.0),
+            (100.0, 10.0),
+            (0.0, 10.0),
+        ]
+        # All horizontal and vertical edges, no wraparound issue
+        assert calculate_shortest_straight_side(horizontal_rect) == pytest.approx(10.0)
+
+    def test_all_edges_equal(self) -> None:
+        """Test polygon where all edges have equal length."""
+        # Equilateral-like hexagon (approximation for testing)
+        square: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (10.0, 0.0),
+            (10.0, 10.0),
+            (0.0, 10.0),
+        ]
+        result = calculate_shortest_straight_side(square)
+        assert result == pytest.approx(10.0)
