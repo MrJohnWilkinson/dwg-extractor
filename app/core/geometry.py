@@ -430,6 +430,28 @@ def _extract_arc_edges(entity: Any) -> list[LineString]:
         return []
 
 
+def _snap_linestring_coords(line: LineString, tolerance: float) -> LineString:
+    """Snap LineString coordinates to grid based on tolerance.
+
+    Rounds each coordinate to the nearest multiple of tolerance to fix
+    floating-point precision artifacts before geometric operations.
+
+    Args:
+        line: Shapely LineString to snap
+        tolerance: Grid spacing for coordinate rounding
+
+    Returns:
+        New LineString with coordinates snapped to grid.
+    """
+    if tolerance <= 0:
+        return line
+    coords = [
+        (round(x / tolerance) * tolerance, round(y / tolerance) * tolerance)
+        for x, y in line.coords
+    ]
+    return LineString(coords)
+
+
 def _extract_hatch_boundary_edges(entity: Any) -> list[LineString]:
     """Extract edges from HATCH boundary paths.
 
@@ -554,15 +576,17 @@ def _extract_paint_bucket_regions(
     if abort_event and abort_event.is_set():
         raise GeometryAbortedError("Region detection aborted")
 
-    # Merge and split at all intersections
+    # Stage 1: Precision snapping BEFORE union to fix floating-point artifacts
+    # This ensures endpoints with nanometer-scale errors align to grid points
+    # before intersection detection occurs in unary_union()
+    if precision_tolerance > 0:
+        edges = [_snap_linestring_coords(e, precision_tolerance) for e in edges]
+        logger.debug(f"Applied Stage 1 precision snap: tolerance={precision_tolerance}")
+
+    # Merge and split at all intersections (now with snapped coordinates)
     merged = unary_union(edges)
     if merged.is_empty:
         return []
-
-    # Stage 1: Precision snapping to fix floating-point artifacts
-    if precision_tolerance > 0:
-        merged = snap(merged, merged, precision_tolerance)
-        logger.debug(f"Applied Stage 1 precision snap: tolerance={precision_tolerance}")
 
     # Stage 2: Gap bridging for intentional design gaps (when enabled)
     if gap_bridge_tolerance > 0:

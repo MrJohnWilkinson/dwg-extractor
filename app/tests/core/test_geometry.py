@@ -27,6 +27,7 @@ from core.geometry import (
     _extract_paint_bucket_regions,
     _get_block_bounding_box,
     _get_intersection_points,
+    _snap_linestring_coords,
 )
 
 
@@ -1329,3 +1330,178 @@ class TestUnitToleranceMapping:
         assert DEFAULT_GAP_BRIDGE_TOLERANCE[2] == 0.1    # FT: 0.1 feet
         assert DEFAULT_GAP_BRIDGE_TOLERANCE[5] == 0.05   # CM: 0.05 cm
         assert DEFAULT_GAP_BRIDGE_TOLERANCE[0] == 0.1    # Unitless
+
+
+class TestPrecisionSnapOrderFix:
+    """Test suite for the precision snap before union fix.
+
+    This validates that coordinate snapping happens BEFORE unary_union()
+    so that line endpoints with floating-point precision errors are aligned
+    to grid points before intersection detection occurs.
+    """
+
+    def test_snap_linestring_coords_basic(self) -> None:
+        """Test that _snap_linestring_coords correctly snaps coordinates."""
+        # Line with precision error: endpoint at (99.9999999962746, 50.0000000002328)
+        line = LineString([(0, 0), (99.9999999962746, 50.0000000002328)])
+
+        snapped = _snap_linestring_coords(line, tolerance=1e-6)
+
+        # Coordinates should be snapped to grid (effectively rounding to 6 decimals)
+        coords = list(snapped.coords)
+        assert len(coords) == 2
+        assert coords[0] == (0.0, 0.0)
+        # With 1e-6 tolerance, 99.9999999962746 rounds to 100.0
+        assert coords[1][0] == pytest.approx(100.0, abs=1e-6)
+        assert coords[1][1] == pytest.approx(50.0, abs=1e-6)
+
+    def test_snap_linestring_coords_zero_tolerance(self) -> None:
+        """Test that zero tolerance returns the original line unmodified."""
+        line = LineString([(0, 0), (99.9999999962746, 50.0000000002328)])
+
+        snapped = _snap_linestring_coords(line, tolerance=0)
+
+        # Should return the same line object
+        assert snapped is line
+
+    def test_snap_linestring_coords_negative_tolerance(self) -> None:
+        """Test that negative tolerance returns the original line unmodified."""
+        line = LineString([(0, 0), (99.9999999962746, 50.0000000002328)])
+
+        snapped = _snap_linestring_coords(line, tolerance=-1.0)
+
+        # Should return the same line object
+        assert snapped is line
+
+    def test_snap_linestring_coords_larger_tolerance(self) -> None:
+        """Test snapping with a larger tolerance value."""
+        # Line endpoint at (99.5, 50.3)
+        line = LineString([(0, 0), (99.5, 50.3)])
+
+        # With tolerance=1.0, coordinates snap to nearest integer
+        snapped = _snap_linestring_coords(line, tolerance=1.0)
+
+        coords = list(snapped.coords)
+        assert coords[1][0] == pytest.approx(100.0, abs=0.01)
+        assert coords[1][1] == pytest.approx(50.0, abs=0.01)
+
+    def test_precision_error_without_fix(self) -> None:
+        """Test that precision_tolerance=0 demonstrates the bug (fewer regions).
+
+        When precision snapping is disabled, line endpoints with nanometer-scale
+        errors don't align with vertical edges, preventing proper edge splitting.
+        """
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="PRECISION_BUG")
+
+        # Rectangle 900x1200
+        block.add_lwpolyline([(0, 0), (900, 0), (900, 1200), (0, 1200)], close=True)
+
+        # Horizontal dividers with precision error on right endpoint
+        # Left endpoints exact, right endpoints have nanometer precision error
+        block.add_line((0, 400), (899.9999999962746, 400.0000000002328))
+        block.add_line((0, 800), (899.9999999962746, 800.0000000002328))
+
+        # Without precision fix, the dividers don't properly split the right edge
+        regions_no_fix = _extract_paint_bucket_regions(
+            block, precision_tolerance=0, gap_bridge_tolerance=0
+        )
+
+        # With precision_tolerance=0, should get fewer than 3 regions
+        # because right edge isn't split at divider endpoints
+        assert len(regions_no_fix) < 3
+
+    def test_precision_error_with_fix(self) -> None:
+        """Test that precision_tolerance>0 fixes the precision error bug.
+
+        With coordinate snapping BEFORE unary_union(), endpoints are aligned
+        to grid points and intersection detection works correctly.
+        """
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="PRECISION_FIXED")
+
+        # Rectangle 900x1200
+        block.add_lwpolyline([(0, 0), (900, 0), (900, 1200), (0, 1200)], close=True)
+
+        # Horizontal dividers with precision error on right endpoint
+        block.add_line((0, 400), (899.9999999962746, 400.0000000002328))
+        block.add_line((0, 800), (899.9999999962746, 800.0000000002328))
+
+        # With precision fix, dividers properly split the rectangle into 3 rows
+        regions_with_fix = _extract_paint_bucket_regions(
+            block, precision_tolerance=1e-6, gap_bridge_tolerance=0
+        )
+
+        # Should produce exactly 3 regions (bottom, middle, top rows)
+        assert len(regions_with_fix) == 3
+
+    def test_precision_error_shelf_regions_from_dxf(self) -> None:
+        """Test precision fix using the test DXF file with precision errors."""
+        doc = ezdxf.readfile("app/tests/assets/precision_snap_order_test.dxf")
+        block = doc.blocks.get("PRECISION_ERROR_SHELF")
+
+        # With default precision tolerance, should get 3 regions
+        regions = _extract_paint_bucket_regions(
+            block, precision_tolerance=1e-6, gap_bridge_tolerance=0
+        )
+
+        # The block has a rectangle with 2 horizontal dividers = 3 regions
+        assert len(regions) == 3
+
+        # Verify each region has reasonable area (rectangle is 900x1200)
+        # With 2 dividers at y=400 and y=800, regions are:
+        # - Bottom: 900 * 400 = 360,000
+        # - Middle: 900 * 400 = 360,000
+        # - Top: 900 * 400 = 360,000
+        from shapely import Polygon as ShapelyPolygon
+        areas = sorted([ShapelyPolygon(r).area for r in regions])
+        for area in areas:
+            assert 350000 < area < 370000  # ~360,000 with some tolerance
+
+    def test_precision_fix_preserves_clean_geometry(self) -> None:
+        """Test that precision fix doesn't break clean geometry without errors."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CLEAN_GEOMETRY")
+
+        # Perfect rectangle with exact coordinates
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 100), (0, 100)], close=True)
+        # Perfect dividers with exact coordinates
+        block.add_line((0, 50), (100, 50))
+        block.add_line((50, 0), (50, 100))
+
+        # Should produce 4 regions with or without precision fix
+        regions_no_fix = _extract_paint_bucket_regions(
+            block, precision_tolerance=0, gap_bridge_tolerance=0
+        )
+        regions_with_fix = _extract_paint_bucket_regions(
+            block, precision_tolerance=1e-6, gap_bridge_tolerance=0
+        )
+
+        assert len(regions_no_fix) == 4
+        assert len(regions_with_fix) == 4
+
+    def test_precision_fix_with_multiple_affected_edges(self) -> None:
+        """Test precision fix with multiple edges having precision errors."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="MULTI_ERROR")
+
+        # Rectangle with slightly imprecise corners
+        block.add_lwpolyline([
+            (0.0000000001, 0.0000000002),
+            (99.9999999998, 0.0000000001),
+            (100.0000000001, 99.9999999999),
+            (0.0000000002, 100.0000000001)
+        ], close=True)
+
+        # Dividers also with small errors
+        block.add_line(
+            (0.0000000003, 49.9999999998),
+            (99.9999999997, 50.0000000002)
+        )
+
+        # With precision fix, should still get 2 regions
+        regions = _extract_paint_bucket_regions(
+            block, precision_tolerance=1e-6, gap_bridge_tolerance=0
+        )
+
+        assert len(regions) == 2
