@@ -21,7 +21,13 @@ from ezdxf import DXFError
 from ezdxf import colors as ezdxf_colors
 from ezdxf.document import Drawing
 
-from .constants import SUPPORTED_EXTENSIONS
+from .constants import (
+    DEFAULT_GAP_BRIDGE_TOLERANCE,
+    DEFAULT_PRECISION_SNAP_TOLERANCE,
+    DXF_INSUNITS_MAP,
+    PRECISION_SNAP_TOLERANCE,
+    SUPPORTED_EXTENSIONS,
+)
 from .geometry import (
     _calculate_segments,
     _categorize_rotation,
@@ -65,6 +71,122 @@ def _check_abort(abort_event: threading.Event | None, context: str) -> None:
     if abort_event and abort_event.is_set():
         logger.info(f"Extraction aborted during {context}")
         raise ExtractionAbortedError(f"Aborted during {context}")
+
+
+def _get_drawing_units(doc: Drawing) -> int:
+    """
+    Read the $INSUNITS header variable from a DXF document.
+
+    The $INSUNITS header specifies the drawing units used for insertion,
+    which typically reflects the units the drawing was created in.
+
+    Args:
+        doc: The ezdxf Drawing document to read units from
+
+    Returns:
+        The $INSUNITS value as an integer. Returns 0 (Unitless) if the
+        header variable is missing or cannot be read.
+
+    Examples:
+        >>> doc = ezdxf.readfile('metric_drawing.dxf')
+        >>> _get_drawing_units(doc)
+        4  # Millimeters
+
+        >>> doc = ezdxf.readfile('imperial_drawing.dxf')
+        >>> _get_drawing_units(doc)
+        1  # Inches
+
+        >>> doc = ezdxf.readfile('old_drawing.dxf')  # No $INSUNITS header
+        >>> _get_drawing_units(doc)
+        0  # Unitless (fallback)
+    """
+    try:
+        units_value = doc.header.get("$INSUNITS", 0)
+        units: int = int(units_value) if units_value is not None else 0
+        unit_name = DXF_INSUNITS_MAP.get(units, f"Unknown ({units})")
+        logger.debug(f"Detected drawing units: {unit_name} (code={units})")
+        return units
+    except (AttributeError, KeyError) as e:
+        logger.debug(f"Could not read $INSUNITS header: {e}, defaulting to 0 (Unitless)")
+        return 0
+
+
+def get_snap_tolerances(
+    detected_units: int,
+    override_units: int | None,
+    gap_bridge_enabled: bool,
+    gap_bridge_amount: float | None,
+) -> tuple[float, float]:
+    """
+    Calculate appropriate snap tolerances based on units and user settings.
+
+    This function computes two tolerance values:
+    1. Precision tolerance (Stage 1): Fixes floating-point artifacts at line endpoints
+    2. Gap bridge tolerance (Stage 2): Bridges intentional small gaps in the drawing
+
+    Args:
+        detected_units: The unit code detected from the DXF file's $INSUNITS header
+        override_units: User-selected unit override. If None or -1, use detected_units
+        gap_bridge_enabled: Whether gap bridging is enabled by the user
+        gap_bridge_amount: Custom gap bridge amount. If None or <= 0, use default for unit
+
+    Returns:
+        Tuple of (precision_tolerance, gap_bridge_tolerance):
+        - precision_tolerance: Always returns a value appropriate for the effective unit
+        - gap_bridge_tolerance: Returns 0.0 if disabled, otherwise returns user amount or default
+
+    Examples:
+        >>> # Auto-detect units (mm), gap bridging disabled
+        >>> get_snap_tolerances(4, None, False, None)
+        (1e-6, 0.0)
+
+        >>> # Override to inches, gap bridging enabled with default
+        >>> get_snap_tolerances(4, 1, True, None)
+        (1e-6, 0.01)  # Uses inch default (0.01)
+
+        >>> # Override to meters, gap bridging with custom amount
+        >>> get_snap_tolerances(4, 6, True, 0.005)
+        (1e-4, 0.005)  # Uses meter precision tolerance and custom gap
+
+        >>> # Auto-detect (override=-1), gap bridging with custom amount
+        >>> get_snap_tolerances(4, -1, True, 1.0)
+        (1e-6, 1.0)  # Uses mm precision tolerance and custom gap
+    """
+    # Determine effective units: use override if provided and not -1
+    if override_units is not None and override_units != -1:
+        effective_units = override_units
+        logger.debug(
+            f"Using override units: {DXF_INSUNITS_MAP.get(effective_units, f'Unknown ({effective_units})')}"
+        )
+    else:
+        effective_units = detected_units
+        logger.debug(
+            f"Using detected units: {DXF_INSUNITS_MAP.get(effective_units, f'Unknown ({effective_units})')}"
+        )
+
+    # Calculate precision tolerance from PRECISION_SNAP_TOLERANCE dict with fallback
+    precision_tolerance = PRECISION_SNAP_TOLERANCE.get(
+        effective_units, DEFAULT_PRECISION_SNAP_TOLERANCE
+    )
+
+    # Calculate gap bridge tolerance
+    if not gap_bridge_enabled:
+        gap_bridge_tolerance = 0.0
+    elif gap_bridge_amount is not None and gap_bridge_amount > 0:
+        # Use user-specified amount
+        gap_bridge_tolerance = gap_bridge_amount
+    else:
+        # Use default for the effective unit
+        gap_bridge_tolerance = DEFAULT_GAP_BRIDGE_TOLERANCE.get(
+            effective_units,
+            DEFAULT_GAP_BRIDGE_TOLERANCE.get(0, 0.1),  # Fallback to unitless default
+        )
+
+    logger.debug(
+        f"Calculated tolerances: precision={precision_tolerance}, gap_bridge={gap_bridge_tolerance}"
+    )
+
+    return (precision_tolerance, gap_bridge_tolerance)
 
 
 def _clean_mtext_content(entity: Any) -> str:

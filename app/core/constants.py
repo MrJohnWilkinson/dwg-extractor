@@ -154,3 +154,71 @@ ARC_FLATTENING_SAGITTA: float = 0.1
 """Maximum distance from arc center to chord center for flattening.
 Smaller values = more segments = higher precision. 0.1 is appropriate for
 typical CAD drawings with units in mm or inches."""
+
+# Drawing Unit Configuration
+# Maps DXF $INSUNITS header codes to human-readable unit names
+# See: https://knowledge.autodesk.com/support/autocad/learn-explore/caas/CloudHelp/cloudhelp/2022/ENU/AutoCAD-Core/files/GUID-A58A87BB-482B-4042-A00A-EEF55D2B1FEC-htm.html
+DXF_INSUNITS_MAP: dict[int, str] = {
+    0: "Unitless",
+    1: "Inches",
+    2: "Feet",
+    4: "Millimeters",
+    5: "Centimeters",
+    6: "Meters",
+}
+"""Maps DXF $INSUNITS header codes to human-readable unit names.
+Only commonly used CAD units are supported. Code 3 (Miles) is intentionally excluded."""
+
+# GUI unit selection options for user override dropdown
+# -1 indicates "use DXF file units" (auto-detect)
+UNIT_SELECTION_OPTIONS: dict[str, int] = {
+    "DXF/DWG": -1,
+    "MM": 4,
+    "CM": 5,
+    "M": 6,
+    "IN": 1,
+    "FT": 2,
+}
+"""GUI dropdown options for manual unit override.
+Key is display label, value is DXF $INSUNITS code (-1 for auto-detect)."""
+
+# Stage 1: Precision snap tolerances for fixing floating-point artifacts
+# These are extremely small (nanometer scale relative to unit) to only fix
+# floating-point precision errors, not intentional design gaps
+PRECISION_SNAP_TOLERANCE: dict[int, float] = {
+    0: 1e-6,  # Unitless: use small default
+    1: 1e-6,  # Inches: ~25 nanometers
+    2: 1e-5,  # Feet: ~3 micrometers (feet are larger units)
+    4: 1e-6,  # Millimeters: 1 nanometer
+    5: 1e-5,  # Centimeters: 0.1 nanometers (cm drawings have larger coords)
+    6: 1e-4,  # Meters: 0.1 micrometers (meter coords can be very large)
+}
+"""Stage 1 precision snap tolerances by unit code.
+These fix floating-point artifacts without affecting intentional gaps.
+Values are scaled relative to typical coordinate magnitudes in each unit system."""
+
+DEFAULT_PRECISION_SNAP_TOLERANCE: float = 1e-6
+"""Fallback precision snap tolerance when unit is unknown or unsupported.
+Conservative value appropriate for most CAD applications."""
+
+# Stage 2: Default gap bridge tolerances for intentional gap bridging
+# These represent typical small gaps in CAD drawings that users may want to bridge
+DEFAULT_GAP_BRIDGE_TOLERANCE: dict[int, float] = {
+    0: 0.1,  # Unitless: small default
+    1: 0.01,  # Inches: 0.01" (common drafting gap)
+    2: 0.1,  # Feet: 0.1' = 1.2" (typical construction tolerance)
+    4: 0.5,  # Millimeters: 0.5mm (common CAD gap)
+    5: 0.05,  # Centimeters: 0.05cm = 0.5mm
+    6: 0.001,  # Meters: 1mm in meter units
+}
+"""Stage 2 default gap bridge tolerances by unit code.
+These bridge intentional small gaps that users may want to close for polygon detection.
+Values represent typical small gaps in each unit system."""
+
+# Gap bridge amount input constraints for GUI slider/input
+GAP_BRIDGE_MIN: float = 0.0
+"""Minimum gap bridge amount (0 = no gap bridging)."""
+
+GAP_BRIDGE_MAX: float = 10000.0
+"""Maximum gap bridge amount. Large value allows extreme cases while
+preventing overflow issues in calculations."""
