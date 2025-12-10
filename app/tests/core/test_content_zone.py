@@ -797,6 +797,205 @@ class TestTypeAnnotations:
             assert isinstance(vertex[1], float)
 
 
+class TestPolygonFiltering:
+    """Test suite for polygon filtering in _detect_content_zone."""
+
+    def test_no_filtering_with_zero_values(self) -> None:
+        """Verify no filtering occurs when filter values are 0 (default)."""
+        doc = ezdxf.readfile("app/tests/assets/content_zone_test.dxf")
+        block = doc.blocks.get("NESTED_RECTANGLES")
+        bbox = _get_block_bounding_box(block)
+
+        # Default behavior with zeros
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=0.0,
+            min_side_filter=0.0,
+        )
+
+        assert result["content_zone_detected"] is True
+        assert result["polygon_count"] == 2  # Both polygons should be present
+
+    def test_area_filter_removes_small_polygons(self) -> None:
+        """Verify polygons below min_area threshold are filtered out."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="AREA_TEST")
+        # Large polygon (100x100 = 10000 sq units)
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 100), (0, 100)], close=True)
+        # Small polygon (5x5 = 25 sq units)
+        block.add_lwpolyline([(110, 10), (115, 10), (115, 15), (110, 15)], close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # Filter out polygons with area < 100
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=100.0,
+            min_side_filter=0.0,
+        )
+
+        assert result["content_zone_detected"] is True
+        # Should have filtered out the small polygon, leaving only the large one
+        assert result["polygon_count"] == 1
+
+    def test_area_filter_filters_all_polygons(self) -> None:
+        """Verify behavior when all polygons are filtered out."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="ALL_SMALL")
+        # Small polygon (10x10 = 100 sq units)
+        block.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)], close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # Filter threshold higher than all polygon areas
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=500.0,
+            min_side_filter=0.0,
+        )
+
+        # All polygons filtered - should return empty content zone
+        assert result["content_zone_detected"] is False
+        assert result["polygon_count"] == 0
+
+    def test_side_filter_removes_narrow_polygons(self) -> None:
+        """Verify polygons with short sides are filtered out."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="SIDE_TEST")
+        # Wide polygon with sides >= 50 (100x50)
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
+        # Narrow polygon with short side = 5 (100x5)
+        block.add_lwpolyline([(0, 60), (100, 60), (100, 65), (0, 65)], close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # Filter out polygons with shortest side < 20
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=0.0,
+            min_side_filter=20.0,
+        )
+
+        assert result["content_zone_detected"] is True
+        # Should have filtered out the narrow polygon
+        assert result["polygon_count"] == 1
+
+    def test_combined_filters(self) -> None:
+        """Verify both filters work together."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="COMBINED_TEST")
+        # Large polygon with reasonable sides (100x50 = 5000 sq units, shortest side 50)
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
+        # Small polygon but with okay sides (10x10 = 100 sq units, sides 10)
+        block.add_lwpolyline([(105, 55), (115, 55), (115, 65), (105, 65)], close=True)
+        # Large area but narrow (200x2 = 400 sq units, shortest side 2)
+        block.add_lwpolyline([(0, 70), (200, 70), (200, 72), (0, 72)], close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # Filter: area >= 200 AND shortest side >= 5
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=200.0,
+            min_side_filter=5.0,
+        )
+
+        assert result["content_zone_detected"] is True
+        # Only the first polygon should pass both filters
+        assert result["polygon_count"] == 1
+
+    def test_filter_with_precision_and_gap_bridge(self) -> None:
+        """Verify filters work with other parameters."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="PARAMS_TEST")
+        # Large polygon
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 100), (0, 100)], close=True)
+        # Small polygon that should be filtered
+        block.add_lwpolyline([(110, 10), (115, 10), (115, 15), (110, 15)], close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # Use filters along with precision and gap bridge tolerances
+        result = _detect_content_zone(
+            block,
+            bbox,
+            precision_tolerance=1e-6,
+            gap_bridge_tolerance=0.0,
+            min_area_filter=100.0,
+            min_side_filter=0.0,
+        )
+
+        assert result["content_zone_detected"] is True
+        assert result["polygon_count"] == 1
+
+    def test_filter_boundary_value_included(self) -> None:
+        """Verify polygon exactly at threshold passes the filter."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="BOUNDARY_TEST")
+        # Polygon with area exactly 100 (10x10)
+        block.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)], close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # Filter threshold at exactly 100 - should NOT be filtered (< not <=)
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=100.0,
+            min_side_filter=0.0,
+        )
+
+        assert result["content_zone_detected"] is True
+        assert result["polygon_count"] == 1
+
+    def test_only_area_filter_enabled(self) -> None:
+        """Verify only area filter is applied when side filter is 0."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="AREA_ONLY")
+        # Large but narrow polygon (100x5 = 500 sq units, side 5)
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 5), (0, 5)], close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # Only area filter, side filter disabled
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=100.0,
+            min_side_filter=0.0,
+        )
+
+        # Should pass because area >= 100, even though side is only 5
+        assert result["content_zone_detected"] is True
+        assert result["polygon_count"] == 1
+
+    def test_only_side_filter_enabled(self) -> None:
+        """Verify only side filter is applied when area filter is 0."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="SIDE_ONLY")
+        # Small but proportional polygon (10x10 = 100 sq units, side 10)
+        block.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)], close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # Only side filter, area filter disabled
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=0.0,
+            min_side_filter=5.0,
+        )
+
+        # Should pass because side >= 5, regardless of small area
+        assert result["content_zone_detected"] is True
+        assert result["polygon_count"] == 1
+
+
 class TestUnionBoundingBox:
     """Tests for _get_union_bounding_box() function."""
 

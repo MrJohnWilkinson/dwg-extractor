@@ -986,6 +986,8 @@ def _detect_content_zone(
     abort_event: threading.Event | None = None,
     precision_tolerance: float = 1e-6,
     gap_bridge_tolerance: float = 0.0,
+    min_area_filter: float = 0.0,
+    min_side_filter: float = 0.0,
 ) -> ContentZoneData:
     """
     Detect content zone and calculate trim values.
@@ -997,6 +999,10 @@ def _detect_content_zone(
     Two-stage coordinate snapping is applied during region detection:
     - Stage 1 (Precision): Automatically fixes floating-point artifacts
     - Stage 2 (Gap Bridge): Optionally bridges intentional gaps when enabled
+
+    Polygon filtering (when enabled):
+    - Filters out small artifact polygons before calculating content zone
+    - Uses area and/or shortest side thresholds to exclude noise polygons
 
     Performance safeguards:
     - Skips region detection if > LINE_SEGMENT_THRESHOLD edges (5000)
@@ -1010,6 +1016,11 @@ def _detect_content_zone(
             artifacts. Default 1e-6. Set to 0 to disable Stage 1 snapping.
         gap_bridge_tolerance: Stage 2 snap tolerance for bridging intentional
             gaps. Default 0.0 (disabled). Set > 0 to bridge gaps.
+        min_area_filter: Minimum polygon area threshold. Polygons with area
+            less than this value are filtered out. Default 0.0 (no filtering).
+        min_side_filter: Minimum shortest side length threshold. Polygons with
+            shortest straight side less than this value are filtered out.
+            Default 0.0 (no filtering).
 
     Returns:
         ContentZoneData with detected trim values, or empty data if no
@@ -1044,6 +1055,30 @@ def _detect_content_zone(
     )
     polygon_count = len(all_shapes)
     logger.debug(f"[{block_name}] Found {polygon_count} paint-bucket regions")
+
+    # Filter polygons by area and shortest side if filters are enabled
+    if min_area_filter > 0 or min_side_filter > 0:
+        filtered_shapes: list[Polygon] = []
+        for shape in all_shapes:
+            # Check area filter
+            if min_area_filter > 0:
+                area = calculate_polygon_area(shape)
+                if area < min_area_filter:
+                    continue
+            # Check side filter
+            if min_side_filter > 0:
+                shortest_side = calculate_shortest_straight_side(shape)
+                if shortest_side < min_side_filter:
+                    continue
+            filtered_shapes.append(shape)
+
+        logger.debug(
+            f"[{block_name}] Filtered {len(all_shapes)} -> {len(filtered_shapes)} polygons "
+            f"(min_area={min_area_filter}, min_side={min_side_filter})"
+        )
+        all_shapes = filtered_shapes
+        # Update polygon count after filtering
+        polygon_count = len(all_shapes)
 
     if polygon_count == 0:
         logger.debug(f"[{block_name}] No closed shapes found")
