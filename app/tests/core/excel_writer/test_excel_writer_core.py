@@ -1431,15 +1431,15 @@ class TestContentZoneExcelOutput:
         # Get header column indices
         headers = [cell.value for cell in ws[1]]
         block_name_col = headers.index(format_header(EXCEL_COLUMN_BLOCK_NAME)) + 1
-        width_col = headers.index(
-            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH)
-        ) + 1
-        height_col = headers.index(
-            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT)
-        ) + 1
-        detected_col = headers.index(
-            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED)
-        ) + 1
+        width_col = (
+            headers.index(format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH)) + 1
+        )
+        height_col = (
+            headers.index(format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT)) + 1
+        )
+        detected_col = (
+            headers.index(format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED)) + 1
+        )
 
         # Find VALVE row (should have content zone detected)
         valve_row = None
@@ -1466,15 +1466,15 @@ class TestContentZoneExcelOutput:
         # Get header column indices
         headers = [cell.value for cell in ws[1]]
         block_name_col = headers.index(format_header(EXCEL_COLUMN_BLOCK_NAME)) + 1
-        width_col = headers.index(
-            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH)
-        ) + 1
-        height_col = headers.index(
-            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT)
-        ) + 1
-        detected_col = headers.index(
-            format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED)
-        ) + 1
+        width_col = (
+            headers.index(format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH)) + 1
+        )
+        height_col = (
+            headers.index(format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT)) + 1
+        )
+        detected_col = (
+            headers.index(format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED)) + 1
+        )
 
         # Find TAG row (should have content zone NOT detected)
         tag_row = None

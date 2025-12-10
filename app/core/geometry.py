@@ -20,8 +20,10 @@ Usage:
 """
 
 import threading
+from typing import Any
 
 from ezdxf.layouts import BlockLayout
+from ezdxf.path import from_hatch
 from shapely import Point
 from shapely import Polygon as ShapelyPolygon
 from shapely.geometry import LineString
@@ -29,6 +31,7 @@ from shapely.geometry.base import BaseGeometry
 from shapely.ops import polygonize, unary_union
 
 from .constants import (
+    ARC_FLATTENING_SAGITTA,
     LINE_SEGMENT_THRESHOLD,
     POLYGON_COUNT_THRESHOLD,
 )
@@ -372,6 +375,93 @@ def _count_line_segments(block_def: BlockLayout) -> int:
     return count
 
 
+def _extract_circle_edges(entity: Any) -> list[LineString]:
+    """Extract edges from CIRCLE entity using adaptive flattening.
+
+    Uses ezdxf's built-in flattening method with sagitta-based precision.
+    The sagitta controls the maximum distance from arc to chord, producing
+    more segments for larger circles and fewer for smaller ones.
+
+    Args:
+        entity: ezdxf CIRCLE entity
+
+    Returns:
+        List of LineString objects representing the circle as line segments.
+        Returns empty list if flattening fails.
+    """
+    try:
+        points = list(entity.flattening(sagitta=ARC_FLATTENING_SAGITTA))
+        edges: list[LineString] = []
+        for i in range(len(points) - 1):
+            edges.append(
+                LineString(
+                    [(points[i].x, points[i].y), (points[i + 1].x, points[i + 1].y)]
+                )
+            )
+        return edges
+    except (AttributeError, TypeError, ValueError):
+        return []
+
+
+def _extract_arc_edges(entity: Any) -> list[LineString]:
+    """Extract edges from ARC entity using adaptive flattening.
+
+    Uses ezdxf's built-in flattening method with sagitta-based precision.
+    Unlike circles, arcs are open curves (start != end).
+
+    Args:
+        entity: ezdxf ARC entity
+
+    Returns:
+        List of LineString objects representing the arc as line segments.
+        Returns empty list if flattening fails.
+    """
+    try:
+        points = list(entity.flattening(sagitta=ARC_FLATTENING_SAGITTA))
+        edges: list[LineString] = []
+        for i in range(len(points) - 1):
+            edges.append(
+                LineString(
+                    [(points[i].x, points[i].y), (points[i + 1].x, points[i + 1].y)]
+                )
+            )
+        return edges
+    except (AttributeError, TypeError, ValueError):
+        return []
+
+
+def _extract_hatch_boundary_edges(entity: Any) -> list[LineString]:
+    """Extract edges from HATCH boundary paths.
+
+    Uses ezdxf's from_hatch() to correctly handle:
+    - PolylinePath with bulge values (curved segments)
+    - EdgePath with LineEdge, ArcEdge, etc.
+
+    The from_hatch() function automatically converts bulge values to
+    arc approximations, ensuring curved polyline segments are captured.
+
+    Args:
+        entity: ezdxf HATCH entity
+
+    Returns:
+        List of LineString objects representing all boundary path edges.
+        Returns empty list if extraction fails.
+    """
+    edges: list[LineString] = []
+    try:
+        for path in from_hatch(entity):
+            points = list(path.flattening(distance=ARC_FLATTENING_SAGITTA))
+            for i in range(len(points) - 1):
+                edges.append(
+                    LineString(
+                        [(points[i].x, points[i].y), (points[i + 1].x, points[i + 1].y)]
+                    )
+                )
+    except (AttributeError, TypeError, ValueError):
+        pass
+    return edges
+
+
 def _extract_all_edges(block_def: BlockLayout) -> list[LineString]:
     """
     Extract ALL edges from block as LineStrings for unified polygonize.
@@ -379,6 +469,9 @@ def _extract_all_edges(block_def: BlockLayout) -> list[LineString]:
     Extracts edges from:
     - LINE entities (start to end as single edge)
     - LWPOLYLINE/POLYLINE entities (all vertices as edges, closing edge if closed)
+    - CIRCLE entities (adaptive flattening to line segments)
+    - ARC entities (adaptive flattening to line segments)
+    - HATCH boundary paths (PolylinePath and EdgePath variants)
 
     Args:
         block_def: ezdxf block definition object
@@ -389,22 +482,31 @@ def _extract_all_edges(block_def: BlockLayout) -> list[LineString]:
     edges: list[LineString] = []
 
     for entity in block_def:
-        if entity.dxftype() == "LINE":
+        entity_type = entity.dxftype()
+
+        if entity_type == "LINE":
             start = entity.dxf.start
             end = entity.dxf.end
             edges.append(LineString([(start.x, start.y), (end.x, end.y)]))
 
-        elif entity.dxftype() in ("LWPOLYLINE", "POLYLINE"):
+        elif entity_type in ("LWPOLYLINE", "POLYLINE"):
             try:
                 points = [(float(p[0]), float(p[1])) for p in entity.get_points()]  # type: ignore[attr-defined]
-                # Convert polyline to edge segments
                 for i in range(len(points) - 1):
                     edges.append(LineString([points[i], points[i + 1]]))
-                # Add closing edge if closed
                 if hasattr(entity, "closed") and entity.closed and len(points) >= 2:
                     edges.append(LineString([points[-1], points[0]]))
             except (AttributeError, IndexError):
                 continue
+
+        elif entity_type == "CIRCLE":
+            edges.extend(_extract_circle_edges(entity))
+
+        elif entity_type == "ARC":
+            edges.extend(_extract_arc_edges(entity))
+
+        elif entity_type == "HATCH":
+            edges.extend(_extract_hatch_boundary_edges(entity))
 
     logger.debug(f"Extracted {len(edges)} edges from block")
     return edges
@@ -651,7 +753,7 @@ def _extract_line_cycles(
         return []
 
     # Handle both single LineString and MultiLineString
-    line_segments = list(merged.geoms) if hasattr(merged, 'geoms') else [merged]
+    line_segments = list(merged.geoms) if hasattr(merged, "geoms") else [merged]
 
     # Polygonize now works correctly with split segments
     polygons = list(polygonize(line_segments))

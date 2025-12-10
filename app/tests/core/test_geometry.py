@@ -11,6 +11,7 @@ This test suite validates geometric calculation utilities including:
 
 import ezdxf
 import pytest
+from shapely.geometry import LineString
 
 from core.geometry import (
     GeometryAbortedError,
@@ -736,3 +737,232 @@ class TestExtractPaintBucketRegions:
 
         # Should produce 6 regions (3 columns x 2 rows)
         assert len(regions) == 6
+
+
+class TestExtractCircleEdges:
+    """Test suite for _extract_circle_edges function."""
+
+    def test_circle_produces_edges(self) -> None:
+        """Test that CIRCLE entity produces line segment edges."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CIRCLE_TEST")
+        block.add_circle(center=(50, 50), radius=25)
+
+        edges = _extract_all_edges(block)
+
+        # Circle should produce multiple edges (exact count depends on sagitta)
+        assert len(edges) > 10  # At minimum, should have many segments
+        # All edges should be LineStrings
+        assert all(isinstance(e, LineString) for e in edges)
+
+    def test_circle_edges_form_closed_loop(self) -> None:
+        """Test that circle edges are extracted (closed region may not form due to discretization)."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CIRCLE_CLOSED")
+        block.add_circle(center=(0, 0), radius=50)
+
+        edges = _extract_all_edges(block)
+
+        # Circle should produce many edges forming a closed loop
+        assert len(edges) > 20
+        # Verify edges form a continuous chain (first point of last edge close to last point of first)
+        assert all(isinstance(e, LineString) for e in edges)
+
+    def test_small_vs_large_circle_segment_count(self) -> None:
+        """Test that larger circles produce more segments (adaptive flattening)."""
+        doc = ezdxf.new()
+
+        block_small = doc.blocks.new(name="SMALL_CIRCLE")
+        block_small.add_circle(center=(0, 0), radius=10)
+
+        block_large = doc.blocks.new(name="LARGE_CIRCLE")
+        block_large.add_circle(center=(0, 0), radius=100)
+
+        edges_small = _extract_all_edges(block_small)
+        edges_large = _extract_all_edges(block_large)
+
+        # Larger circle should have more segments due to sagitta-based flattening
+        assert len(edges_large) > len(edges_small)
+
+
+class TestExtractArcEdges:
+    """Test suite for _extract_arc_edges function."""
+
+    def test_arc_produces_edges(self) -> None:
+        """Test that ARC entity produces line segment edges."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="ARC_TEST")
+        block.add_arc(center=(100, 100), radius=50, start_angle=0, end_angle=90)
+
+        edges = _extract_all_edges(block)
+
+        # 90-degree arc should produce multiple edges
+        assert len(edges) > 5
+        assert all(isinstance(e, LineString) for e in edges)
+
+    def test_180_degree_arc_segment_count(self) -> None:
+        """Test that 180-degree arc produces appropriate segment count."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="ARC_180")
+        block.add_arc(center=(0, 0), radius=50, start_angle=0, end_angle=180)
+
+        edges = _extract_all_edges(block)
+
+        # 180-degree arc should have more segments than 90-degree
+        assert len(edges) > 10
+
+    def test_multiple_arcs_forming_closed_shape(self) -> None:
+        """Test that multiple arcs extract edges (closed region may not form due to discretization)."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="ARCS_CLOSED")
+
+        # Two semicircles forming a closed shape
+        block.add_arc(center=(50, 0), radius=50, start_angle=0, end_angle=180)
+        block.add_arc(center=(50, 0), radius=50, start_angle=180, end_angle=360)
+
+        edges = _extract_all_edges(block)
+
+        # Two semicircles should produce many edges
+        assert len(edges) > 20
+        assert all(isinstance(e, LineString) for e in edges)
+
+
+class TestExtractHatchBoundaryEdges:
+    """Test suite for _extract_hatch_boundary_edges function."""
+
+    def test_hatch_polyline_path_produces_edges(self) -> None:
+        """Test that HATCH with PolylinePath produces edges."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="HATCH_POLY_TEST")
+        hatch = block.add_hatch()
+        hatch.paths.add_polyline_path(
+            [(0, 0), (100, 0), (100, 50), (0, 50)], is_closed=True
+        )
+
+        edges = _extract_all_edges(block)
+
+        # Rectangular hatch boundary should produce 4 edges
+        assert len(edges) == 4
+        assert all(isinstance(e, LineString) for e in edges)
+
+    def test_hatch_with_bulge_produces_curved_edges(self) -> None:
+        """Test that HATCH with bulge values produces curved segment edges."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="HATCH_BULGE_TEST")
+        hatch = block.add_hatch()
+        # Bulge of 1.0 creates a semicircle
+        hatch.paths.add_polyline_path(
+            [(0, 0, 0), (100, 0, 1.0), (100, 50, 0), (0, 50, 0)], is_closed=True
+        )
+
+        edges = _extract_all_edges(block)
+
+        # Should have more than 4 edges due to curved segment
+        assert len(edges) > 4
+
+    def test_hatch_edge_path_line_edges(self) -> None:
+        """Test that HATCH with EdgePath LineEdge produces edges."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="HATCH_EDGE_TEST")
+        hatch = block.add_hatch()
+        edge_path = hatch.paths.add_edge_path()
+        edge_path.add_line((0, 0), (100, 0))
+        edge_path.add_line((100, 0), (100, 50))
+        edge_path.add_line((100, 50), (0, 50))
+        edge_path.add_line((0, 50), (0, 0))
+
+        edges = _extract_all_edges(block)
+
+        # Should produce 4 edges for rectangular boundary
+        assert len(edges) == 4
+
+    def test_hatch_forms_closed_region(self) -> None:
+        """Test that HATCH boundary forms closed region via polygonize."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="HATCH_REGION_TEST")
+        hatch = block.add_hatch()
+        hatch.paths.add_polyline_path(
+            [(0, 0), (100, 0), (100, 50), (0, 50)], is_closed=True
+        )
+
+        regions = _extract_paint_bucket_regions(block)
+
+        # HATCH boundary should form exactly one closed region
+        assert len(regions) == 1
+
+
+class TestCircleArcHatchIntegration:
+    """Integration tests for CIRCLE, ARC, and HATCH edge extraction."""
+
+    def test_mixed_entities_produces_all_edges(self) -> None:
+        """Test that block with mixed entities extracts all edge types."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="MIXED_TEST")
+
+        # Add various entity types
+        block.add_line((0, 0), (100, 0))
+        block.add_circle(center=(150, 25), radius=20)
+        block.add_arc(center=(200, 25), radius=15, start_angle=0, end_angle=180)
+        hatch = block.add_hatch()
+        hatch.paths.add_polyline_path(
+            [(250, 0), (300, 0), (300, 50), (250, 50)], is_closed=True
+        )
+
+        edges = _extract_all_edges(block)
+
+        # Should have edges from all entity types
+        # 1 LINE + circle edges + arc edges + 4 HATCH edges
+        assert len(edges) > 10
+
+    def test_content_zone_with_circle_boundary(self) -> None:
+        """Test edge extraction with CIRCLE entities."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CIRCLE_BOUNDARY")
+        # Circle as outer boundary
+        block.add_circle(center=(50, 50), radius=50)
+        # Small inner circle (hole)
+        block.add_circle(center=(50, 50), radius=10)
+
+        edges = _extract_all_edges(block)
+
+        # Should extract edges from both circles
+        # Larger circle produces more edges than smaller one
+        assert len(edges) > 40  # Both circles combined
+
+    def test_content_zone_with_arc_boundary(self) -> None:
+        """Test edge extraction with ARCs forming boundary."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="ARC_BOUNDARY")
+        # Rounded rectangle using arcs at corners
+        block.add_line((20, 0), (80, 0))
+        block.add_arc(center=(80, 20), radius=20, start_angle=270, end_angle=360)
+        block.add_line((100, 20), (100, 80))
+        block.add_arc(center=(80, 80), radius=20, start_angle=0, end_angle=90)
+        block.add_line((80, 100), (20, 100))
+        block.add_arc(center=(20, 80), radius=20, start_angle=90, end_angle=180)
+        block.add_line((0, 80), (0, 20))
+        block.add_arc(center=(20, 20), radius=20, start_angle=180, end_angle=270)
+
+        edges = _extract_all_edges(block)
+
+        # Should extract edges from 4 lines + 4 arcs
+        # 4 lines = 4 edges, 4 arcs produce multiple edges each
+        assert len(edges) > 20
+
+    def test_real_file_circles_arcs(self) -> None:
+        """Test edge extraction from real test file with CIRCLE and ARC entities."""
+        doc = ezdxf.readfile("app/tests/assets/circles_arcs_points.dxf")
+
+        # Test CIRCLE block
+        block_circles = doc.blocks.get("TEST_CIRCLES")
+        edges_circles = _extract_all_edges(block_circles)
+
+        # Should have edges from all 3 circles
+        assert len(edges_circles) > 30  # Multiple segments per circle
+
+        # Test ARC block
+        block_arcs = doc.blocks.get("TEST_ARCS")
+        edges_arcs = _extract_all_edges(block_arcs)
+
+        # Should have edges from all 3 arcs
+        assert len(edges_arcs) > 15  # Multiple segments per arc

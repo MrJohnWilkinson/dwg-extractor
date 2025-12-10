@@ -148,3 +148,9 @@ LINE_SEGMENT_THRESHOLD: int = 5000
 Blocks with more LINE segments skip LINE cycle extraction.
 Rationale: With Shapely's GEOS-based polygonize(), can handle 5000 segments
 efficiently (previously 200 with DFS-based cycle detection)."""
+
+# Arc Flattening Configuration
+ARC_FLATTENING_SAGITTA: float = 0.1
+"""Maximum distance from arc center to chord center for flattening.
+Smaller values = more segments = higher precision. 0.1 is appropriate for
+typical CAD drawings with units in mm or inches."""
