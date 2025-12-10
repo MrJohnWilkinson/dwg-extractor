@@ -106,7 +106,9 @@ def _get_drawing_units(doc: Drawing) -> int:
         logger.debug(f"Detected drawing units: {unit_name} (code={units})")
         return units
     except (AttributeError, KeyError) as e:
-        logger.debug(f"Could not read $INSUNITS header: {e}, defaulting to 0 (Unitless)")
+        logger.debug(
+            f"Could not read $INSUNITS header: {e}, defaulting to 0 (Unitless)"
+        )
         return 0
 
 
@@ -192,7 +194,9 @@ def get_snap_tolerances(
                 effective_units,
                 DEFAULT_PRECISION_FIX_TOLERANCE.get(0, 0.01),  # Fallback to unitless
             )
-            logger.debug(f"Using default precision fix tolerance: {precision_tolerance}")
+            logger.debug(
+                f"Using default precision fix tolerance: {precision_tolerance}"
+            )
     else:
         precision_tolerance = 0.0
 

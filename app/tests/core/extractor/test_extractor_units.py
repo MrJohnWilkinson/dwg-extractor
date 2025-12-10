@@ -263,12 +263,14 @@ class TestGetSnapTolerances:
         supported_units = [0, 1, 2, 4, 5, 6]
 
         for unit_code in supported_units:
-            precision, gap_bridge = get_snap_tolerances(
-                unit_code, None, True, None
-            )
+            precision, gap_bridge = get_snap_tolerances(unit_code, None, True, None)
 
-            assert precision > 0, f"Unit {unit_code} should have positive precision tolerance"
-            assert gap_bridge > 0, f"Unit {unit_code} should have positive gap bridge default"
+            assert precision > 0, (
+                f"Unit {unit_code} should have positive precision tolerance"
+            )
+            assert gap_bridge > 0, (
+                f"Unit {unit_code} should have positive gap bridge default"
+            )
             assert precision == DEFAULT_PRECISION_FIX_TOLERANCE[unit_code]
             assert gap_bridge == DEFAULT_GAP_BRIDGE_TOLERANCE[unit_code]
 
@@ -519,7 +521,11 @@ class TestGetSnapTolerancesIndependence:
 
         # Gap bridge only
         p3, g3 = get_snap_tolerances(
-            detected_units, override_units, True, custom_gap, precision_fix_enabled=False
+            detected_units,
+            override_units,
+            True,
+            custom_gap,
+            precision_fix_enabled=False,
         )
         assert p3 == 0.0
         assert g3 == custom_gap

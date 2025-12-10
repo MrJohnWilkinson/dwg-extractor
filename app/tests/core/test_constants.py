@@ -180,7 +180,9 @@ class TestPrecisionFixToleranceConstants:
         units_with_larger_tolerance = [0, 1, 4]  # Unitless, Inches, Millimeters
         for code in units_with_larger_tolerance:
             new_tolerance = DEFAULT_PRECISION_FIX_TOLERANCE[code]
-            old_tolerance = PRECISION_SNAP_TOLERANCE.get(code, DEFAULT_PRECISION_SNAP_TOLERANCE)
+            old_tolerance = PRECISION_SNAP_TOLERANCE.get(
+                code, DEFAULT_PRECISION_SNAP_TOLERANCE
+            )
             assert new_tolerance > old_tolerance, (
                 f"Unit {code}: new tolerance {new_tolerance} should be > "
                 f"old tolerance {old_tolerance}"

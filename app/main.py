@@ -24,6 +24,7 @@ import customtkinter as ctk
 
 from core.constants import (
     DEFAULT_GAP_BRIDGE_TOLERANCE,
+    DEFAULT_PRECISION_FIX_TOLERANCE,
     GAP_BRIDGE_MAX,
     GAP_BRIDGE_MIN,
     MSG_ABORTED,
@@ -34,6 +35,8 @@ from core.constants import (
     MSG_PROCESSING,
     MSG_SELECT_FILE,
     MSG_SUCCESS,
+    PRECISION_FIX_MAX,
+    PRECISION_FIX_MIN,
     UNIT_SELECTION_OPTIONS,
 )
 from core.excel_writer import write_excel
@@ -73,11 +76,12 @@ class DXFExtractorApp(ctk.CTk):
         self.queue_handler = create_queue_handler(self.log_queue)
         logging.getLogger().addHandler(self.queue_handler)
 
-        # Unit selection and gap bridge settings
+        # Unit selection, precision fix, and gap bridge settings
         self.unit_selection_var = ctk.StringVar(value="DXF/DWG")
+        self.precision_fix_var = ctk.BooleanVar(value=True)
+        self.precision_fix_amount_var = ctk.StringVar(value="0.01")
         self.gap_bridge_var = ctk.BooleanVar(value=False)
         self.gap_bridge_amount_var = ctk.StringVar(value="100.0")
-        self.precision_fix_var = ctk.BooleanVar(value=True)
 
         # Create UI
         self._create_widgets()
@@ -149,13 +153,13 @@ class DXFExtractorApp(ctk.CTk):
         )
         # Don't pack - will be shown during extraction
 
-        # Options frame for unit selection and gap bridge
-        options_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        options_frame.pack(pady=(0, 15))
+        # Units row frame
+        units_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        units_frame.pack(pady=(0, 10))
 
         # Unit selection label
         unit_label = ctk.CTkLabel(
-            options_frame,
+            units_frame,
             text="Units:",
             font=ctk.CTkFont(size=12),
         )
@@ -163,37 +167,86 @@ class DXFExtractorApp(ctk.CTk):
 
         # Unit selection dropdown
         self.unit_dropdown = ctk.CTkOptionMenu(
-            options_frame,
+            units_frame,
             values=list(UNIT_SELECTION_OPTIONS.keys()),
             variable=self.unit_selection_var,
             width=100,
             command=self._on_unit_change,
         )
-        self.unit_dropdown.pack(side="left", padx=(0, 20))
+        self.unit_dropdown.pack(side="left", padx=(0, 10))
+
+        # Units hint label
+        units_hint = ctk.CTkLabel(
+            units_frame,
+            text="(applies to precision fix and gap bridge)",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        units_hint.pack(side="left")
+
+        # First separator
+        separator1 = ctk.CTkFrame(self.main_frame, height=1, fg_color="gray50")
+        separator1.pack(fill="x", pady=5)
+
+        # Precision Fix row frame
+        precision_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        precision_frame.pack(pady=(5, 10))
 
         # Precision fix checkbox
         self.precision_fix_checkbox = ctk.CTkCheckBox(
-            options_frame,
-            text="Precision Fix:",
+            precision_frame,
+            text="Precision Fix",
             variable=self.precision_fix_var,
             command=self._on_precision_fix_toggle,
             font=ctk.CTkFont(size=12),
         )
-        self.precision_fix_checkbox.pack(side="left", padx=(0, 20))
+        self.precision_fix_checkbox.pack(side="left", padx=(0, 10))
+
+        # Precision fix amount label
+        precision_amount_label = ctk.CTkLabel(
+            precision_frame,
+            text="Amount:",
+            font=ctk.CTkFont(size=12),
+        )
+        precision_amount_label.pack(side="left", padx=(0, 5))
+
+        # Precision fix amount entry (starts enabled since precision_fix_var defaults to True)
+        self.precision_fix_entry = ctk.CTkEntry(
+            precision_frame,
+            width=80,
+            textvariable=self.precision_fix_amount_var,
+        )
+        self.precision_fix_entry.pack(side="left")
+
+        # Second separator
+        separator2 = ctk.CTkFrame(self.main_frame, height=1, fg_color="gray50")
+        separator2.pack(fill="x", pady=5)
+
+        # Gap Bridge row frame
+        gap_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        gap_frame.pack(pady=(5, 10))
 
         # Gap bridge checkbox
         self.gap_bridge_checkbox = ctk.CTkCheckBox(
-            options_frame,
-            text="Gap Bridge:",
+            gap_frame,
+            text="Gap Bridge",
             variable=self.gap_bridge_var,
             command=self._on_gap_bridge_toggle,
             font=ctk.CTkFont(size=12),
         )
-        self.gap_bridge_checkbox.pack(side="left", padx=(0, 5))
+        self.gap_bridge_checkbox.pack(side="left", padx=(0, 10))
+
+        # Gap bridge amount label
+        gap_amount_label = ctk.CTkLabel(
+            gap_frame,
+            text="Amount:",
+            font=ctk.CTkFont(size=12),
+        )
+        gap_amount_label.pack(side="left", padx=(0, 5))
 
         # Gap bridge amount entry
         self.gap_bridge_entry = ctk.CTkEntry(
-            options_frame,
+            gap_frame,
             width=80,
             textvariable=self.gap_bridge_amount_var,
             state="disabled",
@@ -512,14 +565,32 @@ class DXFExtractorApp(ctk.CTk):
     def _on_unit_change(self, value: str) -> None:
         """Handle unit dropdown selection change."""
         self.logger.debug(f"Unit selection changed to: {value}")
-        # Update gap bridge default if gap bridging is enabled
-        if hasattr(self, "gap_bridge_var") and self.gap_bridge_var.get():
+        # Update precision fix default if enabled
+        if self.precision_fix_var.get():
+            self._update_precision_fix_default()
+        # Update gap bridge default if enabled
+        if self.gap_bridge_var.get():
             self._update_gap_bridge_default()
 
     def _on_precision_fix_toggle(self) -> None:
         """Handle precision fix checkbox toggle."""
         enabled = self.precision_fix_var.get()
         self.logger.debug(f"Precision fix toggled: {enabled}")
+
+        if enabled:
+            self.precision_fix_entry.configure(state="normal")
+            self._update_precision_fix_default()
+        else:
+            self.precision_fix_entry.configure(state="disabled")
+
+    def _update_precision_fix_default(self) -> None:
+        """Update precision fix amount to default for selected unit."""
+        selection = self.unit_selection_var.get()
+        insunits = UNIT_SELECTION_OPTIONS.get(selection, -1)
+        effective_units = insunits if insunits != -1 else 4  # Default to mm
+        default_amount = DEFAULT_PRECISION_FIX_TOLERANCE.get(effective_units, 0.01)
+        self.precision_fix_amount_var.set(str(default_amount))
+        self.logger.debug(f"Precision fix default updated to {default_amount}")
 
     def _on_gap_bridge_toggle(self) -> None:
         """Handle gap bridge checkbox toggle."""
@@ -561,6 +632,21 @@ class DXFExtractorApp(ctk.CTk):
                 return None
         except ValueError:
             self.logger.warning("Invalid gap bridge amount")
+            return None
+
+    def _get_precision_fix_amount(self) -> float | None:
+        """Get validated precision fix amount, or None if invalid/disabled."""
+        if not self.precision_fix_var.get():
+            return None
+        try:
+            amount = float(self.precision_fix_amount_var.get())
+            if PRECISION_FIX_MIN <= amount <= PRECISION_FIX_MAX:
+                return amount
+            else:
+                self.logger.warning(f"Precision fix amount {amount} out of range")
+                return None
+        except ValueError:
+            self.logger.warning("Invalid precision fix amount")
             return None
 
     def _on_log_level_change(self, value: str) -> None:

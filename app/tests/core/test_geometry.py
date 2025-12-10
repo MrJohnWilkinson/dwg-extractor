@@ -1087,7 +1087,11 @@ class TestPrecisionSnapping:
 
         # Verify snapping was applied (merged geometry is modified)
         # The snap function should process without error
-        line_segments = list(merged_snapped.geoms) if hasattr(merged_snapped, "geoms") else [merged_snapped]
+        line_segments = (
+            list(merged_snapped.geoms)
+            if hasattr(merged_snapped, "geoms")
+            else [merged_snapped]
+        )
         polygons = list(polygonize(line_segments))
 
         # Should produce at least 1 valid polygon (the outer rectangle)
@@ -1195,12 +1199,16 @@ class TestGapBridging:
         ]
 
         merged = unary_union(edges)
-        merged = snap(merged, merged, 1e-6)   # Stage 1
-        merged_stage2 = snap(merged, merged, 2.0)    # Stage 2 with 2.0 tolerance
+        merged = snap(merged, merged, 1e-6)  # Stage 1
+        merged_stage2 = snap(merged, merged, 2.0)  # Stage 2 with 2.0 tolerance
 
         # Verify Stage 2 modified the geometry (added vertex at gap location)
         # The snapped geometry should have a vertex added at (9, 5) on the right edge
-        line_segments = list(merged_stage2.geoms) if hasattr(merged_stage2, "geoms") else [merged_stage2]
+        line_segments = (
+            list(merged_stage2.geoms)
+            if hasattr(merged_stage2, "geoms")
+            else [merged_stage2]
+        )
         polygons = list(polygonize(line_segments))
 
         # Should produce at least 1 polygon
@@ -1237,9 +1245,7 @@ class TestTolerancePropagation:
 
         block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
 
-        regions = _extract_paint_bucket_regions(
-            block, precision_tolerance=1e-5
-        )
+        regions = _extract_paint_bucket_regions(block, precision_tolerance=1e-5)
 
         assert len(regions) == 1
 
@@ -1252,9 +1258,7 @@ class TestTolerancePropagation:
         block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
 
         # Default precision + gap bridging
-        regions = _extract_paint_bucket_regions(
-            block, gap_bridge_tolerance=2.0
-        )
+        regions = _extract_paint_bucket_regions(block, gap_bridge_tolerance=2.0)
 
         assert len(regions) == 1
 
@@ -1267,9 +1271,7 @@ class TestTolerancePropagation:
         block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
 
         regions = _extract_paint_bucket_regions(
-            block,
-            precision_tolerance=1e-5,
-            gap_bridge_tolerance=0.5
+            block, precision_tolerance=1e-5, gap_bridge_tolerance=0.5
         )
 
         assert len(regions) == 1
@@ -1287,10 +1289,7 @@ class TestTolerancePropagation:
 
         with pytest.raises(GeometryAbortedError):
             _extract_paint_bucket_regions(
-                block,
-                abort_event,
-                precision_tolerance=1e-6,
-                gap_bridge_tolerance=1.0
+                block, abort_event, precision_tolerance=1e-6, gap_bridge_tolerance=1.0
             )
 
 
@@ -1324,12 +1323,12 @@ class TestUnitToleranceMapping:
     def test_default_gap_amounts(self) -> None:
         """Default gap amounts should be appropriate for each unit."""
         # Verify key unit defaults
-        assert DEFAULT_GAP_BRIDGE_TOLERANCE[4] == 0.5   # MM: 0.5mm
+        assert DEFAULT_GAP_BRIDGE_TOLERANCE[4] == 0.5  # MM: 0.5mm
         assert DEFAULT_GAP_BRIDGE_TOLERANCE[6] == 0.001  # M: 1mm in meters
-        assert DEFAULT_GAP_BRIDGE_TOLERANCE[1] == 0.01   # IN: 0.01 inches
-        assert DEFAULT_GAP_BRIDGE_TOLERANCE[2] == 0.1    # FT: 0.1 feet
-        assert DEFAULT_GAP_BRIDGE_TOLERANCE[5] == 0.05   # CM: 0.05 cm
-        assert DEFAULT_GAP_BRIDGE_TOLERANCE[0] == 0.1    # Unitless
+        assert DEFAULT_GAP_BRIDGE_TOLERANCE[1] == 0.01  # IN: 0.01 inches
+        assert DEFAULT_GAP_BRIDGE_TOLERANCE[2] == 0.1  # FT: 0.1 feet
+        assert DEFAULT_GAP_BRIDGE_TOLERANCE[5] == 0.05  # CM: 0.05 cm
+        assert DEFAULT_GAP_BRIDGE_TOLERANCE[0] == 0.1  # Unitless
 
 
 class TestPrecisionSnapOrderFix:
@@ -1454,6 +1453,7 @@ class TestPrecisionSnapOrderFix:
         # - Middle: 900 * 400 = 360,000
         # - Top: 900 * 400 = 360,000
         from shapely import Polygon as ShapelyPolygon
+
         areas = sorted([ShapelyPolygon(r).area for r in regions])
         for area in areas:
             assert 350000 < area < 370000  # ~360,000 with some tolerance
@@ -1486,18 +1486,18 @@ class TestPrecisionSnapOrderFix:
         block = doc.blocks.new(name="MULTI_ERROR")
 
         # Rectangle with slightly imprecise corners
-        block.add_lwpolyline([
-            (0.0000000001, 0.0000000002),
-            (99.9999999998, 0.0000000001),
-            (100.0000000001, 99.9999999999),
-            (0.0000000002, 100.0000000001)
-        ], close=True)
+        block.add_lwpolyline(
+            [
+                (0.0000000001, 0.0000000002),
+                (99.9999999998, 0.0000000001),
+                (100.0000000001, 99.9999999999),
+                (0.0000000002, 100.0000000001),
+            ],
+            close=True,
+        )
 
         # Dividers also with small errors
-        block.add_line(
-            (0.0000000003, 49.9999999998),
-            (99.9999999997, 50.0000000002)
-        )
+        block.add_line((0.0000000003, 49.9999999998), (99.9999999997, 50.0000000002))
 
         # With precision fix, should still get 2 regions
         regions = _extract_paint_bucket_regions(
