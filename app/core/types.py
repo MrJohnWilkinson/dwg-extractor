@@ -225,3 +225,18 @@ class ContentZoneData(TypedDict):
     content_zone_width: float | None
     content_zone_height: float | None
     polygon_count: int
+
+
+class PolygonMetrics(TypedDict):
+    """
+    Metrics calculated for a single polygon after precision fix.
+
+    Attributes:
+        area_raw: Area in DXF drawing units squared
+        shortest_side: Length of shortest straight side in DXF units
+        perimeter: Total perimeter length in DXF units
+    """
+
+    area_raw: float
+    shortest_side: float
+    perimeter: float

@@ -253,3 +253,41 @@ PRECISION_FIX_MIN: float = 0.0
 PRECISION_FIX_MAX: float = 10.0
 """Maximum precision fix amount. Conservative limit to prevent
 unreasonably large tolerance values that could merge distinct geometry."""
+
+# Minimum Area Filter constants
+DEFAULT_MIN_AREA_FILTER: dict[int, float] = {
+    0: 100.0,  # Unitless: assume mm-equivalent
+    1: 0.01,  # Inches: 0.01 sq inches
+    2: 0.001,  # Feet: 0.001 sq feet
+    4: 100.0,  # Millimeters: 100 sq mm
+    5: 1.0,  # Centimeters: 1 sq cm
+    6: 0.0001,  # Meters: 0.0001 sq m (100 sq mm)
+}
+"""Default minimum area filter by unit code.
+Polygons with area less than this value are filtered out of content zone calculation."""
+
+MIN_AREA_FILTER_MIN: float = 0.0
+"""Minimum area filter amount (0 = no area filtering)."""
+
+MIN_AREA_FILTER_MAX: float = 1000000.0
+"""Maximum area filter amount. Large value allows extreme cases while
+preventing overflow issues in calculations."""
+
+# Minimum Side Filter constants
+DEFAULT_MIN_SIDE_FILTER: dict[int, float] = {
+    0: 10.0,  # Unitless: assume mm-equivalent
+    1: 0.5,  # Inches: 0.5 inches
+    2: 0.05,  # Feet: 0.05 feet (~0.6 inches)
+    4: 10.0,  # Millimeters: 10mm
+    5: 1.0,  # Centimeters: 1cm
+    6: 0.01,  # Meters: 0.01m (10mm)
+}
+"""Default minimum side filter by unit code.
+Polygons with shortest straight side less than this value are filtered out."""
+
+MIN_SIDE_FILTER_MIN: float = 0.0
+"""Minimum side filter amount (0 = no side filtering)."""
+
+MIN_SIDE_FILTER_MAX: float = 100000.0
+"""Maximum side filter amount. Large value allows extreme cases while
+preventing overflow issues in calculations."""

@@ -9,6 +9,8 @@ Tests cover:
 
 from core.constants import (
     DEFAULT_GAP_BRIDGE_TOLERANCE,
+    DEFAULT_MIN_AREA_FILTER,
+    DEFAULT_MIN_SIDE_FILTER,
     DEFAULT_PRECISION_FIX_TOLERANCE,
     DEFAULT_PRECISION_SNAP_TOLERANCE,
     DXF_INSUNITS_MAP,
@@ -20,6 +22,10 @@ from core.constants import (
     GAP_BRIDGE_MAX,
     GAP_BRIDGE_MIN,
     LINE_SEGMENT_THRESHOLD,
+    MIN_AREA_FILTER_MAX,
+    MIN_AREA_FILTER_MIN,
+    MIN_SIDE_FILTER_MAX,
+    MIN_SIDE_FILTER_MIN,
     POLYGON_COUNT_THRESHOLD,
     PRECISION_FIX_MAX,
     PRECISION_FIX_MIN,
@@ -235,4 +241,110 @@ class TestPrecisionFixToleranceConstants:
         """Meter tolerance should be 0.00001m (= 0.01mm)."""
         assert DEFAULT_PRECISION_FIX_TOLERANCE[6] == 0.00001, (
             f"Meter tolerance should be 0.00001, got {DEFAULT_PRECISION_FIX_TOLERANCE[6]}"
+        )
+
+
+class TestMinAreaFilterConstants:
+    """Tests for minimum area filter constants."""
+
+    def test_default_min_area_filter_has_all_supported_units(self) -> None:
+        """DEFAULT_MIN_AREA_FILTER should have all supported unit codes.
+
+        Supported codes: 0 (Unitless), 1 (Inches), 2 (Feet), 4 (MM), 5 (CM), 6 (M).
+        """
+        expected_codes = {0, 1, 2, 4, 5, 6}
+        actual_codes = set(DEFAULT_MIN_AREA_FILTER.keys())
+        assert actual_codes == expected_codes, (
+            f"Expected codes {expected_codes}, got {actual_codes}"
+        )
+
+    def test_default_min_area_filter_values_non_negative(self) -> None:
+        """All area filter values must be non-negative (>= 0)."""
+        for code, value in DEFAULT_MIN_AREA_FILTER.items():
+            assert value >= 0, (
+                f"Area filter value for code {code} is {value}, must be >= 0"
+            )
+
+    def test_min_area_filter_min_value(self) -> None:
+        """MIN_AREA_FILTER_MIN should be 0.0."""
+        assert MIN_AREA_FILTER_MIN == 0.0, (
+            f"MIN_AREA_FILTER_MIN should be 0.0, got {MIN_AREA_FILTER_MIN}"
+        )
+
+    def test_min_area_filter_max_value(self) -> None:
+        """MIN_AREA_FILTER_MAX should be 1000000.0."""
+        assert MIN_AREA_FILTER_MAX == 1000000.0, (
+            f"MIN_AREA_FILTER_MAX should be 1000000.0, got {MIN_AREA_FILTER_MAX}"
+        )
+
+    def test_min_area_filter_min_less_than_max(self) -> None:
+        """MIN_AREA_FILTER_MIN should be less than MIN_AREA_FILTER_MAX."""
+        assert MIN_AREA_FILTER_MIN < MIN_AREA_FILTER_MAX, (
+            f"MIN_AREA_FILTER_MIN ({MIN_AREA_FILTER_MIN}) must be < "
+            f"MIN_AREA_FILTER_MAX ({MIN_AREA_FILTER_MAX})"
+        )
+
+    def test_default_min_area_filter_mm_value(self) -> None:
+        """MM (4) area filter should be 100.0 sq mm."""
+        assert DEFAULT_MIN_AREA_FILTER[4] == 100.0, (
+            f"MM area filter should be 100.0, got {DEFAULT_MIN_AREA_FILTER[4]}"
+        )
+
+    def test_default_min_area_filter_inch_value(self) -> None:
+        """Inch (1) area filter should be 0.01 sq inches."""
+        assert DEFAULT_MIN_AREA_FILTER[1] == 0.01, (
+            f"Inch area filter should be 0.01, got {DEFAULT_MIN_AREA_FILTER[1]}"
+        )
+
+
+class TestMinSideFilterConstants:
+    """Tests for minimum side filter constants."""
+
+    def test_default_min_side_filter_has_all_supported_units(self) -> None:
+        """DEFAULT_MIN_SIDE_FILTER should have all supported unit codes.
+
+        Supported codes: 0 (Unitless), 1 (Inches), 2 (Feet), 4 (MM), 5 (CM), 6 (M).
+        """
+        expected_codes = {0, 1, 2, 4, 5, 6}
+        actual_codes = set(DEFAULT_MIN_SIDE_FILTER.keys())
+        assert actual_codes == expected_codes, (
+            f"Expected codes {expected_codes}, got {actual_codes}"
+        )
+
+    def test_default_min_side_filter_values_non_negative(self) -> None:
+        """All side filter values must be non-negative (>= 0)."""
+        for code, value in DEFAULT_MIN_SIDE_FILTER.items():
+            assert value >= 0, (
+                f"Side filter value for code {code} is {value}, must be >= 0"
+            )
+
+    def test_min_side_filter_min_value(self) -> None:
+        """MIN_SIDE_FILTER_MIN should be 0.0."""
+        assert MIN_SIDE_FILTER_MIN == 0.0, (
+            f"MIN_SIDE_FILTER_MIN should be 0.0, got {MIN_SIDE_FILTER_MIN}"
+        )
+
+    def test_min_side_filter_max_value(self) -> None:
+        """MIN_SIDE_FILTER_MAX should be 100000.0."""
+        assert MIN_SIDE_FILTER_MAX == 100000.0, (
+            f"MIN_SIDE_FILTER_MAX should be 100000.0, got {MIN_SIDE_FILTER_MAX}"
+        )
+
+    def test_min_side_filter_min_less_than_max(self) -> None:
+        """MIN_SIDE_FILTER_MIN should be less than MIN_SIDE_FILTER_MAX."""
+        assert MIN_SIDE_FILTER_MIN < MIN_SIDE_FILTER_MAX, (
+            f"MIN_SIDE_FILTER_MIN ({MIN_SIDE_FILTER_MIN}) must be < "
+            f"MIN_SIDE_FILTER_MAX ({MIN_SIDE_FILTER_MAX})"
+        )
+
+    def test_default_min_side_filter_mm_value(self) -> None:
+        """MM (4) side filter should be 10.0 mm."""
+        assert DEFAULT_MIN_SIDE_FILTER[4] == 10.0, (
+            f"MM side filter should be 10.0, got {DEFAULT_MIN_SIDE_FILTER[4]}"
+        )
+
+    def test_default_min_side_filter_inch_value(self) -> None:
+        """Inch (1) side filter should be 0.5 inches."""
+        assert DEFAULT_MIN_SIDE_FILTER[1] == 0.5, (
+            f"Inch side filter should be 0.5, got {DEFAULT_MIN_SIDE_FILTER[1]}"
         )
