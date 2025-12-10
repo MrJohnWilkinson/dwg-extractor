@@ -77,6 +77,7 @@ class DXFExtractorApp(ctk.CTk):
         self.unit_selection_var = ctk.StringVar(value="DXF/DWG")
         self.gap_bridge_var = ctk.BooleanVar(value=False)
         self.gap_bridge_amount_var = ctk.StringVar(value="100.0")
+        self.precision_fix_var = ctk.BooleanVar(value=True)
 
         # Create UI
         self._create_widgets()
@@ -169,6 +170,16 @@ class DXFExtractorApp(ctk.CTk):
             command=self._on_unit_change,
         )
         self.unit_dropdown.pack(side="left", padx=(0, 20))
+
+        # Precision fix checkbox
+        self.precision_fix_checkbox = ctk.CTkCheckBox(
+            options_frame,
+            text="Precision Fix:",
+            variable=self.precision_fix_var,
+            command=self._on_precision_fix_toggle,
+            font=ctk.CTkFont(size=12),
+        )
+        self.precision_fix_checkbox.pack(side="left", padx=(0, 20))
 
         # Gap bridge checkbox
         self.gap_bridge_checkbox = ctk.CTkCheckBox(
@@ -318,11 +329,13 @@ class DXFExtractorApp(ctk.CTk):
             unit_override = self._get_selected_unit_override()
             gap_bridge_enabled = self.gap_bridge_var.get()
             gap_bridge_amount = self._get_gap_bridge_amount()
+            precision_fix_enabled = self.precision_fix_var.get()
 
             self.logger.info(
                 f"Extraction settings: unit_override={unit_override}, "
                 f"gap_bridge_enabled={gap_bridge_enabled}, "
-                f"gap_bridge_amount={gap_bridge_amount}"
+                f"gap_bridge_amount={gap_bridge_amount}, "
+                f"precision_fix_enabled={precision_fix_enabled}"
             )
 
             # Step 1: Load file
@@ -337,6 +350,7 @@ class DXFExtractorApp(ctk.CTk):
                 unit_override=unit_override,
                 gap_bridge_enabled=gap_bridge_enabled,
                 gap_bridge_amount=gap_bridge_amount,
+                precision_fix_enabled=precision_fix_enabled,
             )
 
             # Check for empty results
@@ -501,6 +515,11 @@ class DXFExtractorApp(ctk.CTk):
         # Update gap bridge default if gap bridging is enabled
         if hasattr(self, "gap_bridge_var") and self.gap_bridge_var.get():
             self._update_gap_bridge_default()
+
+    def _on_precision_fix_toggle(self) -> None:
+        """Handle precision fix checkbox toggle."""
+        enabled = self.precision_fix_var.get()
+        self.logger.debug(f"Precision fix toggled: {enabled}")
 
     def _on_gap_bridge_toggle(self) -> None:
         """Handle gap bridge checkbox toggle."""
