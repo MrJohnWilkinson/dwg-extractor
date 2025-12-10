@@ -116,6 +116,7 @@ def get_snap_tolerances(
     override_units: int | None,
     gap_bridge_enabled: bool,
     gap_bridge_amount: float | None,
+    precision_fix_enabled: bool = True,
 ) -> tuple[float, float]:
     """
     Calculate appropriate snap tolerances based on units and user settings.
@@ -129,10 +130,14 @@ def get_snap_tolerances(
         override_units: User-selected unit override. If None or -1, use detected_units
         gap_bridge_enabled: Whether gap bridging is enabled by the user
         gap_bridge_amount: Custom gap bridge amount. If None or <= 0, use default for unit
+        precision_fix_enabled: Whether precision fix (Stage 1) snapping is enabled.
+                               When False, precision_tolerance is set to 0.0.
+                               Defaults to True for backward compatibility.
 
     Returns:
         Tuple of (precision_tolerance, gap_bridge_tolerance):
-        - precision_tolerance: Always returns a value appropriate for the effective unit
+        - precision_tolerance: Returns value appropriate for the effective unit when enabled,
+                               or 0.0 when precision_fix_enabled=False
         - gap_bridge_tolerance: Returns 0.0 if disabled, otherwise returns user amount or default
 
     Examples:
@@ -151,6 +156,10 @@ def get_snap_tolerances(
         >>> # Auto-detect (override=-1), gap bridging with custom amount
         >>> get_snap_tolerances(4, -1, True, 1.0)
         (1e-6, 1.0)  # Uses mm precision tolerance and custom gap
+
+        >>> # Precision fix disabled
+        >>> get_snap_tolerances(4, None, False, None, precision_fix_enabled=False)
+        (0.0, 0.0)  # Precision tolerance is 0.0 when disabled
     """
     # Determine effective units: use override if provided and not -1
     if override_units is not None and override_units != -1:
@@ -165,9 +174,13 @@ def get_snap_tolerances(
         )
 
     # Calculate precision tolerance from PRECISION_SNAP_TOLERANCE dict with fallback
-    precision_tolerance = PRECISION_SNAP_TOLERANCE.get(
-        effective_units, DEFAULT_PRECISION_SNAP_TOLERANCE
-    )
+    # When precision_fix_enabled=False, set to 0.0 to disable Stage 1 snapping
+    if precision_fix_enabled:
+        precision_tolerance = PRECISION_SNAP_TOLERANCE.get(
+            effective_units, DEFAULT_PRECISION_SNAP_TOLERANCE
+        )
+    else:
+        precision_tolerance = 0.0
 
     # Calculate gap bridge tolerance
     if not gap_bridge_enabled:
@@ -835,6 +848,7 @@ def extract_blocks(
     unit_override: int | None = None,
     gap_bridge_enabled: bool = False,
     gap_bridge_amount: float | None = None,
+    precision_fix_enabled: bool = True,
 ) -> ExtractionResult:
     """
     Extract comprehensive CAD analysis from a DXF file.
@@ -861,6 +875,10 @@ def extract_blocks(
                             gap bridge tolerance to bridge intentional gaps.
         gap_bridge_amount: Custom gap bridge tolerance. None = use default
                            for unit.
+        precision_fix_enabled: Enable Stage 1 precision fix snapping. When True,
+                               applies precision tolerance to fix floating-point
+                               artifacts. When False, disables precision snapping.
+                               Defaults to True for backward compatibility.
 
     Returns:
         ExtractionResult TypedDict containing all analysis data.
@@ -915,11 +933,13 @@ def extract_blocks(
             unit_override,
             gap_bridge_enabled,
             gap_bridge_amount,
+            precision_fix_enabled,
         )
         logger.info(
             f"Using tolerances: precision={precision_tolerance}, "
             f"gap_bridge={gap_bridge_tolerance} "
-            f"(units={'auto' if unit_override in (None, -1) else unit_override})"
+            f"(units={'auto' if unit_override in (None, -1) else unit_override}, "
+            f"precision_fix={'enabled' if precision_fix_enabled else 'disabled'})"
         )
 
         msp = doc.modelspace()
