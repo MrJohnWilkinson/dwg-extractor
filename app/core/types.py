@@ -214,7 +214,10 @@ class ContentZoneData(TypedDict):
                            or None if no content zone detected
         content_zone_height: Height of content zone bounding box (cz_max_y - cz_min_y),
                             or None if no content zone detected
-        polygon_count: Total number of closed polygons found (LWPOLYLINE + LINE cycles)
+        polygon_count: Total number of closed polygons found BEFORE any filtering
+                      (LWPOLYLINE + LINE cycles)
+        filtered_polygon_count: Count of polygons AFTER all filtering (side + area
+                               filters applied)
     """
 
     suggested_trim_left: float | None
@@ -225,6 +228,7 @@ class ContentZoneData(TypedDict):
     content_zone_width: float | None
     content_zone_height: float | None
     polygon_count: int
+    filtered_polygon_count: int
 
 
 class PolygonMetrics(TypedDict):

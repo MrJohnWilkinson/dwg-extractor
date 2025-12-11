@@ -113,6 +113,7 @@ EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED: str = "block_content_zone_detected"
 EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH: str = "block_content_zone_width"
 EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT: str = "block_content_zone_height"
 EXCEL_COLUMN_BLOCK_POLYGON_COUNT: str = "block_polygon_count"
+EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT: str = "block_filtered_polygon_count"
 
 # Excel configuration - Fill colors for scale highlighting
 # Yellow: Warning color for scale variance with all positive values
