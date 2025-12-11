@@ -84,13 +84,13 @@ class DXFExtractorApp(ctk.CTk):
         # Unit selection, precision fix, and gap bridge settings
         self.unit_selection_var = ctk.StringVar(value="DXF/DWG")
         self.precision_fix_var = ctk.BooleanVar(value=True)
-        self.precision_fix_amount_var = ctk.StringVar(value="0.01")
+        self.precision_fix_amount_var = ctk.StringVar(value="3.0")
         self.gap_bridge_var = ctk.BooleanVar(value=False)
-        self.gap_bridge_amount_var = ctk.StringVar(value="100.0")
+        self.gap_bridge_amount_var = ctk.StringVar(value="3.0")
 
         # Min Area Filter settings
         self.min_area_filter_var = ctk.BooleanVar(value=False)
-        self.min_area_filter_amount_var = ctk.StringVar(value="100.0")
+        self.min_area_filter_amount_var = ctk.StringVar(value="100000.0")
 
         # Min Side Filter settings
         self.min_side_filter_var = ctk.BooleanVar(value=False)
