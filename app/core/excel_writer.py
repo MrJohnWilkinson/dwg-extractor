@@ -92,6 +92,7 @@ from .constants import (
     EXCEL_SHEET_LAYER_ANALYSIS,
 )
 from .excel_formatting import (
+    _format_all_blocks_sheet,
     _format_annotations_analysis_sheet,
     _format_block_analysis_sheet,
     _format_block_definitions_sheet,
@@ -293,12 +294,16 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
     """
     Generate a multi-sheet Excel file from comprehensive CAD extraction data.
 
-    This function creates an Excel workbook with five sheets:
-    - Block Analysis: Simplified inventory with block-layer pairs and insertion counts
-    - Layer Analysis: Layers with insertion counts and entity counts
-    - Entity Summary: Entity types with total counts
-    - Block Geometry Analysis: Consolidated transformations and geometry (rotations, scales, dimensions, segments)
-    - Annotations Analysis: Text annotations (TEXT/MTEXT) with contents, type, layer, color, and counts
+    This function creates an Excel workbook with nine sheets:
+    1. All Blocks: Consolidated block-centric view with one row per block definition
+    2. Block Analysis: Simplified inventory with block-layer pairs and insertion counts
+    3. Layer Analysis: Layers with insertion counts and entity counts
+    4. Entity Summary: Entity types with total counts
+    5. Block Geometry Analysis: Consolidated transformations and geometry (rotations, scales, dimensions, segments)
+    6. Annotations Analysis: Text annotations (TEXT/MTEXT) with contents, type, layer, color, and counts
+    7. Color Analysis: Entity color breakdown by layer and type
+    8. Extraction Issues: Unresolved anonymous blocks and other extraction issues
+    9. Block Definitions: All block definitions with nesting status
 
     All sheets include headers, appropriate sorting, auto-filters, and proper column widths.
     The Block Geometry Analysis sheet includes red highlighting for mirrored blocks (negative scales).
@@ -336,28 +341,31 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
 
         # Create Excel writer
         with pd.ExcelWriter(full_path, engine="openpyxl") as writer:
-            # Sheet 1: Block Analysis
+            # Sheet 1: All Blocks (consolidated block-centric view)
+            _create_all_blocks_sheet(extraction_data, writer)
+
+            # Sheet 2: Block Analysis
             _create_block_analysis_sheet(extraction_data, writer)
 
-            # Sheet 2: Layer Analysis
+            # Sheet 3: Layer Analysis
             _create_layer_analysis_sheet(extraction_data, writer)
 
-            # Sheet 3: Entity Summary
+            # Sheet 4: Entity Summary
             _create_entity_summary_sheet(extraction_data, writer)
 
-            # Sheet 4: Block Geometry Analysis
+            # Sheet 5: Block Geometry Analysis
             _create_block_geometry_analysis_sheet(extraction_data, writer)
 
-            # Sheet 5: Annotations Analysis
+            # Sheet 6: Annotations Analysis
             _create_annotations_analysis_sheet(extraction_data, writer)
 
-            # Sheet 6: Color Analysis
+            # Sheet 7: Color Analysis
             _create_color_analysis_sheet(extraction_data, writer)
 
-            # Sheet 7: Extraction Issues
+            # Sheet 8: Extraction Issues
             _create_extraction_issues_sheet(extraction_data, writer)
 
-            # Sheet 8: Block Definitions
+            # Sheet 9: Block Definitions
             _create_block_definitions_sheet(extraction_data, writer)
 
         # Load workbook for post-processing (formatting)
@@ -365,6 +373,8 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         wb = load_workbook(full_path)
 
         # Apply formatting to all sheets
+        logger.debug("Applying formatting to All Blocks sheet...")
+        _format_all_blocks_sheet(wb)
         logger.debug("Applying formatting to Block Analysis sheet...")
         _format_block_analysis_sheet(wb)
         logger.debug("Applying formatting to Layer Analysis sheet...")

@@ -194,11 +194,12 @@ class TestAnnotationsAnalysisSheet:
         counts = df[format_header(EXCEL_COLUMN_ANNOTATION_COUNT)].tolist()
         assert counts == sorted(counts, reverse=True)
 
-    def test_eight_sheets_created(
+    def test_nine_sheets_created(
         self, temp_dir: str, annotation_extraction_data: ExtractionResult
     ) -> None:
-        """Test that exactly 8 sheets are created including Color Analysis, Extraction Issues, and Block Definitions."""
+        """Test that exactly 9 sheets are created including All Blocks, Color Analysis, Extraction Issues, and Block Definitions."""
         from core.constants import (
+            EXCEL_SHEET_ALL_BLOCKS,
             EXCEL_SHEET_BLOCK_DEFINITIONS,
             EXCEL_SHEET_COLOR_ANALYSIS,
             EXCEL_SHEET_EXTRACTION_ISSUES,
@@ -209,10 +210,11 @@ class TestAnnotationsAnalysisSheet:
 
         wb = load_workbook(excel_path)
 
-        # Verify exactly 8 sheets
-        assert len(wb.sheetnames) == 8
+        # Verify exactly 9 sheets
+        assert len(wb.sheetnames) == 9
 
         # Verify all expected sheet names
+        assert EXCEL_SHEET_ALL_BLOCKS in wb.sheetnames
         assert EXCEL_SHEET_BLOCK_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_LAYER_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_ENTITY_SUMMARY in wb.sheetnames

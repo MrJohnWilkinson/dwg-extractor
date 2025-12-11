@@ -55,6 +55,7 @@ from core.constants import (
     EXCEL_COLUMN_LAYER_NAME,
     EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT,
     EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
+    EXCEL_SHEET_ALL_BLOCKS,
     EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
@@ -70,10 +71,10 @@ from core.types import BlockLayerKey, BlockRotationKey
 class TestExcelWriter:
     """Test suite for the write_excel function."""
 
-    def test_write_excel_eight_sheets(
+    def test_write_excel_nine_sheets(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that eight sheets are created with correct names."""
+        """Test that nine sheets are created with correct names."""
         from core.constants import (
             EXCEL_SHEET_BLOCK_DEFINITIONS,
             EXCEL_SHEET_COLOR_ANALYSIS,
@@ -88,6 +89,7 @@ class TestExcelWriter:
 
         # Load and verify sheet names
         wb = load_workbook(excel_path)
+        assert EXCEL_SHEET_ALL_BLOCKS in wb.sheetnames
         assert EXCEL_SHEET_BLOCK_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_LAYER_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_ENTITY_SUMMARY in wb.sheetnames
@@ -96,7 +98,7 @@ class TestExcelWriter:
         assert EXCEL_SHEET_COLOR_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_EXTRACTION_ISSUES in wb.sheetnames
         assert EXCEL_SHEET_BLOCK_DEFINITIONS in wb.sheetnames
-        assert len(wb.sheetnames) == 8
+        assert len(wb.sheetnames) == 9
 
     def test_block_analysis_sheet_simplified(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -1576,3 +1578,145 @@ class TestContentZoneExcelOutput:
 
         assert valve_row is not None, "VALVE row not found"
         assert ws.cell(row=valve_row, column=poly_col).value == 2
+
+
+class TestAllBlocksSheetIntegration:
+    """Integration tests for All Blocks sheet in write_excel flow."""
+
+    def test_write_excel_creates_all_blocks_sheet(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that write_excel creates All Blocks sheet in the workbook."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Verify file exists
+        assert Path(excel_path).exists()
+
+        # Load and verify All Blocks sheet exists
+        wb = load_workbook(excel_path)
+        assert EXCEL_SHEET_ALL_BLOCKS in wb.sheetnames
+
+        # Verify sheet is not empty (has headers at minimum)
+        ws = wb[EXCEL_SHEET_ALL_BLOCKS]
+        assert ws.max_row >= 1  # At least header row exists
+        assert ws.max_column == 29  # All 29 columns should be present
+
+    def test_write_excel_all_blocks_is_first_sheet(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that All Blocks is the first (leftmost) sheet in the workbook."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Load workbook and verify sheet order
+        wb = load_workbook(excel_path)
+        assert wb.sheetnames[0] == EXCEL_SHEET_ALL_BLOCKS
+
+    def test_write_excel_sheet_order(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that sheets are in the correct order."""
+        from core.constants import (
+            EXCEL_SHEET_BLOCK_DEFINITIONS,
+            EXCEL_SHEET_COLOR_ANALYSIS,
+            EXCEL_SHEET_EXTRACTION_ISSUES,
+        )
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Load workbook and verify sheet order
+        wb = load_workbook(excel_path)
+
+        expected_order = [
+            EXCEL_SHEET_ALL_BLOCKS,
+            EXCEL_SHEET_BLOCK_ANALYSIS,
+            EXCEL_SHEET_LAYER_ANALYSIS,
+            EXCEL_SHEET_ENTITY_SUMMARY,
+            EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
+            EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
+            EXCEL_SHEET_COLOR_ANALYSIS,
+            EXCEL_SHEET_EXTRACTION_ISSUES,
+            EXCEL_SHEET_BLOCK_DEFINITIONS,
+        ]
+
+        assert wb.sheetnames == expected_order
+
+    def test_write_excel_all_blocks_has_correct_columns(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that All Blocks sheet has 29 columns with correct headers."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Load All Blocks sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
+
+        # Verify 29 columns
+        assert len(df.columns) == 29
+
+        # Verify key column headers exist (formatted)
+        headers = list(df.columns)
+        assert format_header("block_raw_name") in headers
+        assert format_header("block_resolved_name") in headers
+        assert format_header("block_insertion_status") in headers
+        assert format_header("block_insertion_count") in headers
+        assert format_header("block_layer_count") in headers
+        assert format_header("block_layer_names") in headers
+
+    def test_write_excel_all_blocks_empty_data(self, temp_dir: str) -> None:
+        """Test that empty extraction data creates All Blocks sheet with headers only."""
+        empty_data: ExtractionResult = {
+            "block_counts": {},
+            "block_entities": {},
+            "block_layer_pairs": {},
+            "block_rotation_counts": {},
+            "block_scale_data": {},
+            "block_xdata_apps": {},
+            "layer_block_insertion_counts": {},
+            "layer_entity_counts": {},
+            "layer_unique_color_counts": {},
+            "layer_annotation_counts": {},
+            "annotation_data": {},
+            "entity_type_counts": {},
+            "color_analysis_data": [],
+            "extraction_issues": [],
+            "block_trimming_data": {},
+            "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
+        }
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(empty_data, output_path)
+
+        # Verify file exists
+        assert Path(excel_path).exists()
+
+        # Load All Blocks sheet
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
+
+        # Should have headers but no data rows
+        assert len(df) == 0
+        assert len(df.columns) == 29
+
+    def test_write_excel_all_blocks_formatting_applied(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that formatting is applied to All Blocks sheet."""
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        # Load workbook and verify formatting
+        wb = load_workbook(excel_path)
+        ws = wb[EXCEL_SHEET_ALL_BLOCKS]
+
+        # Verify auto-filter is applied
+        assert ws.auto_filter.ref is not None
+
+        # Verify frozen panes are applied (B2 freezes header row and first column)
+        assert ws.freeze_panes == "B2"
+
+        # Verify column widths are set (first column should have a width > 0)
+        assert ws.column_dimensions["A"].width > 0

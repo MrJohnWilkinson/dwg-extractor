@@ -159,7 +159,7 @@ class TestExtractionIssuesSheet:
     def test_extraction_issues_sheet_position(
         self, temp_dir: str, extraction_issues_data: ExtractionResult
     ) -> None:
-        """Test that Extraction Issues sheet is at position 7 (index 6)."""
+        """Test that Extraction Issues sheet is at position 8 (index 7)."""
         from core.constants import EXCEL_SHEET_EXTRACTION_ISSUES
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -167,6 +167,6 @@ class TestExtractionIssuesSheet:
 
         wb = load_workbook(excel_path)
 
-        # Extraction Issues should be at index 6 (Sheet 7)
+        # Extraction Issues should be at index 7 (Sheet 8, after All Blocks was added)
         assert EXCEL_SHEET_EXTRACTION_ISSUES in wb.sheetnames
-        assert wb.sheetnames.index(EXCEL_SHEET_EXTRACTION_ISSUES) == 6
+        assert wb.sheetnames.index(EXCEL_SHEET_EXTRACTION_ISSUES) == 7
