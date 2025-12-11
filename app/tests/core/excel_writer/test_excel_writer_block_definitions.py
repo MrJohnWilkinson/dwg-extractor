@@ -12,7 +12,6 @@ This test suite validates the Block Definitions sheet generation including:
 import os
 
 import pandas as pd
-import pytest
 from openpyxl import load_workbook
 
 from core.constants import (

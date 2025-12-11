@@ -37,7 +37,9 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_BLOCK_INSERTION_STATUS,
     EXCEL_COLUMN_BLOCK_IS_NESTED,
+    EXCEL_COLUMN_BLOCK_LAYER_COUNT,
     EXCEL_COLUMN_BLOCK_LAYER_NAME,
+    EXCEL_COLUMN_BLOCK_LAYER_NAMES,
     EXCEL_COLUMN_BLOCK_NAME,
     EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
     EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
@@ -79,6 +81,7 @@ from .constants import (
     EXCEL_COLUMN_LAYER_ENTITY_COUNT,
     EXCEL_COLUMN_LAYER_NAME,
     EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT,
+    EXCEL_SHEET_ALL_BLOCKS,
     EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_DEFINITIONS,
@@ -958,3 +961,301 @@ def _create_block_definitions_sheet(
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_BLOCK_DEFINITIONS, index=False)
     logger.info(f"Block Definitions sheet created with {len(df)} rows")
+
+
+def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> None:
+    """
+    Create the All Blocks sheet with consolidated block data across all layers.
+
+    This sheet provides a block-centric view with one row per block definition,
+    aggregating data from multiple sources: block_counts, block_layer_pairs,
+    block_rotation_counts, block_scale_data, block_trimming_data, and
+    block_content_zone_data.
+
+    System blocks (insertion_status starting with "System") are excluded.
+    Rows are sorted by insertion_status (Inserted first), then by resolved_name.
+
+    The sheet contains 29 columns covering:
+    - Identity fields: raw_name, resolved_name, insertion_status, is_nested, etc.
+    - Layer aggregation: layer_count, layer_names
+    - Insertion count: aggregated from block_counts
+    - Rotation counts: summed across all layers
+    - Scale data: variance detection with "VARIES"/"VARIES (-)" display
+    - Geometry data: native dimensions and segments
+    - Content zone data: trim values and detection status
+
+    Args:
+        data: ExtractionResult containing all extraction data
+        writer: pandas ExcelWriter object for output
+    """
+    logger.info("Creating All Blocks sheet...")
+
+    all_block_definitions = data.get("all_block_definitions", {})
+    block_counts = data.get("block_counts", {})
+    block_layer_pairs = data.get("block_layer_pairs", {})
+    block_rotation_counts = data.get("block_rotation_counts", {})
+    block_scale_data = data.get("block_scale_data", {})
+    block_trimming_data = data.get("block_trimming_data", {})
+    block_content_zone_data = data.get("block_content_zone_data", {})
+
+    if not all_block_definitions:
+        logger.info("No block definitions found, creating empty All Blocks sheet")
+        # Create empty DataFrame with all 29 column headers
+        df = pd.DataFrame(
+            columns=[
+                EXCEL_COLUMN_BLOCK_RAW_NAME,
+                EXCEL_COLUMN_BLOCK_RESOLVED_NAME,
+                EXCEL_COLUMN_BLOCK_INSERTION_STATUS,
+                EXCEL_COLUMN_BLOCK_IS_NESTED,
+                EXCEL_COLUMN_BLOCK_NESTED_PARENT_NAMES,
+                EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
+                EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
+                EXCEL_COLUMN_BLOCK_LAYER_COUNT,
+                EXCEL_COLUMN_BLOCK_LAYER_NAMES,
+                EXCEL_COLUMN_BLOCK_ROTATION_0,
+                EXCEL_COLUMN_BLOCK_ROTATION_90,
+                EXCEL_COLUMN_BLOCK_ROTATION_180,
+                EXCEL_COLUMN_BLOCK_ROTATION_270,
+                EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
+                EXCEL_COLUMN_BLOCK_SCALE_X,
+                EXCEL_COLUMN_BLOCK_SCALE_Y,
+                EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+                EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
+                EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+                EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
+                EXCEL_COLUMN_BLOCK_POLYGON_COUNT,
+                EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT,
+            ]
+        )
+        df.columns = [format_header(col) for col in df.columns]
+        df.to_excel(writer, sheet_name=EXCEL_SHEET_ALL_BLOCKS, index=False)
+        return
+
+    # Build DataFrame rows
+    rows = []
+    for raw_name, record in all_block_definitions.items():
+        # Skip System blocks
+        insertion_status = record["block_insertion_status"]
+        if insertion_status.startswith("System"):
+            continue
+
+        resolved_name = record["block_resolved_name"]
+        parent_names_str = ", ".join(record["block_nested_parent_names"])
+
+        # Calculate block insertion count
+        block_insertion_count = block_counts.get(resolved_name, 0)
+
+        # Calculate layer aggregation
+        layers_for_block = {
+            key.layer_name
+            for key in block_layer_pairs
+            if key.block_name == resolved_name
+        }
+        block_layer_count = len(layers_for_block)
+        block_layer_names = ", ".join(sorted(layers_for_block))
+
+        # Calculate rotation counts summed across all layers
+        rot_0 = sum(
+            count
+            for key, count in block_rotation_counts.items()
+            if key.block_name == resolved_name and key.rotation_category == "0"
+        )
+        rot_90 = sum(
+            count
+            for key, count in block_rotation_counts.items()
+            if key.block_name == resolved_name and key.rotation_category == "90"
+        )
+        rot_180 = sum(
+            count
+            for key, count in block_rotation_counts.items()
+            if key.block_name == resolved_name and key.rotation_category == "180"
+        )
+        rot_270 = sum(
+            count
+            for key, count in block_rotation_counts.items()
+            if key.block_name == resolved_name and key.rotation_category == "270"
+        )
+        rot_other = sum(
+            count
+            for key, count in block_rotation_counts.items()
+            if key.block_name == resolved_name and key.rotation_category == "other"
+        )
+
+        # Extract scale data
+        scale_set = block_scale_data.get(resolved_name, {(1.0, 1.0)})
+        x_variance = _has_x_scale_variance(scale_set)
+        y_variance = _has_y_scale_variance(scale_set)
+
+        if x_variance:
+            if _has_negative_scale_in_set(scale_set, "x"):
+                x_scale: str | float = "VARIES (-)"
+            else:
+                x_scale = "VARIES"
+        else:
+            x_scale = _get_single_scale_value(scale_set, "x")
+
+        if y_variance:
+            if _has_negative_scale_in_set(scale_set, "y"):
+                y_scale: str | float = "VARIES (-)"
+            else:
+                y_scale = "VARIES"
+        else:
+            y_scale = _get_single_scale_value(scale_set, "y")
+
+        # Extract geometry data
+        geometry_data = block_trimming_data.get(resolved_name)
+        if geometry_data:
+            native_width: float | str = geometry_data["native_width"]
+            native_height: float | str = geometry_data["native_height"]
+            vertical_segments = geometry_data["vertical_segments"]
+            horizontal_segments = geometry_data["horizontal_segments"]
+
+            # Convert segment lists to comma-separated strings
+            def format_number(n: float) -> str:
+                """Format number without decimals if it's a whole number."""
+                return str(int(n)) if n == int(n) else str(n)
+
+            vertical_segments_str = (
+                ", ".join(map(format_number, vertical_segments))
+                if vertical_segments
+                else ""
+            )
+            horizontal_segments_str = (
+                ", ".join(map(format_number, horizontal_segments))
+                if horizontal_segments
+                else ""
+            )
+        else:
+            native_width = ""
+            native_height = ""
+            vertical_segments_str = ""
+            horizontal_segments_str = ""
+
+        # Extract content zone data
+        content_zone = block_content_zone_data.get(resolved_name)
+        if content_zone and content_zone["content_zone_detected"]:
+            trim_left: float | str = content_zone["suggested_trim_left"] or ""
+            trim_right: float | str = content_zone["suggested_trim_right"] or ""
+            trim_top: float | str = content_zone["suggested_trim_top"] or ""
+            trim_bottom: float | str = content_zone["suggested_trim_bottom"] or ""
+            detected = "TRUE"
+            cz_width: float | str = content_zone["content_zone_width"] or ""
+            cz_height: float | str = content_zone["content_zone_height"] or ""
+            poly_count: int | str = content_zone["polygon_count"]
+            filtered_poly_count: int | str = content_zone["filtered_polygon_count"]
+        else:
+            trim_left = ""
+            trim_right = ""
+            trim_top = ""
+            trim_bottom = ""
+            detected = "FALSE" if content_zone else ""
+            cz_width = ""
+            cz_height = ""
+            poly_count = content_zone["polygon_count"] if content_zone else ""
+            filtered_poly_count = (
+                content_zone["filtered_polygon_count"] if content_zone else ""
+            )
+
+        rows.append(
+            {
+                EXCEL_COLUMN_BLOCK_RAW_NAME: record["block_raw_name"],
+                EXCEL_COLUMN_BLOCK_RESOLVED_NAME: resolved_name,
+                EXCEL_COLUMN_BLOCK_INSERTION_STATUS: insertion_status,
+                EXCEL_COLUMN_BLOCK_IS_NESTED: record["block_is_nested"],
+                EXCEL_COLUMN_BLOCK_NESTED_PARENT_NAMES: parent_names_str,
+                EXCEL_COLUMN_BLOCK_ENTITY_COUNT: record["block_entity_count"],
+                EXCEL_COLUMN_BLOCK_INSERTION_COUNT: block_insertion_count,
+                EXCEL_COLUMN_BLOCK_LAYER_COUNT: block_layer_count,
+                EXCEL_COLUMN_BLOCK_LAYER_NAMES: block_layer_names,
+                EXCEL_COLUMN_BLOCK_ROTATION_0: rot_0,
+                EXCEL_COLUMN_BLOCK_ROTATION_90: rot_90,
+                EXCEL_COLUMN_BLOCK_ROTATION_180: rot_180,
+                EXCEL_COLUMN_BLOCK_ROTATION_270: rot_270,
+                EXCEL_COLUMN_BLOCK_ROTATION_OTHER: rot_other,
+                EXCEL_COLUMN_BLOCK_SCALE_X: x_scale,
+                EXCEL_COLUMN_BLOCK_SCALE_Y: y_scale,
+                EXCEL_COLUMN_BLOCK_NATIVE_WIDTH: native_width,
+                EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT: native_height,
+                EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS: vertical_segments_str,
+                EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS: horizontal_segments_str,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT: trim_left,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT: trim_right,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP: trim_top,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM: trim_bottom,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED: detected,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH: cz_width,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT: cz_height,
+                EXCEL_COLUMN_BLOCK_POLYGON_COUNT: poly_count,
+                EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT: filtered_poly_count,
+            }
+        )
+
+    # Handle case where all blocks were system blocks (rows is empty)
+    if not rows:
+        logger.info("All blocks are system blocks, creating empty All Blocks sheet")
+        df = pd.DataFrame(
+            columns=[
+                EXCEL_COLUMN_BLOCK_RAW_NAME,
+                EXCEL_COLUMN_BLOCK_RESOLVED_NAME,
+                EXCEL_COLUMN_BLOCK_INSERTION_STATUS,
+                EXCEL_COLUMN_BLOCK_IS_NESTED,
+                EXCEL_COLUMN_BLOCK_NESTED_PARENT_NAMES,
+                EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
+                EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
+                EXCEL_COLUMN_BLOCK_LAYER_COUNT,
+                EXCEL_COLUMN_BLOCK_LAYER_NAMES,
+                EXCEL_COLUMN_BLOCK_ROTATION_0,
+                EXCEL_COLUMN_BLOCK_ROTATION_90,
+                EXCEL_COLUMN_BLOCK_ROTATION_180,
+                EXCEL_COLUMN_BLOCK_ROTATION_270,
+                EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
+                EXCEL_COLUMN_BLOCK_SCALE_X,
+                EXCEL_COLUMN_BLOCK_SCALE_Y,
+                EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+                EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
+                EXCEL_COLUMN_BLOCK_VERTICAL_SEGMENTS,
+                EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP,
+                EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
+                EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
+                EXCEL_COLUMN_BLOCK_POLYGON_COUNT,
+                EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT,
+            ]
+        )
+        df.columns = [format_header(col) for col in df.columns]
+        df.to_excel(writer, sheet_name=EXCEL_SHEET_ALL_BLOCKS, index=False)
+        return
+
+    # Sort by insertion status (Inserted first), then by resolved name
+    status_order = {
+        "Inserted": 0,
+        "Nested Only": 1,
+        "Unused": 2,
+        "Unresolved (*U)": 3,
+        "Unresolved (A$C)": 4,
+    }
+    rows.sort(
+        key=lambda r: (
+            status_order.get(str(r[EXCEL_COLUMN_BLOCK_INSERTION_STATUS]), 99),
+            str(r[EXCEL_COLUMN_BLOCK_RESOLVED_NAME]).lower(),
+        )
+    )
+
+    df = pd.DataFrame(rows)
+
+    # Format column headers for Excel display
+    df.columns = [format_header(col) for col in df.columns]
+
+    df.to_excel(writer, sheet_name=EXCEL_SHEET_ALL_BLOCKS, index=False)
+    logger.info(f"All Blocks sheet created with {len(df)} rows")

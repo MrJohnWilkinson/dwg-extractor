@@ -22,6 +22,7 @@ from .constants import (
     EXCEL_FILL_COLOR_SCALE_NEGATIVE,
     EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
     EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
+    EXCEL_SHEET_ALL_BLOCKS,
     EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_DEFINITIONS,
@@ -553,4 +554,160 @@ def _format_block_definitions_sheet(wb: Workbook) -> None:
 
     logger.info(
         f"Block Definitions sheet formatted with {rows_highlighted} nested block rows highlighted"
+    )
+
+
+def _format_all_blocks_sheet(wb: Workbook) -> None:
+    """
+    Apply formatting to the All Blocks sheet with scale highlighting.
+
+    This function applies:
+    - Auto-filter to the header row
+    - Frozen panes (header row and first column)
+    - Column widths appropriate for each data type
+    - Text wrapping on header row
+    - Three-tier scale highlighting:
+      - Red: "VARIES (-)" - variance with negative values
+      - Orange: Single negative number (e.g., -1.0)
+      - Yellow: "VARIES" - variance with all positive values
+
+    Args:
+        wb: openpyxl Workbook object containing the All Blocks sheet
+    """
+    if EXCEL_SHEET_ALL_BLOCKS not in wb.sheetnames:
+        logger.info("All Blocks sheet not found, skipping formatting")
+        return
+
+    ws = wb[EXCEL_SHEET_ALL_BLOCKS]
+
+    # Apply auto-filter
+    if ws.dimensions:
+        ws.auto_filter.ref = ws.dimensions
+
+    # Freeze header row and first column
+    ws.freeze_panes = "B2"
+    logger.info("Frozen panes applied to All Blocks sheet")
+
+    # Set column widths (29 columns: A-AC)
+    ws.column_dimensions["A"].width = 30  # block_raw_name
+    ws.column_dimensions["B"].width = 30  # block_resolved_name
+    ws.column_dimensions["C"].width = 20  # block_insertion_status
+    ws.column_dimensions["D"].width = 15  # block_is_nested
+    ws.column_dimensions["E"].width = 40  # block_nested_parent_names
+    ws.column_dimensions["F"].width = 20  # block_entity_count
+    ws.column_dimensions["G"].width = 25  # block_insertion_count
+    ws.column_dimensions["H"].width = 18  # block_layer_count
+    ws.column_dimensions["I"].width = 40  # block_layer_names
+    ws.column_dimensions["J"].width = 12  # block_rotation_0
+    ws.column_dimensions["K"].width = 12  # block_rotation_90
+    ws.column_dimensions["L"].width = 12  # block_rotation_180
+    ws.column_dimensions["M"].width = 12  # block_rotation_270
+    ws.column_dimensions["N"].width = 15  # block_rotation_other
+    ws.column_dimensions["O"].width = 15  # block_scale_x
+    ws.column_dimensions["P"].width = 15  # block_scale_y
+    ws.column_dimensions["Q"].width = 20  # block_native_width
+    ws.column_dimensions["R"].width = 20  # block_native_height
+    ws.column_dimensions["S"].width = 40  # block_vertical_segments
+    ws.column_dimensions["T"].width = 40  # block_horizontal_segments
+    ws.column_dimensions["U"].width = 15  # block_suggested_trim_left
+    ws.column_dimensions["V"].width = 15  # block_suggested_trim_right
+    ws.column_dimensions["W"].width = 15  # block_suggested_trim_top
+    ws.column_dimensions["X"].width = 15  # block_suggested_trim_bottom
+    ws.column_dimensions["Y"].width = 20  # block_content_zone_detected
+    ws.column_dimensions["Z"].width = 20  # block_content_zone_width
+    ws.column_dimensions["AA"].width = 20  # block_content_zone_height
+    ws.column_dimensions["AB"].width = 18  # block_polygon_count
+    ws.column_dimensions["AC"].width = 20  # block_filtered_polygon_count
+
+    # Enable text wrapping on header row
+    header_alignment = Alignment(wrap_text=True, vertical="top")
+    for cell in ws[1]:
+        cell.alignment = header_alignment
+
+    # Define three-tier highlighting fills
+    red_fill = PatternFill(
+        start_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
+        end_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
+        fill_type="solid",
+    )
+    orange_fill = PatternFill(
+        start_color=EXCEL_FILL_COLOR_SCALE_NEGATIVE,
+        end_color=EXCEL_FILL_COLOR_SCALE_NEGATIVE,
+        fill_type="solid",
+    )
+    yellow_fill = PatternFill(
+        start_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
+        end_color=EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
+        fill_type="solid",
+    )
+
+    # Track highlighting counts by color
+    red_highlighted = 0
+    orange_highlighted = 0
+    yellow_highlighted = 0
+
+    def _is_negative_number(value: object) -> bool:
+        """Check if cell value is a negative number.
+
+        Args:
+            value: Cell value which can be various types (int, float, str, None,
+                   Decimal, bool, date, time, etc. from openpyxl)
+
+        Returns:
+            True if value is a negative int or float, False otherwise
+        """
+        if value is None:
+            return False
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return value < 0
+        # String values like "VARIES" or "VARIES (-)" and other types are not negative numbers
+        return False
+
+    # Iterate through data rows (skip header at row 1)
+    # Scale columns are O (15 = x_scale) and P (16 = y_scale)
+    for row_idx in range(2, ws.max_row + 1):
+        x_scale_cell = ws.cell(row=row_idx, column=15)  # Column O
+        y_scale_cell = ws.cell(row=row_idx, column=16)  # Column P
+
+        x_scale = x_scale_cell.value
+        y_scale = y_scale_cell.value
+
+        # Determine highlight priority based on both X and Y scale values
+        # Priority 1 (Red): "VARIES (-)" - variance with negative values
+        # Priority 2 (Orange): Single negative number (e.g., -1.0)
+        # Priority 3 (Yellow): "VARIES" - variance with all positive values
+        # Priority 4 (None): No highlighting for consistent positive values
+
+        fill_to_apply = None
+
+        # Check for Priority 1: "VARIES (-)"
+        if x_scale == "VARIES (-)" or y_scale == "VARIES (-)":
+            fill_to_apply = red_fill
+            red_highlighted += 1
+        # Check for Priority 2: Negative number
+        elif _is_negative_number(x_scale) or _is_negative_number(y_scale):
+            fill_to_apply = orange_fill
+            orange_highlighted += 1
+        # Check for Priority 3: "VARIES"
+        elif x_scale == "VARIES" or y_scale == "VARIES":
+            fill_to_apply = yellow_fill
+            yellow_highlighted += 1
+
+        # Apply fill to entire row (all 29 columns A-AC) if highlighting is needed
+        if fill_to_apply is not None:
+            for col_idx in range(1, 30):  # Columns A through AC (1-29)
+                ws.cell(row=row_idx, column=col_idx).fill = fill_to_apply
+
+    # Apply right-alignment to segment columns (S=19 and T=20)
+    right_alignment = Alignment(horizontal="right")
+    for row_idx in range(2, ws.max_row + 1):
+        # Column S (19) - block_vertical_segments
+        ws.cell(row=row_idx, column=19).alignment = right_alignment
+        # Column T (20) - block_horizontal_segments
+        ws.cell(row=row_idx, column=20).alignment = right_alignment
+
+    total_highlighted = red_highlighted + orange_highlighted + yellow_highlighted
+    logger.info(
+        f"All Blocks sheet formatted with {total_highlighted} rows highlighted "
+        f"(red: {red_highlighted}, orange: {orange_highlighted}, yellow: {yellow_highlighted})"
     )
