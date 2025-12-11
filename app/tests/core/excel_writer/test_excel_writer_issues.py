@@ -117,8 +117,8 @@ class TestExtractionIssuesSheet:
         wb = load_workbook(excel_path)
         ws = wb[EXCEL_SHEET_EXTRACTION_ISSUES]
 
-        # Verify frozen panes at A2
-        assert ws.freeze_panes == "A2"
+        # Verify frozen panes at B2 (header row and first column)
+        assert ws.freeze_panes == "B2"
 
     def test_extraction_issues_sheet_column_widths(
         self, temp_dir: str, extraction_issues_data: ExtractionResult

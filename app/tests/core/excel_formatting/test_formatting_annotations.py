@@ -58,7 +58,7 @@ class TestAnnotationsAnalysisFormatting:
         assert ws.auto_filter.ref == "A1:H2"
 
     def test_annotations_analysis_frozen_panes(self) -> None:
-        """Test that frozen panes are applied at A2."""
+        """Test that frozen panes are applied at B2 (header row and first column)."""
         from core.constants import EXCEL_SHEET_ANNOTATIONS_ANALYSIS
         from core.excel_formatting import _format_annotations_analysis_sheet
 
@@ -82,9 +82,9 @@ class TestAnnotationsAnalysisFormatting:
 
         _format_annotations_analysis_sheet(wb)
 
-        # Verify frozen panes
+        # Verify frozen panes (B2 freezes header row and first column)
         assert ws.freeze_panes is not None
-        assert ws.freeze_panes == "A2"
+        assert ws.freeze_panes == "B2"
 
     def test_annotations_analysis_column_widths(self) -> None:
         """Test that column widths are correctly set."""
@@ -235,7 +235,7 @@ class TestAnnotationsAnalysisFormatting:
         _format_annotations_analysis_sheet(wb)
 
         # Verify basic formatting still applied
-        assert ws.freeze_panes == "A2"
+        assert ws.freeze_panes == "B2"
         assert ws.column_dimensions["A"].width == 60
 
     def test_annotations_analysis_invalid_rgb_values(self) -> None:

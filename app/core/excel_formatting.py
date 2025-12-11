@@ -92,8 +92,8 @@ def _format_block_analysis_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
-    # Freeze header row
-    ws.freeze_panes = "A2"
+    # Freeze header row and first column
+    ws.freeze_panes = "B2"
     logger.info("Frozen panes applied to Block Analysis sheet")
 
     # Set column widths (5 columns)
@@ -119,8 +119,8 @@ def _format_layer_analysis_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
-    # Freeze header row
-    ws.freeze_panes = "A2"
+    # Freeze header row and first column
+    ws.freeze_panes = "B2"
     logger.info("Frozen panes applied to Layer Analysis sheet")
 
     # Set column widths
@@ -162,8 +162,8 @@ def _format_entity_summary_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
-    # Freeze header row
-    ws.freeze_panes = "A2"
+    # Freeze header row and first column
+    ws.freeze_panes = "B2"
     logger.info("Frozen panes applied to Entity Summary sheet")
 
     # Set column widths
@@ -186,8 +186,8 @@ def _format_block_geometry_analysis_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
-    # Freeze header row
-    ws.freeze_panes = "A2"
+    # Freeze header row and first column
+    ws.freeze_panes = "B2"
     logger.info("Frozen panes applied to Block Geometry Analysis sheet")
 
     # Set column widths (13 columns)
@@ -316,8 +316,8 @@ def _format_annotations_analysis_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
-    # Freeze header row
-    ws.freeze_panes = "A2"
+    # Freeze header row and first column
+    ws.freeze_panes = "B2"
     logger.info("Frozen panes applied to Annotations Analysis sheet")
 
     # Set column widths (8 columns: A-H)
@@ -380,8 +380,8 @@ def _format_color_analysis_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
-    # Freeze header row
-    ws.freeze_panes = "A2"
+    # Freeze header row and first column
+    ws.freeze_panes = "B2"
     logger.info("Frozen panes applied to Color Analysis sheet")
 
     # Set column widths (9 columns: A-I)
@@ -453,8 +453,8 @@ def _format_extraction_issues_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
-    # Freeze header row
-    ws.freeze_panes = "A2"
+    # Freeze header row and first column
+    ws.freeze_panes = "B2"
     logger.info("Frozen panes applied to Extraction Issues sheet")
 
     # Set column widths (5 columns: A-E)
@@ -511,8 +511,8 @@ def _format_block_definitions_sheet(wb: Workbook) -> None:
     if ws.dimensions:
         ws.auto_filter.ref = ws.dimensions
 
-    # Freeze header row
-    ws.freeze_panes = "A2"
+    # Freeze header row and first column
+    ws.freeze_panes = "B2"
     logger.info("Frozen panes applied to Block Definitions sheet")
 
     # Set column widths (6 columns: A-F)

@@ -1234,25 +1234,25 @@ class TestExcelWriter:
 
         wb = load_workbook(excel_path)
 
-        # Verify frozen panes on Block Analysis sheet
+        # Verify frozen panes on Block Analysis sheet (B2 freezes header row and first column)
         ws_blocks = wb[EXCEL_SHEET_BLOCK_ANALYSIS]
         assert ws_blocks.freeze_panes is not None
-        assert ws_blocks.freeze_panes == "A2"
+        assert ws_blocks.freeze_panes == "B2"
 
         # Verify frozen panes on Layer Analysis sheet
         ws_layers = wb[EXCEL_SHEET_LAYER_ANALYSIS]
         assert ws_layers.freeze_panes is not None
-        assert ws_layers.freeze_panes == "A2"
+        assert ws_layers.freeze_panes == "B2"
 
         # Verify frozen panes on Entity Summary sheet
         ws_entities = wb[EXCEL_SHEET_ENTITY_SUMMARY]
         assert ws_entities.freeze_panes is not None
-        assert ws_entities.freeze_panes == "A2"
+        assert ws_entities.freeze_panes == "B2"
 
         # Verify frozen panes on Block Geometry Analysis sheet
         ws_geometry = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
         assert ws_geometry.freeze_panes is not None
-        assert ws_geometry.freeze_panes == "A2"
+        assert ws_geometry.freeze_panes == "B2"
 
     def test_frozen_panes_with_empty_data(self, temp_dir: str) -> None:
         """Test that frozen panes are applied even with headers-only sheets."""
@@ -1281,33 +1281,33 @@ class TestExcelWriter:
 
         wb = load_workbook(excel_path)
 
-        # Verify all sheets have frozen panes even with no data
+        # Verify all sheets have frozen panes even with no data (B2 freezes header row and first column)
         ws_blocks = wb[EXCEL_SHEET_BLOCK_ANALYSIS]
-        assert ws_blocks.freeze_panes == "A2"
+        assert ws_blocks.freeze_panes == "B2"
 
         ws_layers = wb[EXCEL_SHEET_LAYER_ANALYSIS]
-        assert ws_layers.freeze_panes == "A2"
+        assert ws_layers.freeze_panes == "B2"
 
         ws_entities = wb[EXCEL_SHEET_ENTITY_SUMMARY]
-        assert ws_entities.freeze_panes == "A2"
+        assert ws_entities.freeze_panes == "B2"
 
         ws_geometry = wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS]
-        assert ws_geometry.freeze_panes == "A2"
+        assert ws_geometry.freeze_panes == "B2"
 
     def test_frozen_panes_position(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that frozen panes cell reference is exactly A2 (freeze row 1)."""
+        """Test that frozen panes cell reference is exactly B2 (freeze row 1 and column A)."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         wb = load_workbook(excel_path)
 
-        # Verify exact frozen pane position for all sheets
-        assert wb[EXCEL_SHEET_BLOCK_ANALYSIS].freeze_panes == "A2"
-        assert wb[EXCEL_SHEET_LAYER_ANALYSIS].freeze_panes == "A2"
-        assert wb[EXCEL_SHEET_ENTITY_SUMMARY].freeze_panes == "A2"
-        assert wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS].freeze_panes == "A2"
+        # Verify exact frozen pane position for all sheets (B2 freezes header row and first column)
+        assert wb[EXCEL_SHEET_BLOCK_ANALYSIS].freeze_panes == "B2"
+        assert wb[EXCEL_SHEET_LAYER_ANALYSIS].freeze_panes == "B2"
+        assert wb[EXCEL_SHEET_ENTITY_SUMMARY].freeze_panes == "B2"
+        assert wb[EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS].freeze_panes == "B2"
 
 
 class TestContentZoneExcelOutput:

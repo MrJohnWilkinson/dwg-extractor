@@ -15,15 +15,23 @@ from openpyxl.worksheet.worksheet import Worksheet
 
 from core.constants import (
     EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
+    EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
+    EXCEL_SHEET_BLOCK_DEFINITIONS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
+    EXCEL_SHEET_COLOR_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
+    EXCEL_SHEET_EXTRACTION_ISSUES,
     EXCEL_SHEET_LAYER_ANALYSIS,
 )
 from core.excel_formatting import (
+    _format_annotations_analysis_sheet,
     _format_block_analysis_sheet,
+    _format_block_definitions_sheet,
     _format_block_geometry_analysis_sheet,
+    _format_color_analysis_sheet,
     _format_entity_summary_sheet,
+    _format_extraction_issues_sheet,
     _format_layer_analysis_sheet,
 )
 
@@ -840,3 +848,180 @@ class TestBlockGeometryAnalysisFormatting:
             assert l_cell.alignment.horizontal == "right"
             assert m_cell.alignment is not None
             assert m_cell.alignment.horizontal == "right"
+
+
+class TestFreezePanes:
+    """Test suite for freeze_panes setting across all sheet types."""
+
+    def test_block_analysis_freeze_panes(self, temp_dir: str) -> None:
+        """Test that Block Analysis sheet freezes first row and first column."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_ANALYSIS
+        ws.append(["block_name", "block_insertion_count"])
+        ws.append(["VALVE", 10])
+
+        _format_block_analysis_sheet(wb)
+
+        assert ws.freeze_panes == "B2"
+
+    def test_layer_analysis_freeze_panes(self, temp_dir: str) -> None:
+        """Test that Layer Analysis sheet freezes first row and first column."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_LAYER_ANALYSIS
+        ws.append(["layer_name", "layer_block_insertion_count"])
+        ws.append(["Layer1", 15])
+
+        _format_layer_analysis_sheet(wb)
+
+        assert ws.freeze_panes == "B2"
+
+    def test_entity_summary_freeze_panes(self, temp_dir: str) -> None:
+        """Test that Entity Summary sheet freezes first row and first column."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ENTITY_SUMMARY
+        ws.append(["entity_type_name", "entity_type_count"])
+        ws.append(["INSERT", 18])
+
+        _format_entity_summary_sheet(wb)
+
+        assert ws.freeze_panes == "B2"
+
+    def test_block_geometry_analysis_freeze_panes(self, temp_dir: str) -> None:
+        """Test that Block Geometry Analysis sheet freezes first row and first column."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
+        ws.append(["block_name", "block_layer_name", "block_scale_x"])
+        ws.append(["VALVE", "Layer1", 1.0])
+
+        _format_block_geometry_analysis_sheet(wb)
+
+        assert ws.freeze_panes == "B2"
+
+    def test_annotations_analysis_freeze_panes(self, temp_dir: str) -> None:
+        """Test that Annotations Analysis sheet freezes first row and first column."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ANNOTATIONS_ANALYSIS
+        ws.append(["annotation_contents", "annotation_type"])
+        ws.append(["Test text", "TEXT"])
+
+        _format_annotations_analysis_sheet(wb)
+
+        assert ws.freeze_panes == "B2"
+
+    def test_color_analysis_freeze_panes(self, temp_dir: str) -> None:
+        """Test that Color Analysis sheet freezes first row and first column."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_COLOR_ANALYSIS
+        ws.append(["color_annotation_contents", "color_layer_name"])
+        ws.append(["Sample text", "Layer1"])
+
+        _format_color_analysis_sheet(wb)
+
+        assert ws.freeze_panes == "B2"
+
+    def test_extraction_issues_freeze_panes(self, temp_dir: str) -> None:
+        """Test that Extraction Issues sheet freezes first row and first column."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_EXTRACTION_ISSUES
+        ws.append(["issue_type", "issue_block_name"])
+        ws.append(["Missing Handle", "VALVE"])
+
+        _format_extraction_issues_sheet(wb)
+
+        assert ws.freeze_panes == "B2"
+
+    def test_block_definitions_freeze_panes(self, temp_dir: str) -> None:
+        """Test that Block Definitions sheet freezes first row and first column."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_BLOCK_DEFINITIONS
+        ws.append(["block_raw_name", "block_resolved_name"])
+        ws.append(["*Model_Space", "Model_Space"])
+
+        _format_block_definitions_sheet(wb)
+
+        assert ws.freeze_panes == "B2"
+
+    def test_all_sheets_freeze_first_row_and_column(self, temp_dir: str) -> None:
+        """Test that all eight sheet types freeze both header row and first column (B2)."""
+        # Create workbook with all sheet types
+        wb = Workbook()
+
+        # Remove default sheet and create all named sheets
+        default_sheet = wb.active
+        if default_sheet is not None:
+            wb.remove(default_sheet)
+
+        # Create and populate all 8 sheets
+        sheets_data = [
+            (EXCEL_SHEET_BLOCK_ANALYSIS, ["block_name", "count"], ["VALVE", 10]),
+            (EXCEL_SHEET_LAYER_ANALYSIS, ["layer_name", "count"], ["Layer1", 15]),
+            (EXCEL_SHEET_ENTITY_SUMMARY, ["entity_type_name", "count"], ["INSERT", 18]),
+            (
+                EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
+                ["block_name", "scale"],
+                ["VALVE", 1.0],
+            ),
+            (
+                EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
+                ["annotation_contents", "type"],
+                ["Text", "TEXT"],
+            ),
+            (EXCEL_SHEET_COLOR_ANALYSIS, ["color_contents", "layer"], ["Text", "L1"]),
+            (EXCEL_SHEET_EXTRACTION_ISSUES, ["issue_type", "block"], ["Missing", "V"]),
+            (EXCEL_SHEET_BLOCK_DEFINITIONS, ["block_raw_name", "resolved"], ["*M", "M"]),
+        ]
+
+        for sheet_name, headers, data in sheets_data:
+            ws = wb.create_sheet(title=sheet_name)
+            ws.append(headers)
+            ws.append(data)
+
+        # Apply formatting to all sheets
+        _format_block_analysis_sheet(wb)
+        _format_layer_analysis_sheet(wb)
+        _format_entity_summary_sheet(wb)
+        _format_block_geometry_analysis_sheet(wb)
+        _format_annotations_analysis_sheet(wb)
+        _format_color_analysis_sheet(wb)
+        _format_extraction_issues_sheet(wb)
+        _format_block_definitions_sheet(wb)
+
+        # Verify freeze_panes = "B2" for all sheets
+        expected_freeze = "B2"
+        for sheet_name, _, _ in sheets_data:
+            ws = wb[sheet_name]
+            assert ws.freeze_panes == expected_freeze, (
+                f"Sheet '{sheet_name}' has freeze_panes={ws.freeze_panes}, "
+                f"expected {expected_freeze}"
+            )
+
+    def test_empty_sheets_freeze_panes(self, temp_dir: str) -> None:
+        """Test that empty sheets still have freeze_panes set to B2."""
+        # Block Analysis
+        wb1 = Workbook()
+        ws1 = cast(Worksheet, wb1.active)
+        ws1.title = EXCEL_SHEET_BLOCK_ANALYSIS
+        _format_block_analysis_sheet(wb1)
+        assert ws1.freeze_panes == "B2"
+
+        # Entity Summary
+        wb2 = Workbook()
+        ws2 = cast(Worksheet, wb2.active)
+        ws2.title = EXCEL_SHEET_ENTITY_SUMMARY
+        _format_entity_summary_sheet(wb2)
+        assert ws2.freeze_panes == "B2"
+
+        # Block Definitions
+        wb3 = Workbook()
+        ws3 = cast(Worksheet, wb3.active)
+        ws3.title = EXCEL_SHEET_BLOCK_DEFINITIONS
+        _format_block_definitions_sheet(wb3)
+        assert ws3.freeze_panes == "B2"

@@ -73,7 +73,7 @@ class TestBlockDefinitionsFormatting:
         assert ws.column_dimensions["F"].width == 20  # block_entity_count
 
     def test_format_block_definitions_frozen_panes(self) -> None:
-        """Test that frozen panes are applied at A2."""
+        """Test that frozen panes are applied at B2 (header row and first column)."""
         wb = Workbook()
         ws = cast(Worksheet, wb.active)
         ws.title = EXCEL_SHEET_BLOCK_DEFINITIONS
@@ -91,7 +91,7 @@ class TestBlockDefinitionsFormatting:
 
         _format_block_definitions_sheet(wb)
 
-        assert ws.freeze_panes == "A2"
+        assert ws.freeze_panes == "B2"
 
     def test_format_block_definitions_green_highlighting_nested(self) -> None:
         """Test that nested blocks are highlighted in green."""
