@@ -499,7 +499,8 @@ class TestNetAreaFilterIntegration:
         # Only inner polygon should remain after net area filtering
         picture_frame_data = content_zone_data["PICTURE_FRAME"]
         assert picture_frame_data["content_zone_detected"] is True
-        assert picture_frame_data["polygon_count"] == 1
+        assert picture_frame_data["polygon_count"] == 2  # Original count before filtering
+        assert picture_frame_data["filtered_polygon_count"] == 1  # After net area filter
 
     def test_content_zone_reflects_net_area_winner(self) -> None:
         """Content zone data shows correct polygon after net area filtering.

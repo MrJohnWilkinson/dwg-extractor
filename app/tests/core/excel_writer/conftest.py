@@ -92,6 +92,7 @@ def sample_extraction_data() -> ExtractionResult:
                 "content_zone_width": 80.0,
                 "content_zone_height": 40.0,
                 "polygon_count": 2,
+                "filtered_polygon_count": 2,
             },
             "PIPE": {
                 "suggested_trim_left": 20.0,
@@ -102,6 +103,7 @@ def sample_extraction_data() -> ExtractionResult:
                 "content_zone_width": 160.0,
                 "content_zone_height": 80.0,
                 "polygon_count": 2,
+                "filtered_polygon_count": 2,
             },
             "TAG": {
                 "suggested_trim_left": None,
@@ -112,6 +114,7 @@ def sample_extraction_data() -> ExtractionResult:
                 "content_zone_width": None,
                 "content_zone_height": None,
                 "polygon_count": 0,
+                "filtered_polygon_count": 0,
             },
         },
     }
@@ -184,6 +187,7 @@ def annotation_extraction_data() -> ExtractionResult:
                 "content_zone_width": 8.0,
                 "content_zone_height": 4.0,
                 "polygon_count": 1,
+                "filtered_polygon_count": 1,
             }
         },
     }
@@ -310,6 +314,7 @@ def extraction_issues_data() -> ExtractionResult:
                 "content_zone_width": 80.0,
                 "content_zone_height": 40.0,
                 "polygon_count": 2,
+                "filtered_polygon_count": 2,
             },
         },
     }
@@ -357,6 +362,7 @@ def no_issues_data() -> ExtractionResult:
                 "content_zone_width": 80.0,
                 "content_zone_height": 40.0,
                 "polygon_count": 2,
+                "filtered_polygon_count": 2,
             },
         },
     }

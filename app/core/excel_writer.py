@@ -32,6 +32,7 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
+    EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT,
     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_BLOCK_LAYER_NAME,
@@ -655,6 +656,7 @@ def _create_block_geometry_analysis_sheet(
                 cz_width: float | str = content_zone["content_zone_width"] or ""
                 cz_height: float | str = content_zone["content_zone_height"] or ""
                 poly_count: int | str = content_zone["polygon_count"]
+                filtered_poly_count: int | str = content_zone["filtered_polygon_count"]
             else:
                 trim_left = ""
                 trim_right = ""
@@ -664,6 +666,9 @@ def _create_block_geometry_analysis_sheet(
                 cz_width = ""
                 cz_height = ""
                 poly_count = content_zone["polygon_count"] if content_zone else ""
+                filtered_poly_count = (
+                    content_zone["filtered_polygon_count"] if content_zone else ""
+                )
 
             rows.append(
                 {
@@ -688,6 +693,7 @@ def _create_block_geometry_analysis_sheet(
                     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH: cz_width,
                     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT: cz_height,
                     EXCEL_COLUMN_BLOCK_POLYGON_COUNT: poly_count,
+                    EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT: filtered_poly_count,
                 }
             )
 
@@ -719,6 +725,7 @@ def _create_block_geometry_analysis_sheet(
                 EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
                 EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
                 EXCEL_COLUMN_BLOCK_POLYGON_COUNT,
+                EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT,
             ]
         )
 

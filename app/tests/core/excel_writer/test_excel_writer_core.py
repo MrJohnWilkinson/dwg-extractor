@@ -26,6 +26,7 @@ from core.constants import (
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
     EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
+    EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT,
     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
     EXCEL_COLUMN_BLOCK_LAYER_NAME,
@@ -376,7 +377,7 @@ class TestExcelWriter:
     def test_block_geometry_analysis_sheet_consolidated(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test Block Geometry Analysis sheet has all 21 columns consolidated."""
+        """Test Block Geometry Analysis sheet has all 22 columns consolidated."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -405,12 +406,13 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH),
             format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT),
             format_header(EXCEL_COLUMN_BLOCK_POLYGON_COUNT),
+            format_header(EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT),
         ]
 
         assert list(df.columns) == expected_columns
 
-        # Verify exactly 21 columns (13 original + 8 content zone)
-        assert len(df.columns) == 21
+        # Verify exactly 22 columns (13 original + 9 content zone)
+        assert len(df.columns) == 22
 
         # Verify sort by block_name alphabetical
         block_names = df[format_header(EXCEL_COLUMN_BLOCK_NAME)].tolist()
@@ -509,7 +511,7 @@ class TestExcelWriter:
 
         # Should have headers but no data rows
         assert len(df) == 0
-        assert len(df.columns) == 21
+        assert len(df.columns) == 22
 
     def test_block_trimming_analysis_auto_filter(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -669,7 +671,7 @@ class TestExcelWriter:
         assert ws.column_dimensions["M"].width == 40  # block_horizontal_segments
 
     def test_block_geometry_analysis_empty_data(self, temp_dir: str) -> None:
-        """Test that empty block_layer_pairs creates sheet with all 18 column headers."""
+        """Test that empty block_layer_pairs creates sheet with all 22 column headers."""
         empty_data: ExtractionResult = {
             "block_counts": {},
             "block_entities": {},
@@ -697,7 +699,7 @@ class TestExcelWriter:
         # Should have headers but no data rows
         assert len(df) == 0
 
-        # Verify all 21 column headers (formatted)
+        # Verify all 22 column headers (formatted)
         expected_columns = [
             format_header(EXCEL_COLUMN_BLOCK_NAME),
             format_header(EXCEL_COLUMN_BLOCK_LAYER_NAME),
@@ -720,6 +722,7 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH),
             format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT),
             format_header(EXCEL_COLUMN_BLOCK_POLYGON_COUNT),
+            format_header(EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT),
         ]
         assert list(df.columns) == expected_columns
 
@@ -834,7 +837,7 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_ENTITY_TYPE_COUNT),
         ]
 
-        # Block Geometry Analysis sheet - 21 columns (13 original + 8 content zone)
+        # Block Geometry Analysis sheet - 22 columns (13 original + 9 content zone)
         df_geometry = pd.read_excel(
             excel_path, sheet_name=EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS
         )
@@ -860,12 +863,13 @@ class TestExcelWriter:
             format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH),
             format_header(EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT),
             format_header(EXCEL_COLUMN_BLOCK_POLYGON_COUNT),
+            format_header(EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT),
         ]
 
     def test_spec_010_consolidated_geometry_sheet(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test spec 010: Block Geometry Analysis sheet has consolidated 21 columns with scales, rotations, and content zone."""
+        """Test spec 010: Block Geometry Analysis sheet has consolidated 22 columns with scales, rotations, and content zone."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -874,8 +878,8 @@ class TestExcelWriter:
         )
         df_blocks = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_BLOCK_ANALYSIS)
 
-        # Verify Block Geometry Analysis has exactly 21 columns (13 original + 8 content zone)
-        assert len(df_geometry.columns) == 21
+        # Verify Block Geometry Analysis has exactly 22 columns (13 original + 9 content zone)
+        assert len(df_geometry.columns) == 22
 
         # Verify scale columns present (formatted)
         assert format_header(EXCEL_COLUMN_BLOCK_SCALE_X) in df_geometry.columns
@@ -1374,7 +1378,7 @@ class TestContentZoneExcelOutput:
     def test_content_zone_column_count(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Block Geometry Analysis sheet has 21 columns (13 original + 8 content zone)."""
+        """Block Geometry Analysis sheet has 22 columns (13 original + 9 content zone)."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
@@ -1384,7 +1388,7 @@ class TestContentZoneExcelOutput:
         headers = [cell.value for cell in ws[1]]
         # Filter out None values for accurate count
         headers = [h for h in headers if h is not None]
-        assert len(headers) == 21
+        assert len(headers) == 22
 
     def test_new_content_zone_columns_in_headers(
         self, temp_dir: str, sample_extraction_data: ExtractionResult

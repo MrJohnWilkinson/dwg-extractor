@@ -499,12 +499,14 @@ class TestTrimValueCalculation:
         result = _detect_content_zone(block, bbox)
 
         assert result["content_zone_detected"] is True
+        # With ALL survivors, bbox encompasses both rectangles = full block
+        # Outer rectangle is (0, 0) to (100, 80)
         # Inner rectangle is (10, 10) to (90, 70)
-        # Block bbox is (0, 0) to (100, 80)
-        assert result["suggested_trim_left"] == 10.0
-        assert result["suggested_trim_right"] == 10.0
-        assert result["suggested_trim_top"] == 10.0
-        assert result["suggested_trim_bottom"] == 10.0
+        # Union bbox = (0, 0) to (100, 80) = block bbox
+        assert result["suggested_trim_left"] == 0.0
+        assert result["suggested_trim_right"] == 0.0
+        assert result["suggested_trim_top"] == 0.0
+        assert result["suggested_trim_bottom"] == 0.0
 
     def test_trim_values_offset_content_zone(self) -> None:
         """Correct trim for offset content zone."""
@@ -520,10 +522,12 @@ class TestTrimValueCalculation:
         result = _detect_content_zone(block, bbox)
 
         assert result["content_zone_detected"] is True
-        assert result["suggested_trim_left"] == 5.0
-        assert result["suggested_trim_right"] == 20.0
-        assert result["suggested_trim_top"] == 10.0
-        assert result["suggested_trim_bottom"] == 10.0
+        # With ALL survivors, bbox encompasses both rectangles = full block
+        # Union of (0,0)-(100,100) and (5,10)-(80,90) = (0,0)-(100,100)
+        assert result["suggested_trim_left"] == 0.0
+        assert result["suggested_trim_right"] == 0.0
+        assert result["suggested_trim_top"] == 0.0
+        assert result["suggested_trim_bottom"] == 0.0
 
     def test_trim_values_full_block_content_zone(self) -> None:
         """Zero trim when content zone equals block bbox."""
@@ -549,10 +553,11 @@ class TestTrimValueCalculation:
         result = _detect_content_zone(block, bbox)
 
         assert result["content_zone_detected"] is True
-        # Inner rectangle is (10, 10) to (90, 70)
-        # Width = 90 - 10 = 80, Height = 70 - 10 = 60
-        assert result["content_zone_width"] == 80.0
-        assert result["content_zone_height"] == 60.0
+        # With ALL survivors, dimensions are full block bbox
+        # Block bbox is (0, 0) to (100, 80)
+        # Width = 100, Height = 80
+        assert result["content_zone_width"] == 100.0
+        assert result["content_zone_height"] == 80.0
 
 
 class TestContentZoneDetection:
@@ -567,9 +572,10 @@ class TestContentZoneDetection:
         result = _detect_content_zone(block, bbox)
 
         assert result["content_zone_detected"] is True
-        # Inner rectangle (10,10)-(90,70) has larger net area
-        assert result["suggested_trim_left"] == 10.0
-        assert result["suggested_trim_right"] == 10.0
+        # With ALL survivors, bbox is union of both rectangles
+        # Block bbox and content zone bbox are the same
+        assert result["suggested_trim_left"] == 0.0
+        assert result["suggested_trim_right"] == 0.0
 
     def test_detect_content_zone_no_shapes(self) -> None:
         """Return empty for blocks without closed shapes."""
@@ -730,6 +736,7 @@ class TestEdgeCases:
         assert result["content_zone_width"] is None
         assert result["content_zone_height"] is None
         assert result["polygon_count"] == 0
+        assert result["filtered_polygon_count"] == 0
 
     def test_polygon_bbox_empty(self) -> None:
         """Handle empty polygon for bbox calculation."""
@@ -778,6 +785,7 @@ class TestTypeAnnotations:
         assert "content_zone_width" in result
         assert "content_zone_height" in result
         assert "polygon_count" in result
+        assert "filtered_polygon_count" in result
 
     def test_polygon_type(self) -> None:
         """Verify Polygon type structure."""
@@ -838,7 +846,8 @@ class TestPolygonFiltering:
 
         assert result["content_zone_detected"] is True
         # Should have filtered out the small polygon, leaving only the large one
-        assert result["polygon_count"] == 1
+        assert result["polygon_count"] == 2  # Original count before filtering
+        assert result["filtered_polygon_count"] == 1  # After filtering
 
     def test_area_filter_filters_all_polygons(self) -> None:
         """Verify behavior when all polygons are filtered out."""
@@ -859,7 +868,8 @@ class TestPolygonFiltering:
 
         # All polygons filtered - should return empty content zone
         assert result["content_zone_detected"] is False
-        assert result["polygon_count"] == 0
+        assert result["polygon_count"] == 1  # Original count before filtering
+        assert result["filtered_polygon_count"] == 0  # After filtering
 
     def test_side_filter_removes_narrow_polygons(self) -> None:
         """Verify polygons with short sides are filtered out."""
@@ -882,7 +892,8 @@ class TestPolygonFiltering:
 
         assert result["content_zone_detected"] is True
         # Should have filtered out the narrow polygon
-        assert result["polygon_count"] == 1
+        assert result["polygon_count"] == 2  # Original count before filtering
+        assert result["filtered_polygon_count"] == 1  # After filtering
 
     def test_combined_filters(self) -> None:
         """Verify both filters work together."""
@@ -907,7 +918,8 @@ class TestPolygonFiltering:
 
         assert result["content_zone_detected"] is True
         # Only the first polygon should pass both filters
-        assert result["polygon_count"] == 1
+        assert result["polygon_count"] == 3  # Original count before filtering
+        assert result["filtered_polygon_count"] == 1  # After filtering
 
     def test_filter_with_precision_and_gap_bridge(self) -> None:
         """Verify filters work with other parameters."""
@@ -931,7 +943,8 @@ class TestPolygonFiltering:
         )
 
         assert result["content_zone_detected"] is True
-        assert result["polygon_count"] == 1
+        assert result["polygon_count"] == 2  # Original count before filtering
+        assert result["filtered_polygon_count"] == 1  # After filtering
 
     def test_filter_boundary_value_included(self) -> None:
         """Verify polygon exactly at threshold passes the filter."""
@@ -1037,7 +1050,8 @@ class TestNetAreaFiltering:
         )
 
         assert result["content_zone_detected"] is True
-        assert result["polygon_count"] == 1  # Only inner polygon remains
+        assert result["polygon_count"] == 2  # Original count before filtering
+        assert result["filtered_polygon_count"] == 1  # Only inner polygon remains after net area filter
 
     def test_picture_frame_inner_selected_as_content_zone(self) -> None:
         """Verify inner polygon becomes content zone with correct trim values.
@@ -1102,7 +1116,8 @@ class TestNetAreaFiltering:
 
         assert result["content_zone_detected"] is True
         # Innermost filtered out (2500 < 3000), outer and middle remain
-        assert result["polygon_count"] == 2
+        assert result["polygon_count"] == 3  # Original count before filtering
+        assert result["filtered_polygon_count"] == 2  # After net area filter
 
     def test_gross_area_filter_would_pass_outer(self) -> None:
         """Regression test: verify gross area WOULD have passed but net area fails.
@@ -1145,7 +1160,8 @@ class TestNetAreaFiltering:
         )
 
         # Only 1 polygon remains (inner), proving we use NET area
-        assert result["polygon_count"] == 1
+        assert result["polygon_count"] == 2  # Original count before filtering
+        assert result["filtered_polygon_count"] == 1  # Only inner remains after net area filter
 
     def test_side_filter_still_uses_gross_geometry(self) -> None:
         """Verify side filter uses shortest side of gross geometry, not net area.
@@ -1209,8 +1225,9 @@ class TestNetAreaFiltering:
         )
 
         assert result["content_zone_detected"] is True
-        # Side filter removed siblings first, only outer remains
-        assert result["polygon_count"] == 1
+        # Side filter removed siblings first (3 siblings with side 20 < 25), only outer remains
+        assert result["polygon_count"] == 4  # Original count before filtering
+        assert result["filtered_polygon_count"] == 1  # After side filter (siblings removed)
 
     def test_single_large_net_equals_gross(self) -> None:
         """Verify net area equals gross area when no containment.
@@ -1257,7 +1274,8 @@ class TestNetAreaFiltering:
         )
 
         assert result["content_zone_detected"] is False
-        assert result["polygon_count"] == 0
+        assert result["polygon_count"] == 3  # Original count before filtering
+        assert result["filtered_polygon_count"] == 0  # All filtered by net area
 
     def test_multiple_siblings_outer_kept_siblings_filtered(self) -> None:
         """Verify outer polygon kept when siblings filtered by net area.
@@ -1284,7 +1302,8 @@ class TestNetAreaFiltering:
         )
 
         assert result["content_zone_detected"] is True
-        assert result["polygon_count"] == 1  # Only outer remains
+        assert result["polygon_count"] == 4  # Original count before filtering
+        assert result["filtered_polygon_count"] == 1  # Only outer remains after net area filter
 
 
 class TestUnionBoundingBox:
@@ -1352,11 +1371,14 @@ class TestTiedShapeHandling:
         result = _detect_content_zone(block, bbox)
 
         assert result["content_zone_detected"] is True
-        # Should use large rectangle's bbox for trim values
-        assert result["suggested_trim_left"] == 10.0
-        assert result["suggested_trim_right"] == 10.0
-        assert result["suggested_trim_top"] == 10.0
-        assert result["suggested_trim_bottom"] == 10.0
+        # With ALL survivors, bbox encompasses both rectangles
+        # Large: (10,10)-(90,90), Small: (0,0)-(10,10)
+        # Union bbox = (0,0)-(90,90)
+        # Block bbox = (0,0)-(100,100)
+        assert result["suggested_trim_left"] == 0.0  # min_x=0, block_min_x=0
+        assert result["suggested_trim_right"] == 10.0  # block_max_x=100, max_x=90
+        assert result["suggested_trim_top"] == 10.0  # block_max_y=100, max_y=90
+        assert result["suggested_trim_bottom"] == 0.0  # min_y=0, block_min_y=0
 
     def test_tied_shapes_use_union_bbox(self) -> None:
         """Multiple tied shapes use union bounding box."""
@@ -1375,7 +1397,7 @@ class TestTiedShapeHandling:
         assert result["suggested_trim_bottom"] == 0.0
 
     def test_single_large_rectangle_trimming(self) -> None:
-        """Single large rectangle from test file calculates correct trim values."""
+        """Rectangle plus LINE frame from test file calculates correct trim values."""
         doc = ezdxf.readfile("app/tests/assets/equal_area_test.dxf")
         block = doc.blocks.get("SINGLE_LARGE")
         bbox = _get_block_bounding_box(block)
@@ -1383,11 +1405,14 @@ class TestTiedShapeHandling:
         result = _detect_content_zone(block, bbox)
 
         assert result["content_zone_detected"] is True
-        # Single rectangle from (10,10) to (90,90) within 0-100 bbox
-        assert result["suggested_trim_left"] == 10.0
-        assert result["suggested_trim_right"] == 10.0
-        assert result["suggested_trim_top"] == 10.0
-        assert result["suggested_trim_bottom"] == 10.0
+        # SINGLE_LARGE has:
+        # - LWPOLYLINE rectangle (10,10)-(90,90)
+        # - LINE frame cycle (0,0)-(100,100)
+        # With ALL survivors, union bbox = (0,0)-(100,100) = block bbox
+        assert result["suggested_trim_left"] == 0.0
+        assert result["suggested_trim_right"] == 0.0
+        assert result["suggested_trim_top"] == 0.0
+        assert result["suggested_trim_bottom"] == 0.0
 
     def test_two_equal_rectangles_union(self) -> None:
         """Two equal rectangles produce union bbox."""
