@@ -67,7 +67,7 @@ class DXFExtractorApp(ctk.CTk):
 
         # Window configuration
         self.title("DXF Block Extractor")
-        self.geometry("600x500")
+        self.geometry("600x750")
         self.resizable(True, True)
 
         # Instance variables
