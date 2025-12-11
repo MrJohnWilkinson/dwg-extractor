@@ -76,7 +76,7 @@ You are the orchestrator managing sub-agents to complete units in a One Piece Fl
 
 **1. Launch Implementation Sub-agent**
 
-- Create sub-agent on same branch with current git state
+- Create NEW sub-agent on same branch with current git state
 - Sub-agent instructions:
   1. Run `/utils:prime`
   2. Run `/dev:implement [spec-path]`

@@ -134,6 +134,8 @@ EXCEL_FILL_COLOR_SCALE_NEGATIVE: str = "FFA500FF"
 EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE: str = "FFFF0000"
 # Yellow: Warning color for extraction issues
 EXCEL_FILL_COLOR_EXTRACTION_ISSUE: str = "FFFFFF00"
+# Green: Highlight color for nested blocks in Block Definitions sheet
+EXCEL_FILL_COLOR_NESTED_BLOCK: str = "FF90EE90"
 
 # UI messages
 MSG_SELECT_FILE: str = "Please select a DXF file"

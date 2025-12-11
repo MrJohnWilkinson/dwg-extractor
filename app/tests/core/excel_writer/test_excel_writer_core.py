@@ -70,11 +70,12 @@ from core.types import BlockLayerKey, BlockRotationKey
 class TestExcelWriter:
     """Test suite for the write_excel function."""
 
-    def test_write_excel_seven_sheets(
+    def test_write_excel_eight_sheets(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that seven sheets are created with correct names."""
+        """Test that eight sheets are created with correct names."""
         from core.constants import (
+            EXCEL_SHEET_BLOCK_DEFINITIONS,
             EXCEL_SHEET_COLOR_ANALYSIS,
             EXCEL_SHEET_EXTRACTION_ISSUES,
         )
@@ -94,7 +95,8 @@ class TestExcelWriter:
         assert EXCEL_SHEET_ANNOTATIONS_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_COLOR_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_EXTRACTION_ISSUES in wb.sheetnames
-        assert len(wb.sheetnames) == 7
+        assert EXCEL_SHEET_BLOCK_DEFINITIONS in wb.sheetnames
+        assert len(wb.sheetnames) == 8
 
     def test_block_analysis_sheet_simplified(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -279,6 +281,8 @@ class TestExcelWriter:
             "extraction_issues": [],
             "block_trimming_data": {},
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(empty_data, output_path)
@@ -502,6 +506,8 @@ class TestExcelWriter:
             "extraction_issues": [],
             "block_trimming_data": {},
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -689,6 +695,8 @@ class TestExcelWriter:
             "extraction_issues": [],
             "block_trimming_data": {},
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -759,6 +767,8 @@ class TestExcelWriter:
                 # ANONYMOUS block intentionally missing from block_trimming_data
             },
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -1175,6 +1185,8 @@ class TestExcelWriter:
                     },
                 },
                 "block_content_zone_data": {},
+                "all_block_definitions": {},
+                "nested_block_parents": {},
             }
 
             output_path = os.path.join(temp_dir, "test_xdata.dxf")
@@ -1261,6 +1273,8 @@ class TestExcelWriter:
             "extraction_issues": [],
             "block_trimming_data": {},
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(empty_data, output_path)

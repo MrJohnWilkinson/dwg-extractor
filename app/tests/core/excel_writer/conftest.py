@@ -117,6 +117,44 @@ def sample_extraction_data() -> ExtractionResult:
                 "filtered_polygon_count": 0,
             },
         },
+        "all_block_definitions": {
+            "VALVE": {
+                "block_raw_name": "VALVE",
+                "block_resolved_name": "VALVE",
+                "block_insertion_status": "Inserted",
+                "block_is_nested": False,
+                "block_nested_parent_names": [],
+                "block_entity_count": 8,
+            },
+            "PIPE": {
+                "block_raw_name": "PIPE",
+                "block_resolved_name": "PIPE",
+                "block_insertion_status": "Inserted",
+                "block_is_nested": True,
+                "block_nested_parent_names": ["VALVE"],
+                "block_entity_count": 12,
+            },
+            "TAG": {
+                "block_raw_name": "TAG",
+                "block_resolved_name": "TAG",
+                "block_insertion_status": "Nested Only",
+                "block_is_nested": True,
+                "block_nested_parent_names": ["VALVE", "PIPE"],
+                "block_entity_count": 4,
+            },
+            "*Model_Space": {
+                "block_raw_name": "*Model_Space",
+                "block_resolved_name": "*Model_Space",
+                "block_insertion_status": "System",
+                "block_is_nested": False,
+                "block_nested_parent_names": [],
+                "block_entity_count": 50,
+            },
+        },
+        "nested_block_parents": {
+            "PIPE": ["VALVE"],
+            "TAG": ["PIPE", "VALVE"],
+        },
     }
 
 
@@ -190,6 +228,17 @@ def annotation_extraction_data() -> ExtractionResult:
                 "filtered_polygon_count": 1,
             }
         },
+        "all_block_definitions": {
+            "VALVE": {
+                "block_raw_name": "VALVE",
+                "block_resolved_name": "VALVE",
+                "block_insertion_status": "Inserted",
+                "block_is_nested": False,
+                "block_nested_parent_names": [],
+                "block_entity_count": 8,
+            },
+        },
+        "nested_block_parents": {},
     }
 
 
@@ -254,6 +303,17 @@ def color_analysis_data() -> ExtractionResult:
         "extraction_issues": [],
         "block_trimming_data": {},
         "block_content_zone_data": {},
+        "all_block_definitions": {
+            "LINE_BLOCK": {
+                "block_raw_name": "LINE_BLOCK",
+                "block_resolved_name": "LINE_BLOCK",
+                "block_insertion_status": "Unused",
+                "block_is_nested": False,
+                "block_nested_parent_names": [],
+                "block_entity_count": 5,
+            },
+        },
+        "nested_block_parents": {},
     }
 
 
@@ -317,6 +377,25 @@ def extraction_issues_data() -> ExtractionResult:
                 "filtered_polygon_count": 2,
             },
         },
+        "all_block_definitions": {
+            "VALVE": {
+                "block_raw_name": "VALVE",
+                "block_resolved_name": "VALVE",
+                "block_insertion_status": "Inserted",
+                "block_is_nested": False,
+                "block_nested_parent_names": [],
+                "block_entity_count": 8,
+            },
+            "*U1": {
+                "block_raw_name": "*U1",
+                "block_resolved_name": "*U1",
+                "block_insertion_status": "Unresolved (*U)",
+                "block_is_nested": False,
+                "block_nested_parent_names": [],
+                "block_entity_count": 3,
+            },
+        },
+        "nested_block_parents": {},
     }
 
 
@@ -365,4 +444,15 @@ def no_issues_data() -> ExtractionResult:
                 "filtered_polygon_count": 2,
             },
         },
+        "all_block_definitions": {
+            "VALVE": {
+                "block_raw_name": "VALVE",
+                "block_resolved_name": "VALVE",
+                "block_insertion_status": "Inserted",
+                "block_is_nested": False,
+                "block_nested_parent_names": [],
+                "block_entity_count": 8,
+            },
+        },
+        "nested_block_parents": {},
     }

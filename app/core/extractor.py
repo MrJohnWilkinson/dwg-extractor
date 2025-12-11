@@ -39,6 +39,7 @@ from .geometry import (
 from .logger import setup_logger
 from .types import (
     AnnotationKey,
+    BlockDefinitionRecord,
     BlockLayerKey,
     BlockRotationKey,
     BlockTrimmingData,
@@ -917,6 +918,22 @@ class ExtractionResult(TypedDict):
                                 suggested_trim_top, suggested_trim_bottom (all float | None), and content_zone_detected (bool).
                                 Example: {'SHELF_4FT': {'suggested_trim_left': 10.0, 'suggested_trim_right': 10.0,
                                           'suggested_trim_top': 5.0, 'suggested_trim_bottom': 5.0, 'content_zone_detected': True}}
+        all_block_definitions: Dictionary mapping raw block names to complete BlockDefinitionRecord entries.
+                              Tracks every block definition in the DXF file with metadata including:
+                              - block_raw_name: Original block name (e.g., '*U1', 'A$C7F63364D', 'DOOR')
+                              - block_resolved_name: Resolved name for anonymous blocks, or same as raw_name
+                              - block_insertion_status: One of 'Inserted', 'Nested Only', 'Unused', 'System',
+                                'System (Dimension)', 'System (Hatch)', 'Unresolved (*U)', 'Unresolved (A$C)'
+                              - block_is_nested: True if this block appears inside another block's definition
+                              - block_nested_parent_names: Sorted list of parent block names that contain this block
+                              - block_entity_count: Number of entities in the block definition
+                              Example: {'DOOR': {'block_raw_name': 'DOOR', 'block_resolved_name': 'DOOR',
+                                        'block_insertion_status': 'Inserted', 'block_is_nested': False,
+                                        'block_nested_parent_names': [], 'block_entity_count': 12}}
+        nested_block_parents: Dictionary mapping child block names to lists of parent block names.
+                             Only includes blocks that are nested inside other blocks (via INSERT entities).
+                             Parent names are sorted alphabetically for consistent output.
+                             Example: {'HANDLE': ['DOOR', 'WINDOW'], 'HINGE': ['DOOR']}
 
     Examples:
         block_layer_pairs: {BlockLayerKey('DOOR', 'WALLS'): 5, BlockLayerKey('WINDOW', 'WALLS'): 8}
@@ -945,6 +962,8 @@ class ExtractionResult(TypedDict):
     color_analysis_data: list[ColorAnalysisRecord]
     extraction_issues: list[ExtractionIssue]
     block_content_zone_data: dict[str, ContentZoneData]
+    all_block_definitions: dict[str, BlockDefinitionRecord]
+    nested_block_parents: dict[str, list[str]]
 
 
 def extract_blocks(
@@ -1127,6 +1146,10 @@ def extract_blocks(
         # Store resolution details for each anonymous block (for accurate error messages)
         anonymous_resolution_details: dict[str, str] = {}
 
+        # Track all block definitions and nested relationships
+        all_block_definitions: dict[str, BlockDefinitionRecord] = {}
+        nested_block_parents: dict[str, set[str]] = {}  # child_name -> {parent_names}
+
         # Initialize all layers from layer table with 0 counts
         logger.info("Initializing layers from layer table...")
         for layer in doc.layers:
@@ -1229,6 +1252,18 @@ def extract_blocks(
             logger.debug(f"Analyzing block definition: {effective_name}")
             entity_count = sum(1 for _ in block_def)
             block_entities[effective_name] = entity_count
+
+            # Scan block definition for nested INSERT entities
+            for entity in block_def:
+                if entity.dxftype() == "INSERT":
+                    nested_name = entity.dxf.name
+                    # Resolve anonymous block names if mapping exists
+                    if nested_name in anonymous_to_resolved:
+                        nested_name = anonymous_to_resolved[nested_name]
+                    # Track parent relationship
+                    if nested_name not in nested_block_parents:
+                        nested_block_parents[nested_name] = set()
+                    nested_block_parents[nested_name].add(effective_name)
 
             # Analyze block geometry for trimming assistance
             bbox = _get_block_bounding_box(block_def)
@@ -1488,6 +1523,85 @@ def extract_blocks(
             if layer_name not in layer_unique_color_counts:
                 layer_unique_color_counts[layer_name] = 0
 
+        # Build complete block definition records after modelspace scan
+        # This must happen AFTER block_counts is populated
+        logger.info("Building complete block definition records...")
+
+        def _classify_block_insertion_status(
+            block_name: str,
+            raw_name: str,
+            block_counts: dict[str, int],
+            nested_parents: dict[str, set[str]],
+        ) -> str:
+            """Determine insertion status for a block."""
+            # System blocks
+            if raw_name in ("*Model_Space", "*Paper_Space") or raw_name.startswith(
+                "*Paper_Space"
+            ):
+                return "System"
+            if (
+                raw_name.startswith("*D")
+                and len(raw_name) > 2
+                and raw_name[2:].isdigit()
+            ):
+                return "System (Dimension)"
+            if (
+                raw_name.startswith("*X")
+                and len(raw_name) > 2
+                and raw_name[2:].isdigit()
+            ):
+                return "System (Hatch)"
+
+            # Unresolved anonymous blocks
+            if raw_name.startswith("*U") and raw_name not in anonymous_to_resolved:
+                return "Unresolved (*U)"
+            if raw_name.startswith("A$C"):
+                resolved = anonymous_to_resolved.get(raw_name)
+                if resolved is None or resolved == raw_name:
+                    return "Unresolved (A$C)"
+
+            # Regular/resolved blocks - check insertion status
+            if block_name in block_counts:
+                return "Inserted"
+            if block_name in nested_parents:
+                return "Nested Only"
+            return "Unused"
+
+        for block_def in doc.blocks:
+            raw_name = block_def.name
+
+            # Determine effective (resolved) name
+            if raw_name in anonymous_to_resolved:
+                effective_name = anonymous_to_resolved[raw_name]
+            else:
+                effective_name = raw_name
+
+            # Count entities
+            entity_count = sum(1 for _ in block_def)
+
+            # Get parent names (sorted for consistency)
+            parent_names = sorted(list(nested_block_parents.get(effective_name, set())))
+
+            # Determine insertion status
+            insertion_status = _classify_block_insertion_status(
+                effective_name,
+                raw_name,
+                block_counts,
+                nested_block_parents,
+            )
+
+            # Build record
+            all_block_definitions[raw_name] = BlockDefinitionRecord(
+                block_raw_name=raw_name,
+                block_resolved_name=effective_name,
+                block_insertion_status=insertion_status,
+                block_is_nested=effective_name in nested_block_parents,
+                block_nested_parent_names=parent_names,
+                block_entity_count=entity_count,
+            )
+
+        logger.info(f"Tracked {len(all_block_definitions)} total block definitions")
+
         # Log summary
         total_insertions = sum(block_counts.values())
         unique_blocks = len(block_counts)
@@ -1565,6 +1679,10 @@ def extract_blocks(
             "color_analysis_data": color_analysis_data,
             "extraction_issues": extraction_issues,
             "block_content_zone_data": block_content_zone_data,
+            "all_block_definitions": all_block_definitions,
+            "nested_block_parents": {
+                k: sorted(list(v)) for k, v in nested_block_parents.items()
+            },
         }
 
         return result

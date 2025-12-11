@@ -288,18 +288,6 @@ After implementation, verify:
 
 5. **Add entity count** - helps identify empty/stub block definitions
 
-## Next Steps
-
-1. Create spec files for each unit:
-   - `specs/050-unit-1-block-definition-types-constants.md`
-   - `specs/051-unit-2-nested-block-test-asset.md`
-   - `specs/052-unit-3-extractor-all-blocks-nested.md`
-   - `specs/053-unit-4-excel-block-definitions-sheet.md`
-   - `specs/054-unit-5-nested-block-unit-tests.md`
-
-2. Create test asset first (Unit 2) to enable TDD approach
-
-3. Implement in order: Unit 1 → Unit 2 → Unit 3 → Unit 4 → Unit 5
 
 ## Technical References
 

@@ -112,6 +112,8 @@ class TestNegativeScaleTextGeneration:
                 }
             },
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
 
         output_path = os.path.join(temp_dir, "test.dxf")
@@ -148,6 +150,8 @@ class TestNegativeScaleTextGeneration:
                 }
             },
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
 
         output_path = os.path.join(temp_dir, "test.dxf")
@@ -182,6 +186,8 @@ class TestNegativeScaleTextGeneration:
                 }
             },
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
 
         output_path = os.path.join(temp_dir, "test.dxf")
@@ -216,6 +222,8 @@ class TestNegativeScaleTextGeneration:
                 }
             },
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
 
         output_path = os.path.join(temp_dir, "test.dxf")
@@ -252,6 +260,8 @@ class TestNegativeScaleTextGeneration:
                 }
             },
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
 
         output_path = os.path.join(temp_dir, "test.dxf")
@@ -289,6 +299,8 @@ class TestNegativeScaleTextGeneration:
                 }
             },
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
 
         output_path = os.path.join(temp_dir, "test.dxf")

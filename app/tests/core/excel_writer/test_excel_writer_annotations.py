@@ -138,6 +138,8 @@ class TestAnnotationsAnalysisSheet:
             "extraction_issues": [],
             "block_trimming_data": {},
             "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
         }
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -192,11 +194,12 @@ class TestAnnotationsAnalysisSheet:
         counts = df[format_header(EXCEL_COLUMN_ANNOTATION_COUNT)].tolist()
         assert counts == sorted(counts, reverse=True)
 
-    def test_seven_sheets_created(
+    def test_eight_sheets_created(
         self, temp_dir: str, annotation_extraction_data: ExtractionResult
     ) -> None:
-        """Test that exactly 7 sheets are created including Color Analysis and Extraction Issues."""
+        """Test that exactly 8 sheets are created including Color Analysis, Extraction Issues, and Block Definitions."""
         from core.constants import (
+            EXCEL_SHEET_BLOCK_DEFINITIONS,
             EXCEL_SHEET_COLOR_ANALYSIS,
             EXCEL_SHEET_EXTRACTION_ISSUES,
         )
@@ -206,8 +209,8 @@ class TestAnnotationsAnalysisSheet:
 
         wb = load_workbook(excel_path)
 
-        # Verify exactly 7 sheets
-        assert len(wb.sheetnames) == 7
+        # Verify exactly 8 sheets
+        assert len(wb.sheetnames) == 8
 
         # Verify all expected sheet names
         assert EXCEL_SHEET_BLOCK_ANALYSIS in wb.sheetnames
@@ -217,3 +220,4 @@ class TestAnnotationsAnalysisSheet:
         assert EXCEL_SHEET_ANNOTATIONS_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_COLOR_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_EXTRACTION_ISSUES in wb.sheetnames
+        assert EXCEL_SHEET_BLOCK_DEFINITIONS in wb.sheetnames

@@ -156,10 +156,10 @@ class TestExtractionIssuesSheet:
         cell_a2 = ws.cell(row=2, column=1)
         assert cell_a2.fill.fgColor is not None
 
-    def test_extraction_issues_sheet_is_last_sheet(
+    def test_extraction_issues_sheet_position(
         self, temp_dir: str, extraction_issues_data: ExtractionResult
     ) -> None:
-        """Test that Extraction Issues sheet is the last sheet (Sheet 7)."""
+        """Test that Extraction Issues sheet is at position 7 (index 6)."""
         from core.constants import EXCEL_SHEET_EXTRACTION_ISSUES
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -167,6 +167,6 @@ class TestExtractionIssuesSheet:
 
         wb = load_workbook(excel_path)
 
-        # Extraction Issues should be the last sheet
-        assert wb.sheetnames[-1] == EXCEL_SHEET_EXTRACTION_ISSUES
+        # Extraction Issues should be at index 6 (Sheet 7)
+        assert EXCEL_SHEET_EXTRACTION_ISSUES in wb.sheetnames
         assert wb.sheetnames.index(EXCEL_SHEET_EXTRACTION_ISSUES) == 6

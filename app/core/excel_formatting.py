@@ -18,11 +18,13 @@ from openpyxl.workbook.workbook import Workbook
 
 from .constants import (
     EXCEL_FILL_COLOR_EXTRACTION_ISSUE,
+    EXCEL_FILL_COLOR_NESTED_BLOCK,
     EXCEL_FILL_COLOR_SCALE_NEGATIVE,
     EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE,
     EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
     EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
+    EXCEL_SHEET_BLOCK_DEFINITIONS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
     EXCEL_SHEET_COLOR_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
@@ -494,4 +496,61 @@ def _format_extraction_issues_sheet(wb: Workbook) -> None:
 
     logger.info(
         f"Extraction Issues sheet formatted with {rows_highlighted} rows highlighted"
+    )
+
+
+def _format_block_definitions_sheet(wb: Workbook) -> None:
+    """Apply formatting to the Block Definitions sheet with green highlighting for nested blocks."""
+    if EXCEL_SHEET_BLOCK_DEFINITIONS not in wb.sheetnames:
+        logger.info("Block Definitions sheet not found, skipping formatting")
+        return
+
+    ws = wb[EXCEL_SHEET_BLOCK_DEFINITIONS]
+
+    # Apply auto-filter
+    if ws.dimensions:
+        ws.auto_filter.ref = ws.dimensions
+
+    # Freeze header row
+    ws.freeze_panes = "A2"
+    logger.info("Frozen panes applied to Block Definitions sheet")
+
+    # Set column widths (6 columns: A-F)
+    ws.column_dimensions["A"].width = 30  # block_raw_name
+    ws.column_dimensions["B"].width = 30  # block_resolved_name
+    ws.column_dimensions["C"].width = 20  # block_insertion_status
+    ws.column_dimensions["D"].width = 15  # block_is_nested
+    ws.column_dimensions["E"].width = 40  # block_nested_parent_names
+    ws.column_dimensions["F"].width = 20  # block_entity_count
+
+    # Enable text wrapping on header row
+    header_alignment = Alignment(wrap_text=True, vertical="top")
+    for cell in ws[1]:
+        cell.alignment = header_alignment
+
+    # Define green fill for nested blocks
+    green_fill = PatternFill(
+        start_color=EXCEL_FILL_COLOR_NESTED_BLOCK,
+        end_color=EXCEL_FILL_COLOR_NESTED_BLOCK,
+        fill_type="solid",
+    )
+
+    # Apply green highlighting to rows where block_is_nested is True
+    # Column D contains the is_nested boolean
+    rows_highlighted = 0
+    for row_idx in range(2, ws.max_row + 1):
+        is_nested_value = ws.cell(row=row_idx, column=4).value
+        if is_nested_value is True or is_nested_value == "True":
+            # Apply fill to entire row (columns A-F)
+            for col_idx in range(1, 7):
+                ws.cell(row=row_idx, column=col_idx).fill = green_fill
+            rows_highlighted += 1
+
+    # Apply right-alignment to entity_count column (F)
+    right_alignment = Alignment(horizontal="right")
+    for row_idx in range(2, ws.max_row + 1):
+        ws.cell(row=row_idx, column=6).alignment = right_alignment
+
+    logger.info(
+        f"Block Definitions sheet formatted with {rows_highlighted} nested block rows highlighted"
     )

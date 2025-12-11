@@ -35,11 +35,16 @@ from .constants import (
     EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT,
     EXCEL_COLUMN_BLOCK_HORIZONTAL_SEGMENTS,
     EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
+    EXCEL_COLUMN_BLOCK_INSERTION_STATUS,
+    EXCEL_COLUMN_BLOCK_IS_NESTED,
     EXCEL_COLUMN_BLOCK_LAYER_NAME,
     EXCEL_COLUMN_BLOCK_NAME,
     EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT,
     EXCEL_COLUMN_BLOCK_NATIVE_WIDTH,
+    EXCEL_COLUMN_BLOCK_NESTED_PARENT_NAMES,
     EXCEL_COLUMN_BLOCK_POLYGON_COUNT,
+    EXCEL_COLUMN_BLOCK_RAW_NAME,
+    EXCEL_COLUMN_BLOCK_RESOLVED_NAME,
     EXCEL_COLUMN_BLOCK_ROTATION_0,
     EXCEL_COLUMN_BLOCK_ROTATION_90,
     EXCEL_COLUMN_BLOCK_ROTATION_180,
@@ -76,6 +81,7 @@ from .constants import (
     EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT,
     EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
+    EXCEL_SHEET_BLOCK_DEFINITIONS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
     EXCEL_SHEET_COLOR_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
@@ -85,6 +91,7 @@ from .constants import (
 from .excel_formatting import (
     _format_annotations_analysis_sheet,
     _format_block_analysis_sheet,
+    _format_block_definitions_sheet,
     _format_block_geometry_analysis_sheet,
     _format_color_analysis_sheet,
     _format_entity_summary_sheet,
@@ -347,6 +354,9 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
             # Sheet 7: Extraction Issues
             _create_extraction_issues_sheet(extraction_data, writer)
 
+            # Sheet 8: Block Definitions
+            _create_block_definitions_sheet(extraction_data, writer)
+
         # Load workbook for post-processing (formatting)
         logger.debug("Loading workbook for formatting stage...")
         wb = load_workbook(full_path)
@@ -366,6 +376,8 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         _format_color_analysis_sheet(wb)
         logger.debug("Applying formatting to Extraction Issues sheet...")
         _format_extraction_issues_sheet(wb)
+        logger.debug("Applying formatting to Block Definitions sheet...")
+        _format_block_definitions_sheet(wb)
 
         # Save workbook with formatting
         logger.debug("Saving workbook with formatting applied...")
@@ -891,3 +903,58 @@ def _create_extraction_issues_sheet(
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_EXTRACTION_ISSUES, index=False)
     logger.info(f"Extraction Issues sheet created with {len(df)} rows")
+
+
+def _create_block_definitions_sheet(
+    data: ExtractionResult, writer: pd.ExcelWriter
+) -> None:
+    """Create the Block Definitions sheet with all block definitions and nesting status."""
+    logger.info("Creating Block Definitions sheet...")
+
+    all_block_definitions = data.get("all_block_definitions", {})
+
+    if not all_block_definitions:
+        logger.info("No block definitions found, skipping Block Definitions sheet")
+        return
+
+    # Build DataFrame rows
+    rows = []
+    for raw_name, record in all_block_definitions.items():
+        parent_names_str = ", ".join(record["block_nested_parent_names"])
+
+        rows.append(
+            {
+                EXCEL_COLUMN_BLOCK_RAW_NAME: record["block_raw_name"],
+                EXCEL_COLUMN_BLOCK_RESOLVED_NAME: record["block_resolved_name"],
+                EXCEL_COLUMN_BLOCK_INSERTION_STATUS: record["block_insertion_status"],
+                EXCEL_COLUMN_BLOCK_IS_NESTED: record["block_is_nested"],
+                EXCEL_COLUMN_BLOCK_NESTED_PARENT_NAMES: parent_names_str,
+                EXCEL_COLUMN_BLOCK_ENTITY_COUNT: record["block_entity_count"],
+            }
+        )
+
+    # Sort by insertion status (Inserted first, System last), then by resolved name
+    status_order = {
+        "Inserted": 0,
+        "Nested Only": 1,
+        "Unused": 2,
+        "Unresolved (*U)": 3,
+        "Unresolved (A$C)": 4,
+        "System": 5,
+        "System (Dimension)": 6,
+        "System (Hatch)": 7,
+    }
+    rows.sort(
+        key=lambda r: (
+            status_order.get(str(r[EXCEL_COLUMN_BLOCK_INSERTION_STATUS]), 99),
+            str(r[EXCEL_COLUMN_BLOCK_RESOLVED_NAME]).lower(),
+        )
+    )
+
+    df = pd.DataFrame(rows)
+
+    # Format column headers for Excel display
+    df.columns = [format_header(col) for col in df.columns]
+
+    df.to_excel(writer, sheet_name=EXCEL_SHEET_BLOCK_DEFINITIONS, index=False)
+    logger.info(f"Block Definitions sheet created with {len(df)} rows")
