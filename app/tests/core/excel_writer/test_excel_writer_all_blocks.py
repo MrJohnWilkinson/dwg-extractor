@@ -230,7 +230,9 @@ class TestAllBlocksSheet:
 
         # VALVE has 10 insertions according to block_counts
         valve_row = df[df[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "VALVE"]
-        assert valve_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT)] == 10
+        assert (
+            valve_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT)] == 10
+        )
 
     def test_all_blocks_scale_variance_varies(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -274,8 +276,12 @@ class TestAllBlocksSheet:
 
         # VALVE has native_width=100.0, native_height=50.0
         valve_row = df[df[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "VALVE"]
-        assert valve_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_NATIVE_WIDTH)] == 100.0
-        assert valve_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT)] == 50.0
+        assert (
+            valve_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_NATIVE_WIDTH)] == 100.0
+        )
+        assert (
+            valve_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_NATIVE_HEIGHT)] == 50.0
+        )
 
     def test_all_blocks_segments_formatted(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -377,9 +383,7 @@ class TestAllBlocksSheet:
         assert poly_count == 2
         assert filtered_count == 2
 
-    def test_all_blocks_empty_data_creates_headers_only(
-        self, temp_dir: str
-    ) -> None:
+    def test_all_blocks_empty_data_creates_headers_only(self, temp_dir: str) -> None:
         """Test that empty all_block_definitions creates sheet with headers only."""
         empty_data: ExtractionResult = {
             "block_counts": {},
@@ -462,9 +466,7 @@ class TestAllBlocksSheet:
         assert len(df.columns) == 29
         assert len(df) == 0
 
-    def test_all_blocks_block_with_no_insertions(
-        self, temp_dir: str
-    ) -> None:
+    def test_all_blocks_block_with_no_insertions(self, temp_dir: str) -> None:
         """Test that blocks with 0 insertions are handled correctly."""
         data_with_unused_block: ExtractionResult = {
             "block_counts": {},  # Empty - no insertions
@@ -507,9 +509,7 @@ class TestAllBlocksSheet:
         assert row[format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT)] == 0
         assert row[format_header(EXCEL_COLUMN_BLOCK_LAYER_COUNT)] == 0
 
-    def test_all_blocks_block_without_geometry_data(
-        self, temp_dir: str
-    ) -> None:
+    def test_all_blocks_block_without_geometry_data(self, temp_dir: str) -> None:
         """Test that blocks without geometry data have empty geometry fields."""
         data_without_geometry: ExtractionResult = {
             "block_counts": {"BLOCK_NO_GEOMETRY": 5},

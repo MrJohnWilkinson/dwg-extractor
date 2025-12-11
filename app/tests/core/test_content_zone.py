@@ -20,6 +20,7 @@ import ezdxf
 import pytest
 
 from core.constants import (
+    ENTITY_COUNT_THRESHOLD,
     LINE_SEGMENT_THRESHOLD,
     POLYGON_COUNT_THRESHOLD,
 )
@@ -29,6 +30,8 @@ from core.geometry import (
     _count_line_segments,
     _detect_content_zone,
     _empty_content_zone_data,
+    _estimate_edge_count,
+    _extract_all_edges,
     _extract_closed_lwpolylines,
     _extract_line_cycles,
     _get_block_bounding_box,
@@ -181,28 +184,38 @@ class TestLineCycleDetection:
 
 
 class TestThresholdSkips:
-    """Test suite for threshold skip behavior."""
+    """Test suite for threshold skip behavior.
+
+    Note: These tests use the fast edge estimation (_estimate_edge_count) introduced
+    in Unit 2 for threshold checks instead of the expensive _extract_all_edges().
+    """
 
     def test_line_threshold_skip(self) -> None:
-        """Verify LINE cycle detection skipped when segment count exceeds threshold."""
+        """Verify region detection skipped when estimated edge count exceeds threshold.
+
+        Uses fast edge estimation (Unit 2) to check threshold before expensive geometry extraction.
+        """
         doc = ezdxf.readfile("app/tests/assets/many_lines_test.dxf")
         block = doc.blocks.get("MANY_LINES")
 
-        # Verify line count exceeds threshold
+        # Verify line count exceeds threshold (LINE entities count as 1 edge each)
         line_count = _count_line_segments(block)
         assert line_count > LINE_SEGMENT_THRESHOLD
 
         # Get block bbox for detection
         bbox = _get_block_bounding_box(block)
 
-        # Run content zone detection - should skip LINE cycle detection
+        # Run content zone detection - should skip due to estimated edge count
         result = _detect_content_zone(block, bbox)
 
         # Since MANY_LINES has no LWPOLYLINEs, should return empty
         assert result["content_zone_detected"] is False
 
     def test_line_threshold_not_skip(self) -> None:
-        """Verify LINE cycle detection runs when segment count is under threshold."""
+        """Verify region detection runs when estimated edge count is under threshold.
+
+        Uses fast edge estimation (Unit 2) to check threshold before expensive geometry extraction.
+        """
         doc = ezdxf.readfile("app/tests/assets/many_lines_test.dxf")
         block = doc.blocks.get("FEW_LINES")
 
@@ -262,6 +275,226 @@ class TestThresholdSkips:
 
         # Should return empty since no LWPOLYLINEs and LINEs skipped
         assert result["content_zone_detected"] is False
+
+
+class TestEntityCountThreshold:
+    """Test suite for entity count threshold skip behavior (Unit 1)."""
+
+    def test_entity_count_threshold_skip(self) -> None:
+        """Verify blocks with >1000 entities are skipped and return empty ContentZoneData."""
+        doc = ezdxf.readfile("app/tests/assets/high_entity_count_test.dxf")
+        block = doc.blocks.get("HIGH_ENTITY_COUNT")
+
+        # Verify entity count exceeds threshold
+        entity_count = sum(1 for _ in block)
+        assert entity_count > ENTITY_COUNT_THRESHOLD
+
+        # Get block bbox for detection
+        bbox = _get_block_bounding_box(block)
+
+        # Run content zone detection - should skip due to high entity count
+        result = _detect_content_zone(block, bbox)
+
+        # Should return empty ContentZoneData
+        assert result["content_zone_detected"] is False
+        assert result["suggested_trim_left"] is None
+        assert result["polygon_count"] == 0
+
+    def test_entity_count_threshold_not_skip(self) -> None:
+        """Verify blocks with <1000 entities proceed with detection."""
+        doc = ezdxf.readfile("app/tests/assets/high_entity_count_test.dxf")
+        block = doc.blocks.get("LOW_ENTITY_COUNT")
+
+        # Verify entity count is under threshold
+        entity_count = sum(1 for _ in block)
+        assert entity_count < ENTITY_COUNT_THRESHOLD
+
+        # Get block bbox for detection
+        bbox = _get_block_bounding_box(block)
+
+        # Run content zone detection - should NOT skip due to entity count
+        # (may still skip due to edge threshold, but not entity count)
+        result = _detect_content_zone(block, bbox)
+
+        # Detection should proceed (may or may not find content zone depending on geometry)
+        # The key is that it didn't return early due to entity count
+        # Since LOW_ENTITY_COUNT has LINE entities, polygon_count may be 0 or more
+        assert isinstance(result["content_zone_detected"], bool)
+
+    def test_entity_count_exactly_threshold(self) -> None:
+        """Verify blocks with exactly 1000 entities are NOT skipped (> not >=)."""
+        doc = ezdxf.readfile("app/tests/assets/high_entity_count_test.dxf")
+        block = doc.blocks.get("EXACTLY_ENTITY_THRESHOLD")
+
+        # Verify entity count is exactly at threshold
+        entity_count = sum(1 for _ in block)
+        assert entity_count == ENTITY_COUNT_THRESHOLD
+
+        # Get block bbox for detection
+        bbox = _get_block_bounding_box(block)
+
+        # Run content zone detection - should NOT skip (threshold is >)
+        result = _detect_content_zone(block, bbox)
+
+        # At exactly threshold, should proceed with detection
+        # (may still skip due to edge threshold, but not entity count)
+        assert isinstance(result["content_zone_detected"], bool)
+
+    def test_entity_count_just_over_threshold(self) -> None:
+        """Verify blocks with 1001 entities ARE skipped (first to be skipped)."""
+        doc = ezdxf.readfile("app/tests/assets/high_entity_count_test.dxf")
+        block = doc.blocks.get("JUST_OVER_ENTITY_THRESHOLD")
+
+        # Verify entity count is exactly 1001
+        entity_count = sum(1 for _ in block)
+        assert entity_count == ENTITY_COUNT_THRESHOLD + 1
+
+        # Get block bbox for detection
+        bbox = _get_block_bounding_box(block)
+
+        # Run content zone detection - should skip due to entity count
+        result = _detect_content_zone(block, bbox)
+
+        # Should return empty ContentZoneData
+        assert result["content_zone_detected"] is False
+        assert result["suggested_trim_left"] is None
+        assert result["polygon_count"] == 0
+
+
+class TestEdgeEstimation:
+    """Test suite for _estimate_edge_count function (Unit 2)."""
+
+    def test_estimate_edge_count_lines_only(self) -> None:
+        """Verify LINE entities counted as 1 edge each."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="LINES_ONLY")
+        # Add 5 LINE entities
+        for i in range(5):
+            block.add_line((i * 10, 0), (i * 10 + 5, 5))
+
+        estimated = _estimate_edge_count(block)
+
+        assert estimated == 5
+
+    def test_estimate_edge_count_polylines(self) -> None:
+        """Verify polyline vertex pairs counted correctly."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="POLYLINES")
+        # Open polyline with 4 vertices = 3 edges
+        block.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)], close=False)
+        # Closed polyline with 4 vertices = 4 edges (3 + closing)
+        block.add_lwpolyline([(20, 0), (30, 0), (30, 10), (20, 10)], close=True)
+
+        estimated = _estimate_edge_count(block)
+
+        # 3 (open) + 4 (closed) = 7 edges
+        assert estimated == 7
+
+    def test_estimate_edge_count_circles(self) -> None:
+        """Verify circles estimated as ~36 edges."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CIRCLES")
+        # Add 2 circles
+        block.add_circle((10, 10), 5)
+        block.add_circle((30, 30), 10)
+
+        estimated = _estimate_edge_count(block)
+
+        # 2 circles * 36 edges each = 72 edges
+        assert estimated == 72
+
+    def test_estimate_edge_count_arcs(self) -> None:
+        """Verify arcs estimated as ~18 edges."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="ARCS")
+        # Add 3 arcs
+        block.add_arc((10, 10), 5, 0, 90)
+        block.add_arc((30, 30), 10, 45, 180)
+        block.add_arc((50, 50), 7, 0, 270)
+
+        estimated = _estimate_edge_count(block)
+
+        # 3 arcs * 18 edges each = 54 edges
+        assert estimated == 54
+
+    def test_estimate_edge_count_hatches(self) -> None:
+        """Verify hatches estimated as ~50 edges each."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="HATCHES")
+        # Add 2 hatches with simple boundary paths
+        hatch1 = block.add_hatch()
+        hatch1.paths.add_polyline_path(
+            [(0, 0), (10, 0), (10, 10), (0, 10)], is_closed=True
+        )
+        hatch2 = block.add_hatch()
+        hatch2.paths.add_polyline_path(
+            [(20, 0), (30, 0), (30, 10), (20, 10)], is_closed=True
+        )
+
+        estimated = _estimate_edge_count(block)
+
+        # 2 hatches * 50 edges each = 100 edges
+        assert estimated == 100
+
+    def test_estimate_edge_count_mixed(self) -> None:
+        """Verify mixed entities counted correctly."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="MIXED")
+        # 2 LINE entities = 2 edges
+        block.add_line((0, 0), (10, 0))
+        block.add_line((10, 0), (10, 10))
+        # 1 closed polyline with 4 vertices = 4 edges
+        block.add_lwpolyline([(20, 0), (30, 0), (30, 10), (20, 10)], close=True)
+        # 1 circle = 36 edges
+        block.add_circle((50, 50), 5)
+        # 1 arc = 18 edges
+        block.add_arc((70, 70), 10, 0, 180)
+
+        estimated = _estimate_edge_count(block)
+
+        # 2 + 4 + 36 + 18 = 60 edges
+        assert estimated == 60
+
+    def test_estimate_vs_actual_accuracy(self) -> None:
+        """Compare estimation to actual _extract_all_edges() count.
+
+        Estimation should be reasonably close to actual for typical blocks.
+        CIRCLE and ARC estimates (36/18) may vary based on radius, so we
+        allow some tolerance.
+        """
+        doc = ezdxf.readfile("app/tests/assets/content_zone_test.dxf")
+        block = doc.blocks.get("NESTED_RECTANGLES")
+
+        estimated = _estimate_edge_count(block)
+        actual = len(_extract_all_edges(block))
+
+        # For LWPOLYLINE-only blocks, estimation should be exact
+        # (2 closed rectangles with 4 vertices each = 8 edges)
+        assert estimated == actual == 8
+
+    def test_estimate_edge_count_empty_block(self) -> None:
+        """Verify empty block returns 0 edges."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="EMPTY")
+
+        estimated = _estimate_edge_count(block)
+
+        assert estimated == 0
+
+    def test_estimate_edge_count_non_geometric_entities(self) -> None:
+        """Verify non-geometric entities (TEXT, MTEXT) are not counted."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEXT_ONLY")
+        # Add text entities (should not contribute to edge count)
+        block.add_text("Hello", dxfattribs={"insert": (0, 0)})
+        block.add_mtext("World", dxfattribs={"insert": (10, 10)})
+        # Add one LINE to verify counting still works
+        block.add_line((0, 0), (10, 0))
+
+        estimated = _estimate_edge_count(block)
+
+        # Only the LINE should be counted
+        assert estimated == 1
 
 
 class TestAreaCalculation:
@@ -1051,7 +1284,9 @@ class TestNetAreaFiltering:
 
         assert result["content_zone_detected"] is True
         assert result["polygon_count"] == 2  # Original count before filtering
-        assert result["filtered_polygon_count"] == 1  # Only inner polygon remains after net area filter
+        assert (
+            result["filtered_polygon_count"] == 1
+        )  # Only inner polygon remains after net area filter
 
     def test_picture_frame_inner_selected_as_content_zone(self) -> None:
         """Verify inner polygon becomes content zone with correct trim values.
@@ -1161,7 +1396,9 @@ class TestNetAreaFiltering:
 
         # Only 1 polygon remains (inner), proving we use NET area
         assert result["polygon_count"] == 2  # Original count before filtering
-        assert result["filtered_polygon_count"] == 1  # Only inner remains after net area filter
+        assert (
+            result["filtered_polygon_count"] == 1
+        )  # Only inner remains after net area filter
 
     def test_side_filter_still_uses_gross_geometry(self) -> None:
         """Verify side filter uses shortest side of gross geometry, not net area.
@@ -1227,7 +1464,9 @@ class TestNetAreaFiltering:
         assert result["content_zone_detected"] is True
         # Side filter removed siblings first (3 siblings with side 20 < 25), only outer remains
         assert result["polygon_count"] == 4  # Original count before filtering
-        assert result["filtered_polygon_count"] == 1  # After side filter (siblings removed)
+        assert (
+            result["filtered_polygon_count"] == 1
+        )  # After side filter (siblings removed)
 
     def test_single_large_net_equals_gross(self) -> None:
         """Verify net area equals gross area when no containment.
@@ -1303,7 +1542,9 @@ class TestNetAreaFiltering:
 
         assert result["content_zone_detected"] is True
         assert result["polygon_count"] == 4  # Original count before filtering
-        assert result["filtered_polygon_count"] == 1  # Only outer remains after net area filter
+        assert (
+            result["filtered_polygon_count"] == 1
+        )  # Only outer remains after net area filter
 
 
 class TestUnionBoundingBox:

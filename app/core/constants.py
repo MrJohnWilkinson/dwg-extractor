@@ -130,7 +130,9 @@ EXCEL_COLUMN_BLOCK_NESTED_PARENT_NAMES: str = "block_nested_parent_names"
 # See app_docs/005-field-naming-convention.md for naming conventions
 # Domain: block, Attribute: layer, Qualifier: count/names
 EXCEL_COLUMN_BLOCK_LAYER_COUNT: str = "block_layer_count"
-EXCEL_COLUMN_BLOCK_LAYER_NAMES: str = "block_layer_names"  # Plural: collection of layer names
+EXCEL_COLUMN_BLOCK_LAYER_NAMES: str = (
+    "block_layer_names"  # Plural: collection of layer names
+)
 
 # Excel configuration - Fill colors for scale highlighting
 # Yellow: Warning color for scale variance with all positive values
@@ -168,6 +170,12 @@ LINE_SEGMENT_THRESHOLD: int = 5000
 Blocks with more LINE segments skip LINE cycle extraction.
 Rationale: With Shapely's GEOS-based polygonize(), can handle 5000 segments
 efficiently (previously 200 with DFS-based cycle detection)."""
+
+ENTITY_COUNT_THRESHOLD: int = 1000
+"""Maximum entities in block for content zone detection.
+Blocks with more entities skip content zone entirely.
+Rationale: High entity counts strongly correlate with complex geometry
+that will exceed polygon thresholds anyway."""
 
 # Arc Flattening Configuration
 ARC_FLATTENING_SAGITTA: float = 0.1

@@ -1261,7 +1261,9 @@ class TestTolerancePropagation:
         block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
 
         # Gap bridge with precision_tolerance=0 (mutually exclusive)
-        regions = _extract_paint_bucket_regions(block, precision_tolerance=0, gap_bridge_tolerance=2.0)
+        regions = _extract_paint_bucket_regions(
+            block, precision_tolerance=0, gap_bridge_tolerance=2.0
+        )
 
         assert len(regions) == 1
 

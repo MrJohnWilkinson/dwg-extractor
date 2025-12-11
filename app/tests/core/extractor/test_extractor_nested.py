@@ -145,9 +145,7 @@ class TestNestedBlockDetection:
         assert block_defs["*Model_Space"]["block_insertion_status"] == "System"
         assert block_defs["*Paper_Space"]["block_insertion_status"] == "System"
 
-    def test_nested_block_is_nested_flag(
-        self, nested_result: ExtractionResult
-    ) -> None:
+    def test_nested_block_is_nested_flag(self, nested_result: ExtractionResult) -> None:
         """Test block_is_nested flag accuracy."""
         block_defs = nested_result["all_block_definitions"]
 
@@ -161,9 +159,7 @@ class TestNestedBlockDetection:
         assert block_defs["UNUSED_BLOCK"]["block_is_nested"] is False
         assert block_defs["SECOND_OUTER"]["block_is_nested"] is False
 
-    def test_nested_block_parent_names(
-        self, nested_result: ExtractionResult
-    ) -> None:
+    def test_nested_block_parent_names(self, nested_result: ExtractionResult) -> None:
         """Test block_nested_parent_names lists."""
         block_defs = nested_result["all_block_definitions"]
 
@@ -176,9 +172,7 @@ class TestNestedBlockDetection:
         assert block_defs["UNUSED_BLOCK"]["block_nested_parent_names"] == []
         assert block_defs["SECOND_OUTER"]["block_nested_parent_names"] == []
 
-    def test_nested_block_multi_parent(
-        self, nested_result: ExtractionResult
-    ) -> None:
+    def test_nested_block_multi_parent(self, nested_result: ExtractionResult) -> None:
         """Test blocks nested in multiple parents."""
         block_defs = nested_result["all_block_definitions"]
 
@@ -190,9 +184,7 @@ class TestNestedBlockDetection:
         # Should be sorted alphabetically
         assert parent_names == sorted(parent_names)
 
-    def test_nested_block_entity_counts(
-        self, nested_result: ExtractionResult
-    ) -> None:
+    def test_nested_block_entity_counts(self, nested_result: ExtractionResult) -> None:
         """Test entity count accuracy in block definitions."""
         block_defs = nested_result["all_block_definitions"]
 
@@ -264,9 +256,7 @@ class TestNestedBlockDetection:
         # Empty file has no user blocks, so no nesting relationships
         assert len(empty_result["nested_block_parents"]) == 0
 
-    def test_nested_block_resolved_names(
-        self, nested_result: ExtractionResult
-    ) -> None:
+    def test_nested_block_resolved_names(self, nested_result: ExtractionResult) -> None:
         """Test that resolved names match raw names for non-anonymous blocks."""
         block_defs = nested_result["all_block_definitions"]
 

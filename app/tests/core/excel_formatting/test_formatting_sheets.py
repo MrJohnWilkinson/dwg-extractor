@@ -976,7 +976,11 @@ class TestFreezePanes:
             ),
             (EXCEL_SHEET_COLOR_ANALYSIS, ["color_contents", "layer"], ["Text", "L1"]),
             (EXCEL_SHEET_EXTRACTION_ISSUES, ["issue_type", "block"], ["Missing", "V"]),
-            (EXCEL_SHEET_BLOCK_DEFINITIONS, ["block_raw_name", "resolved"], ["*M", "M"]),
+            (
+                EXCEL_SHEET_BLOCK_DEFINITIONS,
+                ["block_raw_name", "resolved"],
+                ["*M", "M"],
+            ),
         ]
 
         for sheet_name, headers, data in sheets_data:

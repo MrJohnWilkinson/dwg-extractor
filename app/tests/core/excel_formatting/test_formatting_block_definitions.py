@@ -121,11 +121,17 @@ class TestBlockDefinitionsFormatting:
             assert valve_fill.start_color.rgb != EXCEL_FILL_COLOR_NESTED_BLOCK
 
         # Row 3 (PIPE) should have green fill (nested)
-        assert ws.cell(row=3, column=1).fill.start_color.rgb == EXCEL_FILL_COLOR_NESTED_BLOCK
+        assert (
+            ws.cell(row=3, column=1).fill.start_color.rgb
+            == EXCEL_FILL_COLOR_NESTED_BLOCK
+        )
         assert ws.cell(row=3, column=1).fill.fill_type == "solid"
 
         # Row 4 (TAG) should have green fill (nested)
-        assert ws.cell(row=4, column=1).fill.start_color.rgb == EXCEL_FILL_COLOR_NESTED_BLOCK
+        assert (
+            ws.cell(row=4, column=1).fill.start_color.rgb
+            == EXCEL_FILL_COLOR_NESTED_BLOCK
+        )
 
     def test_format_block_definitions_no_highlighting_non_nested(self) -> None:
         """Test that non-nested blocks are not highlighted."""

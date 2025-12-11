@@ -100,7 +100,9 @@ class TestBlockDefinitionsSheet:
         valve_row = valve_rows.iloc[0]
 
         assert valve_row[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "VALVE"
-        assert valve_row[format_header(EXCEL_COLUMN_BLOCK_INSERTION_STATUS)] == "Inserted"
+        assert (
+            valve_row[format_header(EXCEL_COLUMN_BLOCK_INSERTION_STATUS)] == "Inserted"
+        )
         assert valve_row[format_header(EXCEL_COLUMN_BLOCK_IS_NESTED)] == False  # noqa: E712
         assert valve_row[format_header(EXCEL_COLUMN_BLOCK_ENTITY_COUNT)] == 8
 

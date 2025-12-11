@@ -33,6 +33,7 @@ from shapely.ops import polygonize, snap, unary_union
 
 from .constants import (
     ARC_FLATTENING_SAGITTA,
+    ENTITY_COUNT_THRESHOLD,
     LINE_SEGMENT_THRESHOLD,
     POLYGON_COUNT_THRESHOLD,
 )
@@ -480,6 +481,56 @@ def _count_line_segments(block_def: BlockLayout) -> int:
     for entity in block_def:
         if entity.dxftype() == "LINE":
             count += 1
+    return count
+
+
+def _estimate_edge_count(block_def: BlockLayout) -> int:
+    """
+    Fast O(n) edge count estimation without coordinate extraction.
+
+    Counts the number of edges that would be extracted by _extract_all_edges()
+    without actually creating LineString objects or extracting coordinates.
+    Used for threshold checks before expensive geometry operations.
+
+    Args:
+        block_def: ezdxf block definition object
+
+    Returns:
+        Estimated number of edges in the block.
+    """
+    count = 0
+    for entity in block_def:
+        entity_type = entity.dxftype()
+
+        if entity_type == "LINE":
+            count += 1
+
+        elif entity_type in ("LWPOLYLINE", "POLYLINE"):
+            try:
+                # Count vertices to estimate edge count
+                # Each vertex pair = 1 edge, plus closing edge if closed
+                points = list(entity.get_points())  # type: ignore[attr-defined]
+                vertex_count = len(points)
+                if vertex_count >= 2:
+                    count += vertex_count - 1
+                    if hasattr(entity, "closed") and entity.closed:
+                        count += 1
+            except (AttributeError, IndexError):
+                continue
+
+        elif entity_type == "CIRCLE":
+            # Estimate based on typical flattening (full circle ~ 36 segments)
+            count += 36
+
+        elif entity_type == "ARC":
+            # Estimate based on typical flattening (half circle ~ 18 segments)
+            count += 18
+
+        elif entity_type == "HATCH":
+            # Conservative estimate per hatch boundary path
+            # Actual count varies, but 50 edges per hatch is reasonable average
+            count += 50
+
     return count
 
 
@@ -1045,12 +1096,21 @@ def _detect_content_zone(
     """
     block_name = block_def.name
 
-    # Count edges for threshold check
-    edge_count = len(_extract_all_edges(block_def))
-    if edge_count > LINE_SEGMENT_THRESHOLD:
+    # UNIT 1: Fast entity count pre-check (O(n), no coordinate extraction)
+    entity_count = sum(1 for _ in block_def)
+    if entity_count > ENTITY_COUNT_THRESHOLD:
+        logger.warning(
+            f"[{block_name}] Skipping content zone: "
+            f"{entity_count} entities exceeds threshold {ENTITY_COUNT_THRESHOLD}"
+        )
+        return _empty_content_zone_data()
+
+    # UNIT 2: Fast edge count estimation (no coordinate extraction)
+    estimated_edge_count = _estimate_edge_count(block_def)
+    if estimated_edge_count > LINE_SEGMENT_THRESHOLD:
         logger.warning(
             f"[{block_name}] Skipping region detection: "
-            f"{edge_count} edges exceeds threshold {LINE_SEGMENT_THRESHOLD}"
+            f"~{estimated_edge_count} estimated edges exceeds threshold {LINE_SEGMENT_THRESHOLD}"
         )
         return ContentZoneData(
             suggested_trim_left=None,
