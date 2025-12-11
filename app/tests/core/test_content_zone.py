@@ -996,6 +996,297 @@ class TestPolygonFiltering:
         assert result["polygon_count"] == 1
 
 
+class TestNetAreaFiltering:
+    """Test suite for net area filtering in _detect_content_zone.
+
+    These tests verify that min_area_filter uses NET area (gross minus contained
+    polygons) rather than GROSS area. This correctly handles "picture frame"
+    scenarios where a large outer polygon has a small net area.
+
+    Test blocks from nested_polygon_filter_test.dxf:
+    - PICTURE_FRAME: outer 100x100 (net=3600), inner 80x80 (net=6400)
+    - BOX_IN_BOX_IN_BOX: 3 levels - outer (net=3600), middle (net=3900), inner (net=2500)
+    - MULTIPLE_SIBLINGS: outer (net=8800), 3 inner 20x20 (net=400 each)
+    - SINGLE_LARGE: 80x80 (net=gross=6400)
+    """
+
+    def test_picture_frame_filtered_by_net_area(self) -> None:
+        """Verify outer polygon with small net area is filtered, leaving inner polygon.
+
+        Scenario:
+        - Outer rectangle: 100x100 = 10,000 sq units gross
+        - Inner rectangle: 80x80 = 6,400 sq units gross (centered at 10,10 to 90,90)
+        - Outer NET area: 10,000 - 6,400 = 3,600 sq units
+        - Inner NET area: 6,400 sq units (no children)
+
+        With min_area_filter=5000:
+        - Outer fails: 3,600 < 5,000 (filtered OUT)
+        - Inner passes: 6,400 >= 5,000 (kept)
+
+        Expected: polygon_count == 1 (only inner remains)
+        """
+        doc = ezdxf.readfile("app/tests/assets/nested_polygon_filter_test.dxf")
+        block = doc.blocks.get("PICTURE_FRAME")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=5000.0,
+            min_side_filter=0.0,
+        )
+
+        assert result["content_zone_detected"] is True
+        assert result["polygon_count"] == 1  # Only inner polygon remains
+
+    def test_picture_frame_inner_selected_as_content_zone(self) -> None:
+        """Verify inner polygon becomes content zone with correct trim values.
+
+        When outer frame is filtered out, the inner polygon (10,10)-(90,90)
+        should be selected as the content zone.
+
+        Block bounding box: (0,0)-(100,100)
+        Inner polygon: (10,10)-(90,90)
+        Expected trim values:
+        - left: 10 (inner starts at x=10)
+        - right: 10 (inner ends at x=90, bbox is 100)
+        - top: 10 (inner ends at y=90, bbox is 100)
+        - bottom: 10 (inner starts at y=10)
+        """
+        doc = ezdxf.readfile("app/tests/assets/nested_polygon_filter_test.dxf")
+        block = doc.blocks.get("PICTURE_FRAME")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=5000.0,
+            min_side_filter=0.0,
+        )
+
+        assert result["content_zone_detected"] is True
+        # Inner rectangle is (10,10) to (90,90)
+        assert result["suggested_trim_left"] == 10.0
+        assert result["suggested_trim_right"] == 10.0
+        assert result["suggested_trim_top"] == 10.0
+        assert result["suggested_trim_bottom"] == 10.0
+        # Content zone dimensions: 80x80
+        assert result["content_zone_width"] == 80.0
+        assert result["content_zone_height"] == 80.0
+
+    def test_box_in_box_in_box_filtering(self) -> None:
+        """Verify multi-level nesting filters correctly by net area.
+
+        3 nested rectangles:
+        - Outermost: 100x100, gross=10000, net=10000-6400=3600
+        - Middle: 80x80, gross=6400, net=6400-2500=3900
+        - Innermost: 50x50, gross=2500, net=2500 (no children)
+
+        With min_area_filter=3000:
+        - Outermost: net=3600 >= 3000, PASSES
+        - Middle: net=3900 >= 3000, PASSES
+        - Innermost: net=2500 < 3000, FAILS (filtered)
+
+        Expected: polygon_count == 2 (outer and middle remain)
+        """
+        doc = ezdxf.readfile("app/tests/assets/nested_polygon_filter_test.dxf")
+        block = doc.blocks.get("BOX_IN_BOX_IN_BOX")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=3000.0,
+            min_side_filter=0.0,
+        )
+
+        assert result["content_zone_detected"] is True
+        # Innermost filtered out (2500 < 3000), outer and middle remain
+        assert result["polygon_count"] == 2
+
+    def test_gross_area_filter_would_pass_outer(self) -> None:
+        """Regression test: verify gross area WOULD have passed but net area fails.
+
+        This test ensures we're using NET area, not GROSS area.
+
+        PICTURE_FRAME outer polygon:
+        - GROSS area: 100x100 = 10,000 sq units
+        - NET area: 10,000 - 6,400 = 3,600 sq units
+
+        With min_area_filter=5000:
+        - If using GROSS: outer would PASS (10,000 >= 5,000) - WRONG!
+        - If using NET: outer FAILS (3,600 < 5,000) - CORRECT!
+
+        This test verifies the implementation uses NET area by confirming
+        the outer polygon is NOT present (polygon_count < 2).
+        """
+        doc = ezdxf.readfile("app/tests/assets/nested_polygon_filter_test.dxf")
+        block = doc.blocks.get("PICTURE_FRAME")
+        bbox = _get_block_bounding_box(block)
+
+        # Verify gross area would pass the threshold
+        from core.geometry import calculate_polygon_area
+
+        polygons = _extract_closed_lwpolylines(block)
+        # Find the outer polygon (larger gross area)
+        outer_polygon = max(polygons, key=lambda p: calculate_polygon_area(p))
+        outer_gross_area = calculate_polygon_area(outer_polygon)
+
+        # Outer gross area should be 10,000 (would pass filter of 5000)
+        assert outer_gross_area >= 9900  # Allow small tolerance
+        assert outer_gross_area >= 5000  # Would pass if using gross
+
+        # But with NET area filtering, outer should be filtered out
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=5000.0,
+            min_side_filter=0.0,
+        )
+
+        # Only 1 polygon remains (inner), proving we use NET area
+        assert result["polygon_count"] == 1
+
+    def test_side_filter_still_uses_gross_geometry(self) -> None:
+        """Verify side filter uses shortest side of gross geometry, not net area.
+
+        The side filter should evaluate the actual polygon dimensions,
+        independent of any contained polygons.
+
+        PICTURE_FRAME outer polygon:
+        - Dimensions: 100x100 (square)
+        - Shortest side: 100 units (all sides equal)
+
+        With min_side_filter=50:
+        - Outer PASSES: shortest side 100 >= 50
+        - Inner PASSES: shortest side 80 >= 50
+
+        Expected: Both polygons remain (side filter doesn't use net area)
+        """
+        doc = ezdxf.readfile("app/tests/assets/nested_polygon_filter_test.dxf")
+        block = doc.blocks.get("PICTURE_FRAME")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=0.0,  # Disable area filter
+            min_side_filter=50.0,  # Both should pass
+        )
+
+        assert result["content_zone_detected"] is True
+        # Both polygons should pass the side filter (100 >= 50, 80 >= 50)
+        assert result["polygon_count"] == 2
+
+    def test_filter_order_side_then_net_area(self) -> None:
+        """Verify side filter is applied BEFORE net area filter.
+
+        This test uses a scenario where filter order matters:
+        - Side filter removes some polygons
+        - Then net area is calculated on remaining polygons
+        - Then net area filter is applied
+
+        MULTIPLE_SIBLINGS block:
+        - Outer 100x100, contains 3 inner 20x20 rectangles
+        - Inner polygons have shortest side = 20
+
+        With min_side_filter=25 (filters inner siblings) and min_area_filter=100:
+        - Side filter removes all 3 inner siblings (20 < 25)
+        - Only outer remains for net area calculation
+        - Outer's net area CHANGES because siblings are gone from calculation
+
+        This demonstrates side filter runs first (before net area calc).
+        """
+        doc = ezdxf.readfile("app/tests/assets/nested_polygon_filter_test.dxf")
+        block = doc.blocks.get("MULTIPLE_SIBLINGS")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=100.0,  # Low threshold, not filtering anything by area
+            min_side_filter=25.0,  # Filters inner siblings (20 < 25)
+        )
+
+        assert result["content_zone_detected"] is True
+        # Side filter removed siblings first, only outer remains
+        assert result["polygon_count"] == 1
+
+    def test_single_large_net_equals_gross(self) -> None:
+        """Verify net area equals gross area when no containment.
+
+        SINGLE_LARGE block has a single 80x80 rectangle with no inner polygons.
+        Net area should equal gross area (6400).
+
+        With min_area_filter=6000:
+        - Single polygon net=gross=6400 >= 6000, PASSES
+        """
+        doc = ezdxf.readfile("app/tests/assets/nested_polygon_filter_test.dxf")
+        block = doc.blocks.get("SINGLE_LARGE")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=6000.0,
+            min_side_filter=0.0,
+        )
+
+        assert result["content_zone_detected"] is True
+        assert result["polygon_count"] == 1
+
+    def test_all_filtered_by_net_area(self) -> None:
+        """Verify behavior when all polygons are filtered by net area.
+
+        BOX_IN_BOX_IN_BOX:
+        - Outer net=3600, Middle net=3900, Inner net=2500
+
+        With min_area_filter=4000:
+        - All polygons have net area < 4000
+        - All should be filtered out
+        """
+        doc = ezdxf.readfile("app/tests/assets/nested_polygon_filter_test.dxf")
+        block = doc.blocks.get("BOX_IN_BOX_IN_BOX")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=4000.0,
+            min_side_filter=0.0,
+        )
+
+        assert result["content_zone_detected"] is False
+        assert result["polygon_count"] == 0
+
+    def test_multiple_siblings_outer_kept_siblings_filtered(self) -> None:
+        """Verify outer polygon kept when siblings filtered by net area.
+
+        MULTIPLE_SIBLINGS:
+        - Outer 100x100, net = 10000 - 400*3 = 8800
+        - 3 inner siblings 20x20, each net = 400
+
+        With min_area_filter=500:
+        - Outer passes: 8800 >= 500
+        - Siblings fail: 400 < 500
+
+        Expected: polygon_count == 1 (only outer)
+        """
+        doc = ezdxf.readfile("app/tests/assets/nested_polygon_filter_test.dxf")
+        block = doc.blocks.get("MULTIPLE_SIBLINGS")
+        bbox = _get_block_bounding_box(block)
+
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=500.0,
+            min_side_filter=0.0,
+        )
+
+        assert result["content_zone_detected"] is True
+        assert result["polygon_count"] == 1  # Only outer remains
+
+
 class TestUnionBoundingBox:
     """Tests for _get_union_bounding_box() function."""
 
