@@ -195,7 +195,7 @@ class DXFExtractorApp(ctk.CTk):
         # Units hint label
         units_hint = ctk.CTkLabel(
             units_frame,
-            text="(applies to precision fix and gap bridge)",
+            text="(applies to all numeric filters)",
             font=ctk.CTkFont(size=10),
             text_color="gray",
         )

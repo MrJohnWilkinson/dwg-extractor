@@ -1096,6 +1096,9 @@ def _detect_content_zone(
     """
     block_name = block_def.name
 
+    # UNIT 6: Progress feedback - log block processing start
+    logger.info(f"[{block_name}] Detecting content zone...")
+
     # UNIT 1: Fast entity count pre-check (O(n), no coordinate extraction)
     entity_count = sum(1 for _ in block_def)
     if entity_count > ENTITY_COUNT_THRESHOLD:
@@ -1195,6 +1198,7 @@ def _detect_content_zone(
         )
 
     if not net_areas:
+        logger.debug(f"[{block_name}] No content zone detected (all polygons filtered)")
         return ContentZoneData(
             suggested_trim_left=None,
             suggested_trim_right=None,
@@ -1231,10 +1235,8 @@ def _detect_content_zone(
     cz_width = round(cz_max_x - cz_min_x, 2)
     cz_height = round(cz_max_y - cz_min_y, 2)
 
-    logger.debug(
-        f"[{block_name}] Content zone detected: "
-        f"trim_left={trim_left}, trim_right={trim_right}, "
-        f"trim_top={trim_top}, trim_bottom={trim_bottom}"
+    logger.info(
+        f"[{block_name}] Content zone detected: {cz_width:.2f} x {cz_height:.2f}"
     )
 
     return ContentZoneData(
