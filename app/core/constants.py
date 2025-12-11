@@ -214,8 +214,10 @@ DEFAULT_PRECISION_SNAP_TOLERANCE: float = 1e-6
 """Fallback precision snap tolerance when unit is unknown or unsupported.
 Conservative value appropriate for most CAD applications."""
 
-# Stage 2: Default gap bridge tolerances for intentional gap bridging
-# These represent typical small gaps in CAD drawings that users may want to bridge
+# Default gap bridge tolerances for closing small gaps in polygon edges.
+# Gap Bridge is an alternative to Precision Fix - both close gaps for accurate
+# polygon counts. Gap Bridge uses larger tolerances suitable for visible
+# coordinate discrepancies in CAD drawings. Mutually exclusive with Precision Fix.
 DEFAULT_GAP_BRIDGE_TOLERANCE: dict[int, float] = {
     0: 0.1,  # Unitless: small default
     1: 0.01,  # Inches: 0.01" (common drafting gap)

@@ -1003,9 +1003,12 @@ def _detect_content_zone(
     both side and area filtering. Trim values are derived from this combined
     bounding box relative to the block bounding box.
 
-    Two-stage coordinate snapping is applied during region detection:
-    - Stage 1 (Precision): Automatically fixes floating-point artifacts
-    - Stage 2 (Gap Bridge): Optionally bridges intentional gaps when enabled
+    Coordinate snapping options (mutually exclusive - GUI enforces one or the other):
+    - Precision Fix: Snaps coordinates to grid to fix floating-point artifacts
+      and small coordinate discrepancies. Uses smaller tolerances.
+    - Gap Bridge: Snaps edges to reference geometry to bridge intentional gaps.
+      Uses larger tolerances suitable for visible coordinate discrepancies.
+    Both options solve the same problem: closing small gaps for accurate polygon counts.
 
     Polygon filtering (when enabled):
     - min_side_filter: Filters polygons by shortest straight side (gross geometry).
