@@ -10,7 +10,7 @@ Orchestrate sub-agents to sequentially generate and implement specifications in 
 
 ## Purpose
 
-This command implements a One Piece Flow workflow. Instead of generating all specs first and then implementing them (batch processing), this command generates and implements each unit one at a time. This ensures that each subsequent spec can account for the reality of what was actually built, not just what was planned.
+This command implements a One Piece Flow workflow. Instead of generating all specs first and then implementing them (batch processing), this command generates and implements each unit one at a time using a sub-agent to create the unit spec, and then a 2nd sub-agent to implement the spec. This ensures that each subsequent unit can account for the reality of what was actually built, not just what was planned.
 
 ## Variables
 
