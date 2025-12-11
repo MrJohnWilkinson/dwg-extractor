@@ -1104,14 +1104,15 @@ class TestPrecisionSnapping:
 
 
 class TestGapBridging:
-    """Test suite for Stage 2 gap bridging in _extract_paint_bucket_regions.
+    """Test suite for gap bridge functionality in _extract_paint_bucket_regions.
 
-    Note: Shapely's snap() function adds vertices to nearby geometries within
-    tolerance. This can help bridge small gaps in certain topologies by adding
-    connection points, though it doesn't directly merge separate line endpoints.
+    Gap Bridge is an alternative to Precision Fix (mutually exclusive). Both close
+    gaps for accurate polygon counts. Gap Bridge snaps edges to reference geometry
+    before union using Shapely's snap() function, which adds vertices where edges
+    pass within tolerance of each other.
     """
 
-    def test_stage2_disabled_by_default(self) -> None:
+    def test_gap_bridge_disabled_by_default(self) -> None:
         """Test that default gap_bridge_tolerance=0.0 doesn't modify geometry."""
         doc = ezdxf.new()
         block = doc.blocks.new(name="GAP_DEFAULT")
@@ -1120,14 +1121,14 @@ class TestGapBridging:
         block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
 
         regions = _extract_paint_bucket_regions(
-            block, precision_tolerance=1e-6, gap_bridge_tolerance=0
+            block, precision_tolerance=0, gap_bridge_tolerance=0
         )
 
         # Should find exactly 1 polygon with default settings
         assert len(regions) == 1
 
-    def test_stage2_tolerance_parameter_accepted(self) -> None:
-        """Test that gap_bridge_tolerance parameter is accepted."""
+    def test_gap_bridge_tolerance_parameter_accepted(self) -> None:
+        """Test that gap_bridge_tolerance parameter is accepted with precision_tolerance=0."""
         doc = ezdxf.new()
         block = doc.blocks.new(name="GAP_TOLERANCE")
 
@@ -1135,21 +1136,21 @@ class TestGapBridging:
 
         # Should not raise with various tolerance values
         regions_zero = _extract_paint_bucket_regions(
-            block, precision_tolerance=1e-6, gap_bridge_tolerance=0.0
+            block, precision_tolerance=0, gap_bridge_tolerance=0.0
         )
         regions_small = _extract_paint_bucket_regions(
-            block, precision_tolerance=1e-6, gap_bridge_tolerance=0.5
+            block, precision_tolerance=0, gap_bridge_tolerance=0.5
         )
         regions_large = _extract_paint_bucket_regions(
-            block, precision_tolerance=1e-6, gap_bridge_tolerance=10.0
+            block, precision_tolerance=0, gap_bridge_tolerance=10.0
         )
 
         assert len(regions_zero) == 1
         assert len(regions_small) == 1
         assert len(regions_large) == 1
 
-    def test_stage2_no_effect_on_clean_geometry(self) -> None:
-        """Test Stage 2 doesn't negatively impact clean geometry."""
+    def test_gap_bridge_no_effect_on_clean_geometry(self) -> None:
+        """Test gap bridge doesn't negatively impact clean geometry."""
         doc = ezdxf.new()
         block = doc.blocks.new(name="CLEAN_GAP")
 
@@ -1161,13 +1162,13 @@ class TestGapBridging:
 
         # Even with large gap_bridge_tolerance, clean geometry should work
         regions = _extract_paint_bucket_regions(
-            block, precision_tolerance=1e-6, gap_bridge_tolerance=10.0
+            block, precision_tolerance=0, gap_bridge_tolerance=10.0
         )
 
         assert len(regions) == 1
 
-    def test_stage2_with_grid_pattern(self) -> None:
-        """Test Stage 2 works correctly with complex grid geometry."""
+    def test_gap_bridge_with_grid_pattern(self) -> None:
+        """Test gap bridge works correctly with complex grid geometry."""
         doc = ezdxf.new()
         block = doc.blocks.new(name="GRID_GAP")
 
@@ -1177,14 +1178,14 @@ class TestGapBridging:
         block.add_line((0, 50), (100, 50))  # Horizontal divider
 
         regions = _extract_paint_bucket_regions(
-            block, precision_tolerance=1e-6, gap_bridge_tolerance=1.0
+            block, precision_tolerance=0, gap_bridge_tolerance=1.0
         )
 
         # Should find 4 regions (2x2 grid)
         assert len(regions) == 4
 
-    def test_stage2_bridges_large_gaps(self) -> None:
-        """Stage 2 should add vertices at larger gap bridge tolerance points.
+    def test_gap_bridge_bridges_large_gaps(self) -> None:
+        """Gap bridge should add vertices at larger tolerance points.
 
         Shapely's snap() adds vertices where edges pass within tolerance
         of each other. With a 2.0 tolerance on a 1-unit gap, the endpoint
@@ -1201,15 +1202,15 @@ class TestGapBridging:
         ]
 
         merged = unary_union(edges)
-        merged = snap(merged, merged, 1e-6)  # Stage 1
-        merged_stage2 = snap(merged, merged, 2.0)  # Stage 2 with 2.0 tolerance
+        merged = snap(merged, merged, 1e-6)  # Precision fix equivalent
+        merged_gap_bridge = snap(merged, merged, 2.0)  # Gap bridge with 2.0 tolerance
 
-        # Verify Stage 2 modified the geometry (added vertex at gap location)
+        # Verify gap bridge modified the geometry (added vertex at gap location)
         # The snapped geometry should have a vertex added at (9, 5) on the right edge
         line_segments = (
-            list(merged_stage2.geoms)
-            if hasattr(merged_stage2, "geoms")
-            else [merged_stage2]
+            list(merged_gap_bridge.geoms)
+            if hasattr(merged_gap_bridge, "geoms")
+            else [merged_gap_bridge]
         )
         polygons = list(polygonize(line_segments))
 
@@ -1252,31 +1253,41 @@ class TestTolerancePropagation:
         assert len(regions) == 1
 
     def test_gap_bridge_only_parameter(self) -> None:
-        """Test passing gap_bridge_tolerance with default precision."""
+        """Test passing gap_bridge_tolerance with precision_tolerance=0 (mutual exclusivity)."""
         doc = ezdxf.new()
         block = doc.blocks.new(name="GAP_BRIDGE_ONLY")
 
         # Clean rectangle should work with gap bridging enabled
         block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
 
-        # Default precision + gap bridging
-        regions = _extract_paint_bucket_regions(block, gap_bridge_tolerance=2.0)
+        # Gap bridge with precision_tolerance=0 (mutually exclusive)
+        regions = _extract_paint_bucket_regions(block, precision_tolerance=0, gap_bridge_tolerance=2.0)
 
         assert len(regions) == 1
 
-    def test_both_tolerances_combined(self) -> None:
-        """Test using both tolerance parameters together."""
-        doc = ezdxf.new()
-        block = doc.blocks.new(name="BOTH_TOLERANCES")
+    def test_mutual_exclusivity_design(self) -> None:
+        """Document that precision_tolerance and gap_bridge_tolerance are mutually exclusive.
 
-        # Clean rectangle with both tolerances specified
+        The GUI enforces mutual exclusivity - users can only enable one option at a time.
+        This test documents the design by showing both approaches work independently.
+        Note: The function technically accepts both parameters, but the GUI prevents this.
+        """
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="MUTUAL_EXCLUSIVITY")
+
         block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
 
-        regions = _extract_paint_bucket_regions(
-            block, precision_tolerance=1e-5, gap_bridge_tolerance=0.5
+        # Precision Fix approach (gap_bridge_tolerance=0)
+        regions_precision = _extract_paint_bucket_regions(
+            block, precision_tolerance=1e-5, gap_bridge_tolerance=0
         )
+        assert len(regions_precision) == 1
 
-        assert len(regions) == 1
+        # Gap Bridge approach (precision_tolerance=0)
+        regions_gap_bridge = _extract_paint_bucket_regions(
+            block, precision_tolerance=0, gap_bridge_tolerance=0.5
+        )
+        assert len(regions_gap_bridge) == 1
 
     def test_abort_event_still_works_with_tolerances(self) -> None:
         """Test that abort_event parameter works with new tolerance parameters."""
@@ -1291,7 +1302,7 @@ class TestTolerancePropagation:
 
         with pytest.raises(GeometryAbortedError):
             _extract_paint_bucket_regions(
-                block, abort_event, precision_tolerance=1e-6, gap_bridge_tolerance=1.0
+                block, abort_event, precision_tolerance=0, gap_bridge_tolerance=1.0
             )
 
 
