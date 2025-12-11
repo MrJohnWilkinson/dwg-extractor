@@ -96,6 +96,10 @@ class DXFExtractorApp(ctk.CTk):
         self.min_side_filter_var = ctk.BooleanVar(value=False)
         self.min_side_filter_amount_var = ctk.StringVar(value="10.0")
 
+        # Log file generation settings
+        self.log_file_var = ctk.BooleanVar(value=False)  # Default: no log file
+        self.file_log_level_var = ctk.StringVar(value="DEBUG")
+
         # Create UI
         self._create_widgets()
 
@@ -355,6 +359,38 @@ class DXFExtractorApp(ctk.CTk):
         )
         self.log_level_menu.pack(anchor="w", padx=5, pady=5)
 
+        # Log file options row
+        log_file_options_frame = ctk.CTkFrame(self.log_frame, fg_color="transparent")
+        log_file_options_frame.pack(anchor="w", padx=5, pady=(0, 5))
+
+        # Log file generation checkbox
+        self.log_file_checkbox = ctk.CTkCheckBox(
+            log_file_options_frame,
+            text="Generate Log File",
+            variable=self.log_file_var,
+            font=ctk.CTkFont(size=12),
+            command=self._on_log_file_toggle,
+        )
+        self.log_file_checkbox.pack(side="left", padx=(0, 10))
+
+        # File log level label
+        file_level_label = ctk.CTkLabel(
+            log_file_options_frame,
+            text="Level:",
+            font=ctk.CTkFont(size=12),
+        )
+        file_level_label.pack(side="left", padx=(0, 5))
+
+        # File log level dropdown (disabled by default)
+        self.file_log_level_menu = ctk.CTkOptionMenu(
+            log_file_options_frame,
+            values=["DEBUG", "INFO", "WARNING"],
+            variable=self.file_log_level_var,
+            width=90,
+            state="disabled",
+        )
+        self.file_log_level_menu.pack(side="left")
+
         # Log text area
         self.log_text = ctk.CTkTextbox(
             self.log_frame,
@@ -443,17 +479,28 @@ class DXFExtractorApp(ctk.CTk):
                 self._show_error("No file selected")
                 return
 
-            # Set up debug file logging
             input_path = Path(self.selected_file_path)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            log_filename = f"{input_path.stem}_debug_{timestamp}.log"
-            log_path = input_path.parent / log_filename
 
-            self.debug_file_handler = create_debug_file_handler(str(log_path))
-            logging.getLogger().addHandler(self.debug_file_handler)
+            # Conditionally set up debug file logging
+            if self.log_file_var.get():
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                log_filename = f"{input_path.stem}_debug_{timestamp}.log"
+                log_path = input_path.parent / log_filename
 
-            self.logger.info(f"Debug log: {log_path}")
-            self._update_progress(0.1, f"Logging to: {log_filename}")
+                self.debug_file_handler = create_debug_file_handler(str(log_path))
+
+                # Apply user-selected log level to file handler
+                file_level = getattr(logging, self.file_log_level_var.get())
+                self.debug_file_handler.setLevel(file_level)
+
+                logging.getLogger().addHandler(self.debug_file_handler)
+
+                self.logger.info(
+                    f"Debug log ({self.file_log_level_var.get()}): {log_path}"
+                )
+                self._update_progress(0.1, f"Logging to: {log_filename}")
+            else:
+                self._update_progress(0.1, "Starting extraction...")
 
             # Get user settings
             unit_override = self._get_selected_unit_override()
@@ -838,6 +885,13 @@ class DXFExtractorApp(ctk.CTk):
         The dropdown value is read directly in _poll_log_queue.
         """
         pass
+
+    def _on_log_file_toggle(self) -> None:
+        """Handle log file checkbox toggle - enable/disable level dropdown."""
+        if self.log_file_var.get():
+            self.file_log_level_menu.configure(state="normal")
+        else:
+            self.file_log_level_menu.configure(state="disabled")
 
     def destroy(self) -> None:
         """Override destroy to clean up queue handler and log application close."""
