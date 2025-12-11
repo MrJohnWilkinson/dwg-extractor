@@ -22,10 +22,9 @@ from ezdxf import colors as ezdxf_colors
 from ezdxf.document import Drawing
 
 from .constants import (
-    DEFAULT_GAP_BRIDGE_TOLERANCE,
+    DEFAULT_GAP_CLOSURE_TOLERANCE,
     DEFAULT_MIN_AREA_FILTER,
     DEFAULT_MIN_SIDE_FILTER,
-    DEFAULT_PRECISION_FIX_TOLERANCE,
     DXF_INSUNITS_MAP,
     SUPPORTED_EXTENSIONS,
 )
@@ -140,25 +139,25 @@ def get_snap_tolerances(
                                Defaults to True for backward compatibility.
         precision_fix_amount: Custom precision fix amount. If provided and > 0, this value
                               is used directly as the precision tolerance. If None, 0, or
-                              negative, the default from DEFAULT_PRECISION_FIX_TOLERANCE is
+                              negative, the default from DEFAULT_GAP_CLOSURE_TOLERANCE is
                               used instead of the old PRECISION_SNAP_TOLERANCE values.
                               Defaults to None.
 
     Returns:
         Tuple of (precision_tolerance, gap_bridge_tolerance):
         - precision_tolerance: Returns user-specified amount if provided and > 0,
-                               otherwise returns default from DEFAULT_PRECISION_FIX_TOLERANCE
+                               otherwise returns default from DEFAULT_GAP_CLOSURE_TOLERANCE
                                for the effective unit when enabled, or 0.0 when disabled
         - gap_bridge_tolerance: Returns 0.0 if disabled, otherwise returns user amount or default
 
     Examples:
         >>> # Auto-detect units (mm), gap bridging disabled, default precision tolerance
         >>> get_snap_tolerances(4, None, False, None)
-        (0.01, 0.0)  # Uses new DEFAULT_PRECISION_FIX_TOLERANCE[4]
+        (3.0, 0.0)  # Uses DEFAULT_GAP_CLOSURE_TOLERANCE[4]
 
         >>> # Override to inches, gap bridging enabled with default
         >>> get_snap_tolerances(4, 1, True, None)
-        (0.0005, 0.01)  # Uses inch default from DEFAULT_PRECISION_FIX_TOLERANCE
+        (0.125, 0.125)  # Uses inch default from DEFAULT_GAP_CLOSURE_TOLERANCE
 
         >>> # Custom precision fix amount
         >>> get_snap_tolerances(4, None, False, None, precision_fix_amount=0.05)
@@ -170,7 +169,7 @@ def get_snap_tolerances(
 
         >>> # precision_fix_amount=0 uses default
         >>> get_snap_tolerances(4, None, False, None, precision_fix_amount=0.0)
-        (0.01, 0.0)  # Uses DEFAULT_PRECISION_FIX_TOLERANCE[4] when amount is 0
+        (3.0, 0.0)  # Uses DEFAULT_GAP_CLOSURE_TOLERANCE[4] when amount is 0
     """
     # Determine effective units: use override if provided and not -1
     if override_units is not None and override_units != -1:
@@ -192,10 +191,10 @@ def get_snap_tolerances(
             precision_tolerance = precision_fix_amount
             logger.debug(f"Using custom precision fix amount: {precision_tolerance}")
         else:
-            # Use new DEFAULT_PRECISION_FIX_TOLERANCE dict with fallback
-            precision_tolerance = DEFAULT_PRECISION_FIX_TOLERANCE.get(
+            # Use DEFAULT_GAP_CLOSURE_TOLERANCE dict with fallback
+            precision_tolerance = DEFAULT_GAP_CLOSURE_TOLERANCE.get(
                 effective_units,
-                DEFAULT_PRECISION_FIX_TOLERANCE.get(0, 0.01),  # Fallback to unitless
+                DEFAULT_GAP_CLOSURE_TOLERANCE.get(0, 3.0),  # Fallback to unitless
             )
             logger.debug(
                 f"Using default precision fix tolerance: {precision_tolerance}"
@@ -211,9 +210,9 @@ def get_snap_tolerances(
         gap_bridge_tolerance = gap_bridge_amount
     else:
         # Use default for the effective unit
-        gap_bridge_tolerance = DEFAULT_GAP_BRIDGE_TOLERANCE.get(
+        gap_bridge_tolerance = DEFAULT_GAP_CLOSURE_TOLERANCE.get(
             effective_units,
-            DEFAULT_GAP_BRIDGE_TOLERANCE.get(0, 0.1),  # Fallback to unitless default
+            DEFAULT_GAP_CLOSURE_TOLERANCE.get(0, 3.0),  # Fallback to unitless default
         )
 
     logger.debug(
@@ -261,7 +260,7 @@ def get_filter_values(
 
         >>> # Area filter enabled with default, side filter disabled
         >>> get_filter_values(4, None, True, None, False, None)
-        (100.0, 0.0)  # Uses DEFAULT_MIN_AREA_FILTER[4]
+        (100000.0, 0.0)  # Uses DEFAULT_MIN_AREA_FILTER[4]
 
         >>> # Both enabled with custom amounts
         >>> get_filter_values(4, None, True, 50.0, True, 5.0)
@@ -269,7 +268,7 @@ def get_filter_values(
 
         >>> # Unit override affects default values
         >>> get_filter_values(4, 1, True, None, True, None)
-        (0.01, 0.5)  # Uses inch defaults from constants
+        (155.0, 0.394)  # Uses inch defaults from constants
     """
     # Determine effective units: use override if provided and not -1
     if override_units is not None and override_units != -1:
@@ -1011,7 +1010,7 @@ def extract_blocks(
         precision_fix_amount: Custom precision fix amount. If provided and > 0,
                               this value is used instead of the default tolerance
                               for the unit. If None, 0, or negative, uses the
-                              default from DEFAULT_PRECISION_FIX_TOLERANCE.
+                              default from DEFAULT_GAP_CLOSURE_TOLERANCE.
                               Defaults to None.
         min_area_filter_enabled: Enable minimum area filtering for content zone detection.
                                  When True, polygons with area below threshold are filtered out.

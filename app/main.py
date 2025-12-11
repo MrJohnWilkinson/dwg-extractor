@@ -23,10 +23,9 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
 from core.constants import (
-    DEFAULT_GAP_BRIDGE_TOLERANCE,
+    DEFAULT_GAP_CLOSURE_TOLERANCE,
     DEFAULT_MIN_AREA_FILTER,
     DEFAULT_MIN_SIDE_FILTER,
-    DEFAULT_PRECISION_FIX_TOLERANCE,
     GAP_BRIDGE_MAX,
     GAP_BRIDGE_MIN,
     MIN_AREA_FILTER_MAX,
@@ -694,7 +693,7 @@ class DXFExtractorApp(ctk.CTk):
         selection = self.unit_selection_var.get()
         insunits = UNIT_SELECTION_OPTIONS.get(selection, -1)
         effective_units = insunits if insunits != -1 else 4  # Default to mm
-        default_amount = DEFAULT_PRECISION_FIX_TOLERANCE.get(effective_units, 0.01)
+        default_amount = DEFAULT_GAP_CLOSURE_TOLERANCE.get(effective_units, 3.0)
         self.precision_fix_amount_var.set(str(default_amount))
         self.logger.debug(f"Precision fix default updated to {default_amount}")
 
@@ -720,7 +719,7 @@ class DXFExtractorApp(ctk.CTk):
         insunits = UNIT_SELECTION_OPTIONS.get(selection, -1)
         # Use detected units fallback if auto
         effective_units = insunits if insunits != -1 else 4  # Default to mm
-        default_amount = DEFAULT_GAP_BRIDGE_TOLERANCE.get(effective_units, 100.0)
+        default_amount = DEFAULT_GAP_CLOSURE_TOLERANCE.get(effective_units, 3.0)
         self.gap_bridge_amount_var.set(str(default_amount))
         self.logger.debug(f"Gap bridge default updated to {default_amount}")
 

@@ -15,7 +15,7 @@ from shapely.geometry import LineString
 from shapely.ops import polygonize, snap, unary_union
 
 from core.constants import (
-    DEFAULT_GAP_BRIDGE_TOLERANCE,
+    DEFAULT_GAP_CLOSURE_TOLERANCE,
     PRECISION_SNAP_TOLERANCE,
 )
 from core.geometry import (
@@ -1334,14 +1334,14 @@ class TestUnitToleranceMapping:
         assert PRECISION_SNAP_TOLERANCE[0] == 1e-6
 
     def test_default_gap_amounts(self) -> None:
-        """Default gap amounts should be appropriate for each unit."""
-        # Verify key unit defaults
-        assert DEFAULT_GAP_BRIDGE_TOLERANCE[4] == 0.5  # MM: 0.5mm
-        assert DEFAULT_GAP_BRIDGE_TOLERANCE[6] == 0.001  # M: 1mm in meters
-        assert DEFAULT_GAP_BRIDGE_TOLERANCE[1] == 0.01  # IN: 0.01 inches
-        assert DEFAULT_GAP_BRIDGE_TOLERANCE[2] == 0.1  # FT: 0.1 feet
-        assert DEFAULT_GAP_BRIDGE_TOLERANCE[5] == 0.05  # CM: 0.05 cm
-        assert DEFAULT_GAP_BRIDGE_TOLERANCE[0] == 0.1  # Unitless
+        """Default gap closure tolerance should be appropriate for each unit."""
+        # Verify key unit defaults (3mm base value)
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[4] == 3.0  # MM: 3mm
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[6] == 0.003  # M: 3mm in meters
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[1] == 0.125  # IN: 1/8 inch
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[2] == 0.0104  # FT: 1/8 inch in feet
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[5] == 0.3  # CM: 0.3 cm
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[0] == 3.0  # Unitless
 
 
 class TestPrecisionSnapOrderFix:

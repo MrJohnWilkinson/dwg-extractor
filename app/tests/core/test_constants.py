@@ -8,10 +8,9 @@ Tests cover:
 """
 
 from core.constants import (
-    DEFAULT_GAP_BRIDGE_TOLERANCE,
+    DEFAULT_GAP_CLOSURE_TOLERANCE,
     DEFAULT_MIN_AREA_FILTER,
     DEFAULT_MIN_SIDE_FILTER,
-    DEFAULT_PRECISION_FIX_TOLERANCE,
     DEFAULT_PRECISION_SNAP_TOLERANCE,
     DXF_INSUNITS_MAP,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
@@ -125,15 +124,16 @@ class TestDrawingUnitConstants:
             f"Default precision tolerance {DEFAULT_PRECISION_SNAP_TOLERANCE} out of range"
         )
 
-    def test_gap_bridge_tolerances_in_reasonable_range(self) -> None:
-        """Gap bridge tolerances should be between 0.001 and 1000.
+    def test_gap_closure_tolerances_in_reasonable_range(self) -> None:
+        """Gap closure tolerances should be between 0.001 and 10.0.
 
-        Stage 2 tolerances represent typical small gaps in CAD drawings.
+        Shared gap closure tolerances for both Precision Fix and Gap Bridge.
+        Base value is 3mm - typical visible CAD gap.
         """
-        for code, tolerance in DEFAULT_GAP_BRIDGE_TOLERANCE.items():
-            assert 0.001 <= tolerance <= 1000, (
-                f"Gap bridge tolerance for code {code} is {tolerance}, "
-                "expected between 0.001 and 1000"
+        for code, tolerance in DEFAULT_GAP_CLOSURE_TOLERANCE.items():
+            assert 0.001 <= tolerance <= 10.0, (
+                f"Gap closure tolerance for code {code} is {tolerance}, "
+                "expected between 0.001 and 10.0"
             )
 
     def test_gap_bridge_constraints_valid(self) -> None:
@@ -145,60 +145,66 @@ class TestDrawingUnitConstants:
         assert GAP_BRIDGE_MAX > 0.0, "GAP_BRIDGE_MAX must be positive"
 
 
-class TestPrecisionFixToleranceConstants:
-    """Tests for user-configurable precision fix tolerance constants."""
+class TestGapClosureToleranceConstants:
+    """Tests for shared gap closure tolerance constants (used by both Precision Fix and Gap Bridge)."""
 
-    def test_default_precision_fix_tolerance_has_all_supported_units(self) -> None:
-        """DEFAULT_PRECISION_FIX_TOLERANCE should have all supported unit codes.
+    def test_default_gap_closure_tolerance_has_all_supported_units(self) -> None:
+        """DEFAULT_GAP_CLOSURE_TOLERANCE should have all supported unit codes.
 
         Supported codes: 0 (Unitless), 1 (Inches), 2 (Feet), 4 (MM), 5 (CM), 6 (M).
         """
         expected_codes = {0, 1, 2, 4, 5, 6}
-        actual_codes = set(DEFAULT_PRECISION_FIX_TOLERANCE.keys())
+        actual_codes = set(DEFAULT_GAP_CLOSURE_TOLERANCE.keys())
         assert actual_codes == expected_codes, (
             f"Expected codes {expected_codes}, got {actual_codes}"
         )
 
-    def test_default_precision_fix_tolerance_values_in_reasonable_range(self) -> None:
-        """DEFAULT_PRECISION_FIX_TOLERANCE values should be between 1e-6 and 1.0.
+    def test_default_gap_closure_tolerance_values_in_reasonable_range(self) -> None:
+        """DEFAULT_GAP_CLOSURE_TOLERANCE values should be between 0.001 and 10.0.
 
-        These are practical CAD tolerances, larger than PRECISION_SNAP_TOLERANCE
-        but still small enough to not merge distinct geometry.
+        These are practical CAD gap closure tolerances. Base value is 3mm.
         """
-        for code, tolerance in DEFAULT_PRECISION_FIX_TOLERANCE.items():
-            assert 1e-6 <= tolerance <= 1.0, (
-                f"Precision fix tolerance for code {code} is {tolerance}, "
-                "expected between 1e-6 and 1.0"
+        for code, tolerance in DEFAULT_GAP_CLOSURE_TOLERANCE.items():
+            assert 0.001 <= tolerance <= 10.0, (
+                f"Gap closure tolerance for code {code} is {tolerance}, "
+                "expected between 0.001 and 10.0"
             )
 
-    def test_default_precision_fix_tolerance_appropriate_scale(self) -> None:
-        """DEFAULT_PRECISION_FIX_TOLERANCE should be at practical CAD scale.
+    def test_default_gap_closure_tolerance_mm_value(self) -> None:
+        """MM tolerance should be 3.0mm."""
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[4] == 3.0, (
+            f"MM tolerance should be 3.0, got {DEFAULT_GAP_CLOSURE_TOLERANCE[4]}"
+        )
 
-        The new tolerances are designed to be equivalent to approximately 0.01mm
-        across unit systems, which is larger than the nanometer-scale values in
-        PRECISION_SNAP_TOLERANCE for most units (MM, IN, Unitless).
+    def test_default_gap_closure_tolerance_inch_value(self) -> None:
+        """Inch tolerance should be 0.125in (1/8 inch)."""
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[1] == 0.125, (
+            f"Inch tolerance should be 0.125, got {DEFAULT_GAP_CLOSURE_TOLERANCE[1]}"
+        )
 
-        Note: For meters and feet, the old tolerances were already relatively
-        large (0.0001m = 0.1mm, 0.00001ft = 0.003mm), so the new values may be
-        smaller in absolute terms but are more consistently scaled.
-        """
-        # For MM, IN, and Unitless, new tolerances should be significantly larger
-        units_with_larger_tolerance = [0, 1, 4]  # Unitless, Inches, Millimeters
-        for code in units_with_larger_tolerance:
-            new_tolerance = DEFAULT_PRECISION_FIX_TOLERANCE[code]
-            old_tolerance = PRECISION_SNAP_TOLERANCE.get(
-                code, DEFAULT_PRECISION_SNAP_TOLERANCE
-            )
-            assert new_tolerance > old_tolerance, (
-                f"Unit {code}: new tolerance {new_tolerance} should be > "
-                f"old tolerance {old_tolerance}"
-            )
+    def test_default_gap_closure_tolerance_feet_value(self) -> None:
+        """Feet tolerance should be 0.0104ft (1/8 inch in feet)."""
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[2] == 0.0104, (
+            f"Feet tolerance should be 0.0104, got {DEFAULT_GAP_CLOSURE_TOLERANCE[2]}"
+        )
 
-        # All new tolerances should be consistent with ~0.01mm equivalent
-        # MM: 0.01, CM: 0.001 (= 0.01mm), M: 0.00001 (= 0.01mm), IN: 0.0005 (~0.0127mm)
-        assert DEFAULT_PRECISION_FIX_TOLERANCE[4] == 0.01  # MM
-        assert DEFAULT_PRECISION_FIX_TOLERANCE[5] == 0.001  # CM = 0.01mm
-        assert DEFAULT_PRECISION_FIX_TOLERANCE[6] == 0.00001  # M = 0.01mm
+    def test_default_gap_closure_tolerance_cm_value(self) -> None:
+        """CM tolerance should be 0.3cm (= 3mm)."""
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[5] == 0.3, (
+            f"CM tolerance should be 0.3, got {DEFAULT_GAP_CLOSURE_TOLERANCE[5]}"
+        )
+
+    def test_default_gap_closure_tolerance_meter_value(self) -> None:
+        """Meter tolerance should be 0.003m (= 3mm)."""
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[6] == 0.003, (
+            f"Meter tolerance should be 0.003, got {DEFAULT_GAP_CLOSURE_TOLERANCE[6]}"
+        )
+
+    def test_default_gap_closure_tolerance_unitless_value(self) -> None:
+        """Unitless tolerance should be 3.0 (mm-equivalent)."""
+        assert DEFAULT_GAP_CLOSURE_TOLERANCE[0] == 3.0, (
+            f"Unitless tolerance should be 3.0, got {DEFAULT_GAP_CLOSURE_TOLERANCE[0]}"
+        )
 
     def test_precision_fix_min_less_than_max(self) -> None:
         """PRECISION_FIX_MIN should be less than PRECISION_FIX_MAX."""
@@ -223,24 +229,6 @@ class TestPrecisionFixToleranceConstants:
         """PRECISION_FIX_MAX should be a reasonable value (10.0 as per spec)."""
         assert PRECISION_FIX_MAX == 10.0, (
             f"PRECISION_FIX_MAX should be 10.0, got {PRECISION_FIX_MAX}"
-        )
-
-    def test_default_precision_fix_tolerance_mm_value(self) -> None:
-        """MM tolerance should be 0.01mm (10 micrometers)."""
-        assert DEFAULT_PRECISION_FIX_TOLERANCE[4] == 0.01, (
-            f"MM tolerance should be 0.01, got {DEFAULT_PRECISION_FIX_TOLERANCE[4]}"
-        )
-
-    def test_default_precision_fix_tolerance_inch_value(self) -> None:
-        """Inch tolerance should be 0.0005in (0.5 mils)."""
-        assert DEFAULT_PRECISION_FIX_TOLERANCE[1] == 0.0005, (
-            f"Inch tolerance should be 0.0005, got {DEFAULT_PRECISION_FIX_TOLERANCE[1]}"
-        )
-
-    def test_default_precision_fix_tolerance_meter_value(self) -> None:
-        """Meter tolerance should be 0.00001m (= 0.01mm)."""
-        assert DEFAULT_PRECISION_FIX_TOLERANCE[6] == 0.00001, (
-            f"Meter tolerance should be 0.00001, got {DEFAULT_PRECISION_FIX_TOLERANCE[6]}"
         )
 
 
@@ -285,15 +273,15 @@ class TestMinAreaFilterConstants:
         )
 
     def test_default_min_area_filter_mm_value(self) -> None:
-        """MM (4) area filter should be 100.0 sq mm."""
-        assert DEFAULT_MIN_AREA_FILTER[4] == 100.0, (
-            f"MM area filter should be 100.0, got {DEFAULT_MIN_AREA_FILTER[4]}"
+        """MM (4) area filter should be 100000.0 sq mm."""
+        assert DEFAULT_MIN_AREA_FILTER[4] == 100000.0, (
+            f"MM area filter should be 100000.0, got {DEFAULT_MIN_AREA_FILTER[4]}"
         )
 
     def test_default_min_area_filter_inch_value(self) -> None:
-        """Inch (1) area filter should be 0.01 sq inches."""
-        assert DEFAULT_MIN_AREA_FILTER[1] == 0.01, (
-            f"Inch area filter should be 0.01, got {DEFAULT_MIN_AREA_FILTER[1]}"
+        """Inch (1) area filter should be 155.0 sq inches (~100,000 sq mm)."""
+        assert DEFAULT_MIN_AREA_FILTER[1] == 155.0, (
+            f"Inch area filter should be 155.0, got {DEFAULT_MIN_AREA_FILTER[1]}"
         )
 
 
@@ -344,7 +332,7 @@ class TestMinSideFilterConstants:
         )
 
     def test_default_min_side_filter_inch_value(self) -> None:
-        """Inch (1) side filter should be 0.5 inches."""
-        assert DEFAULT_MIN_SIDE_FILTER[1] == 0.5, (
-            f"Inch side filter should be 0.5, got {DEFAULT_MIN_SIDE_FILTER[1]}"
+        """Inch (1) side filter should be 0.394 inches (~10mm)."""
+        assert DEFAULT_MIN_SIDE_FILTER[1] == 0.394, (
+            f"Inch side filter should be 0.394, got {DEFAULT_MIN_SIDE_FILTER[1]}"
         )

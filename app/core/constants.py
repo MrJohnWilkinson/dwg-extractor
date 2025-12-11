@@ -214,21 +214,22 @@ DEFAULT_PRECISION_SNAP_TOLERANCE: float = 1e-6
 """Fallback precision snap tolerance when unit is unknown or unsupported.
 Conservative value appropriate for most CAD applications."""
 
-# Default gap bridge tolerances for closing small gaps in polygon edges.
-# Gap Bridge is an alternative to Precision Fix - both close gaps for accurate
-# polygon counts. Gap Bridge uses larger tolerances suitable for visible
-# coordinate discrepancies in CAD drawings. Mutually exclusive with Precision Fix.
-DEFAULT_GAP_BRIDGE_TOLERANCE: dict[int, float] = {
-    0: 0.1,  # Unitless: small default
-    1: 0.01,  # Inches: 0.01" (common drafting gap)
-    2: 0.1,  # Feet: 0.1' = 1.2" (typical construction tolerance)
-    4: 0.5,  # Millimeters: 0.5mm (common CAD gap)
-    5: 0.05,  # Centimeters: 0.05cm = 0.5mm
-    6: 0.001,  # Meters: 1mm in meter units
+# Shared gap closure tolerance for both Precision Fix and Gap Bridge algorithms.
+# Both solve the same problem (closing small gaps for accurate polygon counts)
+# using different algorithms, so they share the same default tolerance.
+# Base: 3mm - typical visible CAD gap, large enough to bridge design gaps
+# but small enough to not merge distinct geometry.
+DEFAULT_GAP_CLOSURE_TOLERANCE: dict[int, float] = {
+    0: 3.0,  # Unitless: assume mm-equivalent (3mm)
+    1: 0.125,  # Inches: 1/8 inch (closest standard fraction to 3mm)
+    2: 0.0104,  # Feet: 1/8 inch in feet (0.125/12)
+    4: 3.0,  # Millimeters: 3mm
+    5: 0.3,  # Centimeters: 0.3cm = 3mm
+    6: 0.003,  # Meters: 0.003m = 3mm
 }
-"""Stage 2 default gap bridge tolerances by unit code.
-These bridge intentional small gaps that users may want to close for polygon detection.
-Values represent typical small gaps in each unit system."""
+"""Shared gap closure tolerance for both Precision Fix and Gap Bridge algorithms.
+Both solve the same problem - closing small gaps for accurate polygon counts.
+Base value is 3mm, a typical visible CAD gap."""
 
 # Gap bridge amount input constraints for GUI slider/input
 GAP_BRIDGE_MIN: float = 0.0
@@ -238,28 +239,6 @@ GAP_BRIDGE_MAX: float = 10000.0
 """Maximum gap bridge amount. Large value allows extreme cases while
 preventing overflow issues in calculations."""
 
-# Stage 1: User-configurable precision fix tolerances at practical CAD scale
-# These are 4-5 orders of magnitude larger than PRECISION_SNAP_TOLERANCE
-# to fix both floating-point artifacts AND small coordinate precision errors
-# common in CAD drawings (e.g., 0.001mm coordinate differences)
-DEFAULT_PRECISION_FIX_TOLERANCE: dict[int, float] = {
-    0: 0.01,  # Unitless: use mm-equivalent default
-    1: 0.0005,  # Inches: 0.5 mils (half a thousandth)
-    2: 0.00005,  # Feet: ~0.5 mils in feet
-    4: 0.01,  # Millimeters: 0.01mm (10 micrometers) - typical CAD precision
-    5: 0.001,  # Centimeters: 0.001cm = 0.01mm
-    6: 0.00001,  # Meters: 0.00001m = 0.01mm
-}
-"""Stage 1 user-configurable precision fix tolerances at practical CAD scale.
-These tolerances are significantly larger than PRECISION_SNAP_TOLERANCE to fix
-both floating-point artifacts AND small coordinate precision errors common in
-CAD drawings. Values represent typical CAD drawing precision for each unit system:
-- MM: 0.01mm (10 micrometers) - typical CAD precision
-- IN: 0.0005in (0.5 mils) - half a thousandth
-- FT: 0.00005ft (~0.5 mils in feet)
-- CM: 0.001cm = 0.01mm
-- M: 0.00001m = 0.01mm
-- Unitless: 0.01 (mm-equivalent default)"""
 
 # Precision fix amount input constraints for GUI slider/input
 PRECISION_FIX_MIN: float = 0.0
@@ -271,15 +250,16 @@ unreasonably large tolerance values that could merge distinct geometry."""
 
 # Minimum Area Filter constants
 DEFAULT_MIN_AREA_FILTER: dict[int, float] = {
-    0: 100.0,  # Unitless: assume mm-equivalent
-    1: 0.01,  # Inches: 0.01 sq inches
-    2: 0.001,  # Feet: 0.001 sq feet
-    4: 100.0,  # Millimeters: 100 sq mm
-    5: 1.0,  # Centimeters: 1 sq cm
-    6: 0.0001,  # Meters: 0.0001 sq m (100 sq mm)
+    0: 100000.0,  # Unitless: assume mm-equivalent (100,000 sq mm)
+    1: 155.0,  # Inches: 155 sq inches (~100,000 sq mm)
+    2: 1.076,  # Feet: 1.076 sq feet (~100,000 sq mm)
+    4: 100000.0,  # Millimeters: 100,000 sq mm
+    5: 1000.0,  # Centimeters: 1,000 sq cm = 100,000 sq mm
+    6: 0.1,  # Meters: 0.1 sq m = 100,000 sq mm
 }
 """Default minimum area filter by unit code.
-Polygons with area less than this value are filtered out of content zone calculation."""
+Polygons with area less than this value are filtered out of content zone calculation.
+Base value is 100,000 sq mm (~10" x 10" square)."""
 
 MIN_AREA_FILTER_MIN: float = 0.0
 """Minimum area filter amount (0 = no area filtering)."""
@@ -290,15 +270,16 @@ preventing overflow issues in calculations."""
 
 # Minimum Side Filter constants
 DEFAULT_MIN_SIDE_FILTER: dict[int, float] = {
-    0: 10.0,  # Unitless: assume mm-equivalent
-    1: 0.5,  # Inches: 0.5 inches
-    2: 0.05,  # Feet: 0.05 feet (~0.6 inches)
+    0: 10.0,  # Unitless: assume mm-equivalent (10mm)
+    1: 0.394,  # Inches: 0.394 inches (~10mm)
+    2: 0.0328,  # Feet: 0.0328 feet (~10mm)
     4: 10.0,  # Millimeters: 10mm
-    5: 1.0,  # Centimeters: 1cm
-    6: 0.01,  # Meters: 0.01m (10mm)
+    5: 1.0,  # Centimeters: 1cm = 10mm
+    6: 0.01,  # Meters: 0.01m = 10mm
 }
 """Default minimum side filter by unit code.
-Polygons with shortest straight side less than this value are filtered out."""
+Polygons with shortest straight side less than this value are filtered out.
+Base value is 10mm."""
 
 MIN_SIDE_FILTER_MIN: float = 0.0
 """Minimum side filter amount (0 = no side filtering)."""
