@@ -7,6 +7,7 @@ Tests cover:
 - get_filter_values() with unit override
 - extract_blocks() accepting new filter parameters
 - Backward compatibility (existing behavior preserved)
+- Net area filter integration (nested polygon filtering via extract_blocks)
 """
 
 from pathlib import Path
@@ -452,3 +453,92 @@ class TestExtractBlocksFilterEdgeCases:
 
         assert result is not None
         assert "block_counts" in result
+
+
+class TestNetAreaFilterIntegration:
+    """Integration tests for net area filtering via extract_blocks().
+
+    These tests verify that the full extraction pipeline correctly applies
+    net area filtering to nested polygons. The tests use nested_polygon_filter_test.dxf
+    which contains blocks with known nested polygon configurations.
+
+    Test blocks:
+    - PICTURE_FRAME: Outer 100x100 (net=3600), inner 80x80 (net=6400)
+      With min_area_filter=5000: outer filtered (3600<5000), inner kept (6400>=5000)
+    """
+
+    def test_nested_polygon_filtered_by_net_area(self) -> None:
+        """Extract blocks filters nested polygons by net area.
+
+        Uses PICTURE_FRAME block which has:
+        - Outer rectangle: 100x100 = 10,000 gross, net = 3,600 (after subtracting inner)
+        - Inner rectangle: 80x80 = 6,400 gross = 6,400 net (no children)
+
+        With min_area_filter=5000:
+        - Outer fails: 3,600 < 5,000
+        - Inner passes: 6,400 >= 5,000
+
+        Expected: polygon_count == 1 in content_zone_data for PICTURE_FRAME
+        """
+        nested_dxf = ASSETS_DIR / "nested_polygon_filter_test.dxf"
+
+        result = extract_blocks(
+            str(nested_dxf),
+            min_area_filter_enabled=True,
+            min_area_filter_amount=5000.0,
+            min_side_filter_enabled=False,
+        )
+
+        assert result is not None
+        assert "block_content_zone_data" in result
+
+        # PICTURE_FRAME block should have content zone data
+        content_zone_data = result["block_content_zone_data"]
+        assert "PICTURE_FRAME" in content_zone_data
+
+        # Only inner polygon should remain after net area filtering
+        picture_frame_data = content_zone_data["PICTURE_FRAME"]
+        assert picture_frame_data["content_zone_detected"] is True
+        assert picture_frame_data["polygon_count"] == 1
+
+    def test_content_zone_reflects_net_area_winner(self) -> None:
+        """Content zone data shows correct polygon after net area filtering.
+
+        When outer frame is filtered out by net area filter, the inner polygon
+        should become the content zone with correct trim values.
+
+        PICTURE_FRAME block:
+        - Block bounding box: (0,0) to (100,100)
+        - Inner polygon: (10,10) to (90,90)
+
+        Expected trim values (distance from block bbox to content zone):
+        - left: 10 (inner starts at x=10)
+        - right: 10 (inner ends at x=90, bbox is 100)
+        - top: 10 (inner ends at y=90, bbox is 100)
+        - bottom: 10 (inner starts at y=10)
+        """
+        nested_dxf = ASSETS_DIR / "nested_polygon_filter_test.dxf"
+
+        result = extract_blocks(
+            str(nested_dxf),
+            min_area_filter_enabled=True,
+            min_area_filter_amount=5000.0,
+            min_side_filter_enabled=False,
+        )
+
+        assert result is not None
+        content_zone_data = result["block_content_zone_data"]
+        picture_frame_data = content_zone_data["PICTURE_FRAME"]
+
+        # Verify content zone was detected
+        assert picture_frame_data["content_zone_detected"] is True
+
+        # Inner rectangle is (10,10) to (90,90), so all trims should be 10
+        assert picture_frame_data["suggested_trim_left"] == 10.0
+        assert picture_frame_data["suggested_trim_right"] == 10.0
+        assert picture_frame_data["suggested_trim_top"] == 10.0
+        assert picture_frame_data["suggested_trim_bottom"] == 10.0
+
+        # Content zone dimensions should be 80x80 (inner rectangle)
+        assert picture_frame_data["content_zone_width"] == 80.0
+        assert picture_frame_data["content_zone_height"] == 80.0
