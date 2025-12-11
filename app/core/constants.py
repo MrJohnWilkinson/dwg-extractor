@@ -22,6 +22,7 @@ EXCEL_SHEET_ANNOTATIONS_ANALYSIS: str = "Annotations Analysis"
 EXCEL_SHEET_COLOR_ANALYSIS: str = "Color Analysis"
 EXCEL_SHEET_EXTRACTION_ISSUES: str = "Extraction Issues"
 EXCEL_SHEET_BLOCK_DEFINITIONS: str = "Block Definitions"
+EXCEL_SHEET_ALL_BLOCKS: str = "All Blocks"
 
 # Excel configuration - Block Counts sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
@@ -124,6 +125,12 @@ EXCEL_COLUMN_BLOCK_INSERTION_STATUS: str = "block_insertion_status"
 EXCEL_COLUMN_BLOCK_IS_NESTED: str = "block_is_nested"
 EXCEL_COLUMN_BLOCK_NESTED_PARENT_NAMES: str = "block_nested_parent_names"
 # Note: EXCEL_COLUMN_BLOCK_ENTITY_COUNT already exists (line 29)
+
+# Excel configuration - All Blocks sheet additional columns
+# See app_docs/005-field-naming-convention.md for naming conventions
+# Domain: block, Attribute: layer, Qualifier: count/names
+EXCEL_COLUMN_BLOCK_LAYER_COUNT: str = "block_layer_count"
+EXCEL_COLUMN_BLOCK_LAYER_NAMES: str = "block_layer_names"  # Plural: collection of layer names
 
 # Excel configuration - Fill colors for scale highlighting
 # Yellow: Warning color for scale variance with all positive values

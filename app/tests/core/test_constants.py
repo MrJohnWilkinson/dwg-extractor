@@ -14,10 +14,13 @@ from core.constants import (
     DEFAULT_PRECISION_SNAP_TOLERANCE,
     DXF_INSUNITS_MAP,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
+    EXCEL_COLUMN_BLOCK_LAYER_COUNT,
+    EXCEL_COLUMN_BLOCK_LAYER_NAMES,
     EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_BOTTOM,
     EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT,
     EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT,
     EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP,
+    EXCEL_SHEET_ALL_BLOCKS,
     GAP_BRIDGE_MAX,
     GAP_BRIDGE_MIN,
     LINE_SEGMENT_THRESHOLD,
@@ -335,4 +338,45 @@ class TestMinSideFilterConstants:
         """Inch (1) side filter should be 0.394 inches (~10mm)."""
         assert DEFAULT_MIN_SIDE_FILTER[1] == 0.394, (
             f"Inch side filter should be 0.394, got {DEFAULT_MIN_SIDE_FILTER[1]}"
+        )
+
+
+class TestAllBlocksSheetConstants:
+    """Tests for All Blocks consolidated sheet constants."""
+
+    def test_excel_sheet_all_blocks_value(self) -> None:
+        """EXCEL_SHEET_ALL_BLOCKS should have value 'All Blocks'."""
+        assert EXCEL_SHEET_ALL_BLOCKS == "All Blocks", (
+            f"EXCEL_SHEET_ALL_BLOCKS should be 'All Blocks', got {EXCEL_SHEET_ALL_BLOCKS!r}"
+        )
+
+    def test_block_layer_count_follows_naming_convention(self) -> None:
+        """EXCEL_COLUMN_BLOCK_LAYER_COUNT should start with 'block_' prefix."""
+        assert EXCEL_COLUMN_BLOCK_LAYER_COUNT.startswith("block_"), (
+            f"Column '{EXCEL_COLUMN_BLOCK_LAYER_COUNT}' does not follow naming convention"
+        )
+
+    def test_block_layer_count_value(self) -> None:
+        """EXCEL_COLUMN_BLOCK_LAYER_COUNT should have value 'block_layer_count'."""
+        assert EXCEL_COLUMN_BLOCK_LAYER_COUNT == "block_layer_count", (
+            f"Expected 'block_layer_count', got {EXCEL_COLUMN_BLOCK_LAYER_COUNT!r}"
+        )
+
+    def test_block_layer_names_follows_naming_convention(self) -> None:
+        """EXCEL_COLUMN_BLOCK_LAYER_NAMES should start with 'block_' prefix."""
+        assert EXCEL_COLUMN_BLOCK_LAYER_NAMES.startswith("block_"), (
+            f"Column '{EXCEL_COLUMN_BLOCK_LAYER_NAMES}' does not follow naming convention"
+        )
+
+    def test_block_layer_names_value(self) -> None:
+        """EXCEL_COLUMN_BLOCK_LAYER_NAMES should have value 'block_layer_names'."""
+        assert EXCEL_COLUMN_BLOCK_LAYER_NAMES == "block_layer_names", (
+            f"Expected 'block_layer_names', got {EXCEL_COLUMN_BLOCK_LAYER_NAMES!r}"
+        )
+
+    def test_block_layer_names_uses_plural_suffix(self) -> None:
+        """EXCEL_COLUMN_BLOCK_LAYER_NAMES should end with '_names' (plural for collections)."""
+        assert EXCEL_COLUMN_BLOCK_LAYER_NAMES.endswith("_names"), (
+            f"Column '{EXCEL_COLUMN_BLOCK_LAYER_NAMES}' should end with '_names' "
+            "to indicate it contains a collection (per naming convention)"
         )
