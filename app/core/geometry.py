@@ -1001,8 +1001,11 @@ def _detect_content_zone(
     - Stage 2 (Gap Bridge): Optionally bridges intentional gaps when enabled
 
     Polygon filtering (when enabled):
-    - Filters out small artifact polygons before calculating content zone
-    - Uses area and/or shortest side thresholds to exclude noise polygons
+    - min_side_filter: Filters polygons by shortest straight side (gross geometry).
+      Applied BEFORE net area calculation for efficiency.
+    - min_area_filter: Filters polygons by NET area (own area minus contained
+      polygons). Applied AFTER net area calculation to correctly handle nested
+      polygons like "picture frames".
 
     Performance safeguards:
     - Skips region detection if > LINE_SEGMENT_THRESHOLD edges (5000)
@@ -1016,8 +1019,9 @@ def _detect_content_zone(
             artifacts. Default 1e-6. Set to 0 to disable Stage 1 snapping.
         gap_bridge_tolerance: Stage 2 snap tolerance for bridging intentional
             gaps. Default 0.0 (disabled). Set > 0 to bridge gaps.
-        min_area_filter: Minimum polygon area threshold. Polygons with area
-            less than this value are filtered out. Default 0.0 (no filtering).
+        min_area_filter: Minimum polygon NET area threshold. Polygons with net
+            area (gross minus contained) less than this value are filtered out.
+            Default 0.0 (no filtering).
         min_side_filter: Minimum shortest side length threshold. Polygons with
             shortest straight side less than this value are filtered out.
             Default 0.0 (no filtering).
@@ -1056,28 +1060,19 @@ def _detect_content_zone(
     polygon_count = len(all_shapes)
     logger.debug(f"[{block_name}] Found {polygon_count} paint-bucket regions")
 
-    # Filter polygons by area and shortest side if filters are enabled
-    if min_area_filter > 0 or min_side_filter > 0:
-        filtered_shapes: list[Polygon] = []
-        for shape in all_shapes:
-            # Check area filter
-            if min_area_filter > 0:
-                area = calculate_polygon_area(shape)
-                if area < min_area_filter:
-                    continue
-            # Check side filter
-            if min_side_filter > 0:
-                shortest_side = calculate_shortest_straight_side(shape)
-                if shortest_side < min_side_filter:
-                    continue
-            filtered_shapes.append(shape)
-
+    # Step 1: Early side filter (uses gross geometry)
+    # Applied BEFORE net area calculation for efficiency
+    if min_side_filter > 0:
+        pre_side_count = len(all_shapes)
+        all_shapes = [
+            s
+            for s in all_shapes
+            if calculate_shortest_straight_side(s) >= min_side_filter
+        ]
         logger.debug(
-            f"[{block_name}] Filtered {len(all_shapes)} -> {len(filtered_shapes)} polygons "
-            f"(min_area={min_area_filter}, min_side={min_side_filter})"
+            f"[{block_name}] Side filter: {pre_side_count} -> {len(all_shapes)} polygons "
+            f"(min_side={min_side_filter})"
         )
-        all_shapes = filtered_shapes
-        # Update polygon count after filtering
         polygon_count = len(all_shapes)
 
     if polygon_count == 0:
@@ -1101,8 +1096,24 @@ def _detect_content_zone(
             polygon_count=polygon_count,
         )
 
-    # Calculate net areas (O(n^3) but bounded by threshold)
+    # Calculate net areas (O(n^2) but bounded by threshold)
     net_areas = _calculate_net_areas(all_shapes, abort_event)
+
+    # Step 2: Filter by NET area (post-calculation)
+    # Applied AFTER net area calculation to correctly handle nested polygons
+    if min_area_filter > 0:
+        pre_area_count = len(net_areas)
+        net_areas = [
+            (poly, net_area)
+            for poly, net_area in net_areas
+            if net_area >= min_area_filter
+        ]
+        logger.debug(
+            f"[{block_name}] Net area filter: {pre_area_count} -> {len(net_areas)} polygons "
+            f"(min_area={min_area_filter})"
+        )
+        # Update polygon count after all filtering
+        polygon_count = len(net_areas)
 
     if not net_areas:
         return ContentZoneData(
