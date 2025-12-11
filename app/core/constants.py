@@ -21,6 +21,7 @@ EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS: str = "Block Geometry Analysis"
 EXCEL_SHEET_ANNOTATIONS_ANALYSIS: str = "Annotations Analysis"
 EXCEL_SHEET_COLOR_ANALYSIS: str = "Color Analysis"
 EXCEL_SHEET_EXTRACTION_ISSUES: str = "Extraction Issues"
+EXCEL_SHEET_BLOCK_DEFINITIONS: str = "Block Definitions"
 
 # Excel configuration - Block Counts sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
@@ -114,6 +115,15 @@ EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH: str = "block_content_zone_width"
 EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT: str = "block_content_zone_height"
 EXCEL_COLUMN_BLOCK_POLYGON_COUNT: str = "block_polygon_count"
 EXCEL_COLUMN_BLOCK_FILTERED_POLYGON_COUNT: str = "block_filtered_polygon_count"
+
+# Excel configuration - Block Definitions sheet columns
+# See app_docs/005-field-naming-convention.md for naming conventions
+EXCEL_COLUMN_BLOCK_RAW_NAME: str = "block_raw_name"
+EXCEL_COLUMN_BLOCK_RESOLVED_NAME: str = "block_resolved_name"
+EXCEL_COLUMN_BLOCK_INSERTION_STATUS: str = "block_insertion_status"
+EXCEL_COLUMN_BLOCK_IS_NESTED: str = "block_is_nested"
+EXCEL_COLUMN_BLOCK_NESTED_PARENT_NAMES: str = "block_nested_parent_names"
+# Note: EXCEL_COLUMN_BLOCK_ENTITY_COUNT already exists (line 29)
 
 # Excel configuration - Fill colors for scale highlighting
 # Yellow: Warning color for scale variance with all positive values

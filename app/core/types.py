@@ -12,7 +12,7 @@ Frozen dataclass keys provide:
 4. Hashability - frozen=True enables use as dict keys
 
 Usage:
-    from core.types import BlockTrimmingData, ColorAnalysisRecord, BlockLayerKey
+    from core.types import BlockTrimmingData, ColorAnalysisRecord, BlockLayerKey, BlockDefinitionRecord
 
     # Type-safe block trimming data
     trimming: BlockTrimmingData = {
@@ -244,3 +244,28 @@ class PolygonMetrics(TypedDict):
     area_raw: float
     shortest_side: float
     perimeter: float
+
+
+class BlockDefinitionRecord(TypedDict):
+    """
+    Complete record for a block definition with insertion and nesting status.
+
+    Used in the all_block_definitions field of ExtractionResult to track
+    every block definition in the DXF file regardless of insertion status.
+
+    Attributes:
+        block_raw_name: Original name from doc.blocks (e.g., "*U1", "DOOR")
+        block_resolved_name: Resolved name (same as raw for non-anonymous blocks)
+        block_insertion_status: One of "Inserted", "Nested Only", "Unused",
+                               "System", "Unresolved (*U)", "Unresolved (A$C)"
+        block_is_nested: True if this block is inserted inside another block definition
+        block_nested_parent_names: List of parent block names containing this block
+        block_entity_count: Number of entities in the block definition
+    """
+
+    block_raw_name: str
+    block_resolved_name: str
+    block_insertion_status: str
+    block_is_nested: bool
+    block_nested_parent_names: list[str]
+    block_entity_count: int
