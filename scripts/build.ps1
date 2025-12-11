@@ -143,110 +143,34 @@ function Sync-Repository {
     Write-ColorOutput "Syncing repository..." -Type Info
 
     # Get current branch
-    try {
-        $currentBranch = git rev-parse --abbrev-ref HEAD 2>&1
-        Write-Host "Current branch: $currentBranch"
-        Write-VerboseLog "Branch: $currentBranch"
-    }
-    catch {
-        Write-ColorOutput "Warning: Could not determine current branch" -Type Warning
-    }
-
-    # Show git line ending configuration in verbose mode
-    if ($VerbosePreference -eq 'Continue') {
-        Write-VerboseLog "Checking git line ending configuration..."
-        try {
-            $autocrlf = git config --get core.autocrlf 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                Write-VerboseLog "core.autocrlf = $autocrlf (should be 'true' on Windows)"
-            }
-            else {
-                Write-VerboseLog "core.autocrlf is not set"
-            }
-        }
-        catch {
-            Write-VerboseLog "Could not read core.autocrlf setting"
-        }
-
-        try {
-            $eol = git config --get core.eol 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                Write-VerboseLog "core.eol = $eol"
-            }
-        }
-        catch {
-            # Silently skip if not set
-        }
-    }
-
-    # Discard line ending changes (Windows/Linux normalization)
-    Write-VerboseLog "Running git checkout to discard line ending changes (Windows/Linux CRLF/LF normalization)..."
-    try {
-        $checkoutOutput = git checkout . 2>&1
-        if ($checkoutOutput -match "Updated (\d+) path") {
-            Write-VerboseLog "Discarded line ending changes in $($matches[1]) file(s)"
-        }
-        elseif ($checkoutOutput -match "Updated 0 path") {
-            Write-VerboseLog "No line ending changes to discard (expected for cross-platform repos)"
-        }
-        if ($VerbosePreference -eq 'Continue' -and $checkoutOutput) {
-            Write-Host $checkoutOutput
-        }
-    }
-    catch {
-        Write-ColorOutput "Warning: git checkout had issues: $_" -Type Warning
-    }
-
-    # Check upstream tracking configuration
-    if ($VerbosePreference -eq 'Continue') {
-        Write-VerboseLog "Checking upstream tracking configuration..."
-        try {
-            $upstream = git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>&1
-            if ($LASTEXITCODE -eq 0) {
-                Write-VerboseLog "Tracking: $upstream"
-            }
-            else {
-                Write-VerboseLog "No upstream tracking branch configured"
-            }
-        }
-        catch {
-            Write-VerboseLog "Could not determine upstream tracking"
-        }
-    }
-
-    # Pull latest changes
-    Write-VerboseLog "Running git pull..."
-    try {
-        $pullOutput = git pull 2>&1 | Out-String
-        $pullExitCode = $LASTEXITCODE
-
-        if ($pullExitCode -eq 0) {
-            Write-Host $pullOutput.Trim()
-            Write-VerboseLog "Git pull completed successfully"
-        }
-        else {
-            Write-ColorOutput "Error: git pull failed (exit code: $pullExitCode)" -Type Error
-            Write-Host $pullOutput.Trim()
-
-            if ($VerbosePreference -eq 'Continue') {
-                Write-VerboseLog "Troubleshooting suggestions:"
-                Write-VerboseLog "  - Check network connectivity"
-                Write-VerboseLog "  - Verify upstream tracking: git branch -vv"
-                Write-VerboseLog "  - Check authentication: git config credential.helper"
-                Write-VerboseLog "  - Try manual pull: git pull origin $currentBranch"
-            }
-
-            Write-Host "Please resolve git issues manually"
-            exit 1
-        }
-    }
-    catch {
-        Write-ColorOutput "Error: git pull failed: $_" -Type Error
-        Write-Host "Please resolve git issues manually"
+    $currentBranch = git rev-parse --abbrev-ref HEAD 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-ColorOutput "Error: Not in a git repository" -Type Error
         exit 1
     }
+    Write-Host "Current branch: $currentBranch"
 
-    Write-ColorOutput "Repository synced successfully" -Type Success
+    # Fetch latest from origin
+    Write-VerboseLog "Fetching from origin..."
+    $fetchOutput = git fetch origin 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-ColorOutput "Error: git fetch failed - check network connectivity" -Type Error
+        Write-Host $fetchOutput
+        exit 1
+    }
+    Write-VerboseLog $fetchOutput
+
+    # Hard reset to remote branch (discards ALL local changes)
+    Write-VerboseLog "Resetting to origin/$currentBranch..."
+    $resetOutput = git reset --hard "origin/$currentBranch" 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-ColorOutput "Error: git reset failed" -Type Error
+        Write-Host $resetOutput
+        exit 1
+    }
+    Write-Host $resetOutput
+
+    Write-ColorOutput "Repository synced to origin/$currentBranch" -Type Success
 }
 
 #endregion
@@ -281,7 +205,7 @@ function Install-BuildDependencies {
             uv pip install --group build
         }
         else {
-            uv pip install --group build | Out-Null
+            $null = uv pip install --group build 2>&1
         }
         Write-VerboseLog "Build dependencies installed"
     }
@@ -328,7 +252,7 @@ function Build-Executable {
         }
         else {
             # Suppress output in normal mode, only show errors
-            uv run pyinstaller @pyinstallerArgs 2>&1 | Out-Null
+            $null = uv run pyinstaller @pyinstallerArgs 2>&1
         }
 
         Write-VerboseLog "Build completed"
