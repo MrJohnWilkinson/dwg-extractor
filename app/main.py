@@ -657,20 +657,18 @@ class DXFExtractorApp(ctk.CTk):
         self.after(100, self._poll_log_queue)
 
     def _on_unit_change(self, value: str) -> None:
-        """Handle unit dropdown selection change."""
+        """Handle unit dropdown selection change.
+
+        Updates ALL filter defaults when units change, regardless of checkbox state.
+        This ensures users see appropriate values for their selected unit system
+        whether or not a filter is currently enabled.
+        """
         self.logger.debug(f"Unit selection changed to: {value}")
-        # Update precision fix default if enabled
-        if self.precision_fix_var.get():
-            self._update_precision_fix_default()
-        # Update gap bridge default if enabled
-        if self.gap_bridge_var.get():
-            self._update_gap_bridge_default()
-        # Update min area filter default if enabled
-        if self.min_area_filter_var.get():
-            self._update_min_area_filter_default()
-        # Update min side filter default if enabled
-        if self.min_side_filter_var.get():
-            self._update_min_side_filter_default()
+        # Always update all defaults when unit changes (regardless of checkbox state)
+        self._update_precision_fix_default()
+        self._update_gap_bridge_default()
+        self._update_min_area_filter_default()
+        self._update_min_side_filter_default()
 
     def _on_precision_fix_toggle(self) -> None:
         """Handle precision fix checkbox toggle."""
