@@ -681,6 +681,11 @@ class DXFExtractorApp(ctk.CTk):
         if enabled:
             self.precision_fix_entry.configure(state="normal")
             self._update_precision_fix_default()
+            # Mutual exclusivity: disable gap bridge when precision fix is enabled
+            if self.gap_bridge_var.get():
+                self.gap_bridge_var.set(False)
+                self.gap_bridge_entry.configure(state="disabled")
+                self.logger.debug("Disabled gap bridge (mutually exclusive with precision fix)")
         else:
             self.precision_fix_entry.configure(state="disabled")
 
@@ -701,6 +706,11 @@ class DXFExtractorApp(ctk.CTk):
         if enabled:
             self.gap_bridge_entry.configure(state="normal")
             self._update_gap_bridge_default()
+            # Mutual exclusivity: disable precision fix when gap bridge is enabled
+            if self.precision_fix_var.get():
+                self.precision_fix_var.set(False)
+                self.precision_fix_entry.configure(state="disabled")
+                self.logger.debug("Disabled precision fix (mutually exclusive with gap bridge)")
         else:
             self.gap_bridge_entry.configure(state="disabled")
 

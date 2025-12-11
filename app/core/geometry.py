@@ -652,23 +652,26 @@ def _extract_paint_bucket_regions(
     Extract all visual regions using paint-bucket algorithm.
 
     Combines all edges (LWPOLYLINE + LINE) into a unified edge set,
-    splits at intersections using unary_union, applies two-stage
-    coordinate snapping, and finds all closed regions using polygonize.
+    splits at intersections using unary_union, and finds all closed
+    regions using polygonize.
 
-    Two-stage snapping:
-    - Stage 1 (Precision): Automatically fixes floating-point artifacts at
-      line endpoints using a very small tolerance (nanometer scale).
-    - Stage 2 (Gap Bridge): Optionally bridges intentional design gaps when
-      gap_bridge_tolerance > 0.
+    Two alternative pre-union snapping methods (mutually exclusive):
+    - Precision Fix: Snaps individual edge coordinates to grid points to fix
+      floating-point artifacts. Uses _snap_linestring_coords() for direct
+      coordinate rounding.
+    - Gap Bridge: Snaps individual edges to reference geometry to bridge
+      intentional design gaps. Uses Shapely's snap() function against a
+      reference geometry created from all edges.
 
     Args:
         block_def: ezdxf block definition object
         abort_event: Optional threading.Event to signal abort request
-        precision_tolerance: Stage 1 snap tolerance for fixing floating-point
+        precision_tolerance: Precision fix snap tolerance for fixing floating-point
             artifacts. Default 1e-6 (appropriate for most unit systems).
-            Set to 0 to disable Stage 1 snapping.
-        gap_bridge_tolerance: Stage 2 snap tolerance for bridging intentional
+            Set to 0 to disable. Mutually exclusive with gap_bridge_tolerance.
+        gap_bridge_tolerance: Gap bridge snap tolerance for bridging intentional
             gaps. Default 0.0 (disabled). Set > 0 to bridge gaps up to this size.
+            Mutually exclusive with precision_tolerance.
 
     Returns:
         List of Polygon objects (coordinate tuples) representing all visual regions.
@@ -684,22 +687,25 @@ def _extract_paint_bucket_regions(
     if abort_event and abort_event.is_set():
         raise GeometryAbortedError("Region detection aborted")
 
-    # Stage 1: Precision snapping BEFORE union to fix floating-point artifacts
-    # This ensures endpoints with nanometer-scale errors align to grid points
-    # before intersection detection occurs in unary_union()
+    # Precision Fix: snap individual edge coordinates to grid BEFORE union
+    # Fixes floating-point artifacts at line endpoints
+    # Note: Mutually exclusive with gap bridge (GUI enforces this)
     if precision_tolerance > 0:
         edges = [_snap_linestring_coords(e, precision_tolerance) for e in edges]
-        logger.debug(f"Applied Stage 1 precision snap: tolerance={precision_tolerance}")
+        logger.debug(f"Applied precision fix snap: tolerance={precision_tolerance}")
 
-    # Merge and split at all intersections (now with snapped coordinates)
+    # Gap Bridge: snap individual edges to reference geometry BEFORE union
+    # Alternative method for closing gaps using Shapely's snap() function
+    # Note: Mutually exclusive with precision fix (GUI enforces this)
+    if gap_bridge_tolerance > 0:
+        all_edges_geom = unary_union(edges)
+        edges = [snap(e, all_edges_geom, gap_bridge_tolerance) for e in edges]
+        logger.debug(f"Applied gap bridge snap: tolerance={gap_bridge_tolerance}")
+
+    # Single authoritative intersection computation via unary_union
     merged = unary_union(edges)
     if merged.is_empty:
         return []
-
-    # Stage 2: Gap bridging for intentional design gaps (when enabled)
-    if gap_bridge_tolerance > 0:
-        merged = snap(merged, merged, gap_bridge_tolerance)
-        logger.debug(f"Applied Stage 2 gap bridge: tolerance={gap_bridge_tolerance}")
 
     line_segments = list(merged.geoms) if hasattr(merged, "geoms") else [merged]
     polygons = list(polygonize(line_segments))
