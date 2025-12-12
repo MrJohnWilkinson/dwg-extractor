@@ -1049,10 +1049,15 @@ class DXFExtractorApp(ctk.CTk):
     def _on_log_level_change(self, value: str) -> None:
         """Handle log level dropdown change.
 
-        Level filtering is done during polling, so this is a no-op.
-        The dropdown value is read directly in _poll_log_queue.
+        Sets source logger levels dynamically so DEBUG messages
+        are captured when DEBUG is selected.
         """
-        pass
+        level = getattr(logging, value)
+
+        # Set source logger levels to enable/disable DEBUG capture
+        logging.getLogger("app.core.extractor").setLevel(level)
+        logging.getLogger("app.core.geometry").setLevel(level)
+        logging.getLogger("app.main").setLevel(level)
 
     def _on_log_file_toggle(self) -> None:
         """Handle log file checkbox toggle - enable/disable level dropdown."""

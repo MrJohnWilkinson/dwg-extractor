@@ -765,3 +765,93 @@ class TestCreateQueueHandler:
         assert "error msg" in messages[3]
 
         logger.handlers.clear()
+
+
+class TestDynamicLogLevelSetting:
+    """Tests for dynamic log level setting pattern used by GUI dropdown."""
+
+    def test_setting_logger_level_dynamically_affects_capture(self) -> None:
+        """Verify setting logger level dynamically changes message capture."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = create_queue_handler(log_queue)
+
+        logger = logging.getLogger("test_dynamic_level")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+
+        # Start at INFO level - DEBUG messages should not be captured
+        logger.setLevel(logging.INFO)
+        logger.debug("debug should not appear")
+
+        assert log_queue.empty(), "DEBUG message captured at INFO level"
+
+        # Change to DEBUG level - DEBUG messages should now be captured
+        logger.setLevel(logging.DEBUG)
+        logger.debug("debug should appear")
+
+        assert not log_queue.empty(), "DEBUG message not captured at DEBUG level"
+        level, msg = log_queue.get_nowait()
+        assert level == logging.DEBUG
+        assert "debug should appear" in msg
+
+        logger.handlers.clear()
+
+    def test_setting_debug_level_captures_debug_messages(self) -> None:
+        """Verify DEBUG level captures DEBUG messages."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = create_queue_handler(log_queue)
+
+        logger = logging.getLogger("test_debug_capture")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+
+        logger.debug("debug message")
+        logger.info("info message")
+
+        messages = []
+        while not log_queue.empty():
+            level, msg = log_queue.get_nowait()
+            messages.append((level, msg))
+
+        assert len(messages) == 2
+        assert messages[0][0] == logging.DEBUG
+        assert "debug message" in messages[0][1]
+        assert messages[1][0] == logging.INFO
+        assert "info message" in messages[1][1]
+
+        logger.handlers.clear()
+
+    def test_setting_info_level_filters_debug_messages(self) -> None:
+        """Verify INFO level filters out DEBUG messages."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = create_queue_handler(log_queue)
+
+        logger = logging.getLogger("test_info_filter")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+
+        logger.debug("debug message")
+        logger.info("info message")
+
+        messages = []
+        while not log_queue.empty():
+            level, msg = log_queue.get_nowait()
+            messages.append((level, msg))
+
+        # Only INFO message should be captured
+        assert len(messages) == 1
+        assert messages[0][0] == logging.INFO
+        assert "info message" in messages[0][1]
+
+        logger.handlers.clear()
+
+    def test_getattr_logging_level_conversion(self) -> None:
+        """Verify getattr(logging, value) pattern works correctly."""
+        # This is the pattern used in _on_log_level_change()
+        assert getattr(logging, "DEBUG") == logging.DEBUG
+        assert getattr(logging, "INFO") == logging.INFO
+        assert getattr(logging, "WARNING") == logging.WARNING
+        assert getattr(logging, "ERROR") == logging.ERROR
+        assert getattr(logging, "CRITICAL") == logging.CRITICAL
