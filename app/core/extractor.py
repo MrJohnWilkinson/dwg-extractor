@@ -1229,6 +1229,8 @@ def extract_blocks(
             else:
                 effective_name = block_name
 
+            logger.info(f"[BLOCK START] '{effective_name}'")
+
             # Start timing for this block
             block_start = time.perf_counter()
 
@@ -1294,12 +1296,9 @@ def extract_blocks(
             )
             block_content_zone_data[effective_name] = content_zone
 
-            # Log timing for slow blocks (> 1 second)
+            # Log block processing end with timing
             block_duration = time.perf_counter() - block_start
-            if block_duration > 1.0:
-                logger.info(
-                    f"[TIMING] Block '{effective_name}' completed in {block_duration:.1f}s"
-                )
+            logger.info(f"[BLOCK END] '{effective_name}' ({block_duration:.3f}s)")
 
         logger.info(f"Analyzed {len(block_entities)} block definitions")
         logger.info(
