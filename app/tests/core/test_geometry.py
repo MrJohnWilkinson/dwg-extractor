@@ -309,6 +309,45 @@ class TestIntersectionPoints:
         assert 0.0 in vertical_points
         assert 0.02 in vertical_points
 
+    def test_intersection_points_custom_epsilon(self) -> None:
+        """Test deduplication with custom epsilon parameter."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CUSTOM_EPSILON_TEST")
+
+        # Add points that are 0.05 apart
+        block.add_point((0, 0))
+        block.add_point((0.05, 0))
+        block.add_point((0.1, 0))
+
+        # With default epsilon (0.01), all points should be distinct
+        vertical_default, _ = _get_intersection_points(block)
+        assert len(vertical_default) == 3
+
+        # With larger epsilon (0.1), points should be deduplicated
+        vertical_large, _ = _get_intersection_points(block, epsilon=0.1)
+        assert len(vertical_large) == 1  # All within 0.1 tolerance of 0
+
+    def test_intersection_points_stricter_epsilon(self) -> None:
+        """Test deduplication with stricter (smaller) epsilon."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="STRICT_EPSILON_TEST")
+
+        # Add points that are 0.02 apart (outside default epsilon)
+        block.add_point((0, 0))
+        block.add_point((0.02, 0))
+        block.add_point((0.1, 0))  # Far enough apart to not be deduplicated
+
+        # With default epsilon (0.01), all points should remain distinct
+        vertical_default, _ = _get_intersection_points(block)
+        assert len(vertical_default) == 3
+
+        # With larger epsilon (0.03), 0 and 0.02 are within tolerance
+        # Sequential dedup: 0.02 is within 0.03 of 0, so dropped
+        # Then 0.1 is outside 0.03 of 0, so kept
+        # Result: [0, 0.1]
+        vertical_large, _ = _get_intersection_points(block, epsilon=0.03)
+        assert len(vertical_large) == 2
+
 
 class TestCalculateSegments:
     """Test suite for _calculate_segments function."""
@@ -458,6 +497,33 @@ class TestCategorizeRotation:
     ) -> None:
         """Test rotation categorization with parametrized test cases."""
         assert _categorize_rotation(rotation) == expected_category
+
+    def test_categorize_rotation_custom_tolerance(self) -> None:
+        """Test rotation categorization with custom tolerance parameter."""
+        # With default tolerance (1.0), 1.5 degrees is 'other'
+        assert _categorize_rotation(1.5) == "other"
+
+        # With tolerance=2.0, 1.5 degrees should be '0'
+        assert _categorize_rotation(1.5, tolerance=2.0) == "0"
+
+        # With tolerance=0.5, 0.8 degrees should be 'other'
+        assert _categorize_rotation(0.8, tolerance=0.5) == "other"
+
+        # With tolerance=0.5, 0.5 degrees should be '0' (at boundary)
+        assert _categorize_rotation(0.5, tolerance=0.5) == "0"
+
+    def test_categorize_rotation_stricter_tolerance(self) -> None:
+        """Test rotation categorization with stricter (smaller) tolerance."""
+        # With stricter tolerance=0.1, even 0.5 degree deviation is 'other'
+        assert _categorize_rotation(90.5, tolerance=0.1) == "other"
+        assert _categorize_rotation(90.05, tolerance=0.1) == "90"
+
+    def test_categorize_rotation_looser_tolerance(self) -> None:
+        """Test rotation categorization with looser (larger) tolerance."""
+        # With looser tolerance=5.0, angles within 5 degrees are categorized
+        assert _categorize_rotation(85.0, tolerance=5.0) == "90"
+        assert _categorize_rotation(95.0, tolerance=5.0) == "90"
+        assert _categorize_rotation(84.0, tolerance=5.0) == "other"
 
 
 class TestExtractLineCycles:

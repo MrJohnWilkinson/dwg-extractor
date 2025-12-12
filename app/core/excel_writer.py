@@ -290,7 +290,11 @@ def _has_negative_scale_in_set(scale_set: set[tuple[float, float]], axis: str) -
         raise ValueError(f"axis must be 'x' or 'y', got '{axis}'")
 
 
-def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
+def write_excel(
+    extraction_data: ExtractionResult,
+    input_file_path: str,
+    output_path: str | Path | None = None,
+) -> str:
     """
     Generate a multi-sheet Excel file from comprehensive CAD extraction data.
 
@@ -307,11 +311,13 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
 
     All sheets include headers, appropriate sorting, auto-filters, and proper column widths.
     The Block Geometry Analysis sheet includes red highlighting for mirrored blocks (negative scales).
-    The output filename is timestamped to prevent overwrites.
+    When output_path is not provided, the output filename is timestamped to prevent overwrites.
 
     Args:
         extraction_data: ExtractionResult TypedDict containing all CAD analysis data
-        output_path: Path to the original DXF file (used for output filename)
+        input_file_path: Path to the original DXF file (used for default output filename)
+        output_path: Optional explicit output path. If provided, uses this exact path.
+                    If None, generates timestamped filename in same directory as input.
 
     Returns:
         Full path to the created Excel file as a string
@@ -324,6 +330,9 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         >>> excel_file = write_excel(result, 'drawing.dxf')
         >>> print(excel_file)
         '/path/to/drawing_blocks_20250117_143022.xlsx'
+
+        >>> # With explicit output path
+        >>> excel_file = write_excel(result, 'drawing.dxf', '/output/custom_name.xlsx')
     """
     logger.info("Starting multi-sheet Excel file generation")
 
@@ -333,11 +342,15 @@ def write_excel(extraction_data: ExtractionResult, output_path: str) -> str:
         raise ValueError("extraction_data cannot be None")
 
     try:
-        # Generate timestamped filename
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        input_path = Path(output_path)
-        filename = f"{input_path.stem}_blocks_{timestamp}.xlsx"
-        full_path = input_path.parent / filename
+        # Determine output path
+        if output_path is not None:
+            full_path = Path(output_path)
+        else:
+            # Generate timestamped filename (legacy behavior)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            input_path = Path(input_file_path)
+            filename = f"{input_path.stem}_blocks_{timestamp}.xlsx"
+            full_path = input_path.parent / filename
 
         # Create Excel writer
         with pd.ExcelWriter(full_path, engine="openpyxl") as writer:

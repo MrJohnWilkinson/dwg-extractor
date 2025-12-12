@@ -33,6 +33,8 @@ from shapely.ops import polygonize, snap, unary_union
 
 from .constants import (
     ARC_FLATTENING_SAGITTA,
+    DEFAULT_COORD_DEDUP_EPSILON,
+    DEFAULT_ROTATION_TOLERANCE,
     ENTITY_COUNT_THRESHOLD,
     LINE_SEGMENT_THRESHOLD,
     POLYGON_COUNT_THRESHOLD,
@@ -263,17 +265,22 @@ def _get_block_bounding_box(
     return (min_x, min_y, max_x, max_y)
 
 
-def _get_intersection_points(block_def: BlockLayout) -> tuple[list[float], list[float]]:
+def _get_intersection_points(
+    block_def: BlockLayout,
+    epsilon: float = DEFAULT_COORD_DEDUP_EPSILON,
+) -> tuple[list[float], list[float]]:
     """
     Identify unique vertical and horizontal intersection points in a block definition.
 
     This function extracts all vertex coordinates from geometric entities in the block
     and identifies unique X-coordinates (vertical intersections) and Y-coordinates
     (horizontal intersections). Duplicate points are filtered using a floating-point
-    tolerance (epsilon = 0.01) to handle precision issues.
+    tolerance (epsilon) to handle precision issues.
 
     Args:
         block_def: ezdxf block definition object
+        epsilon: Tolerance for floating-point comparison when deduplicating
+                 coordinates. Default: DEFAULT_COORD_DEDUP_EPSILON (0.01)
 
     Returns:
         Tuple of (sorted_vertical_points, sorted_horizontal_points) where:
@@ -285,7 +292,6 @@ def _get_intersection_points(block_def: BlockLayout) -> tuple[list[float], list[
         >>> _get_intersection_points(block_def)
         ([0.0, 50.0, 1150.0, 1200.0], [0.0, 25.0, 575.0, 600.0])
     """
-    epsilon = 0.01  # Tolerance for floating-point comparison
     x_coords: set[float] = set()
     y_coords: set[float] = set()
 
@@ -394,17 +400,22 @@ def _calculate_segments(intersection_points: list[float]) -> list[float]:
     return segments
 
 
-def _categorize_rotation(angle: float) -> str:
+def _categorize_rotation(
+    angle: float,
+    tolerance: float = DEFAULT_ROTATION_TOLERANCE,
+) -> str:
     """
     Categorize a rotation angle into standard rotation categories.
 
     This function normalizes rotation angles to the 0-360 range and categorizes them
     as standard orthogonal rotations (0°, 90°, 180°, 270°) or 'other'.
-    A tolerance of ±1° is used for standard angles to handle floating-point precision
-    and near-orthogonal manual rotations.
+    A configurable tolerance is used for standard angles to handle floating-point
+    precision and near-orthogonal manual rotations.
 
     Args:
         angle: Rotation angle in degrees (can be negative or > 360)
+        tolerance: Tolerance in degrees for matching standard angles.
+                   Default: DEFAULT_ROTATION_TOLERANCE (1.0)
 
     Returns:
         String representing rotation category: '0', '90', '180', '270', or 'other'
@@ -424,14 +435,14 @@ def _categorize_rotation(angle: float) -> str:
     # Normalize angle to 0-360 range
     normalized = angle % 360
 
-    # Check for standard angles with ±1° tolerance
-    if abs(normalized - 0) <= 1 or abs(normalized - 360) <= 1:
+    # Check for standard angles with configurable tolerance
+    if abs(normalized - 0) <= tolerance or abs(normalized - 360) <= tolerance:
         result = "0"
-    elif abs(normalized - 90) <= 1:
+    elif abs(normalized - 90) <= tolerance:
         result = "90"
-    elif abs(normalized - 180) <= 1:
+    elif abs(normalized - 180) <= tolerance:
         result = "180"
-    elif abs(normalized - 270) <= 1:
+    elif abs(normalized - 270) <= tolerance:
         result = "270"
     else:
         result = "other"
@@ -1046,6 +1057,10 @@ def _detect_content_zone(
     gap_bridge_tolerance: float = 0.0,
     min_area_filter: float = 0.0,
     min_side_filter: float = 0.0,
+    *,
+    polygon_count_threshold: int = POLYGON_COUNT_THRESHOLD,
+    line_segment_threshold: int = LINE_SEGMENT_THRESHOLD,
+    entity_count_threshold: int = ENTITY_COUNT_THRESHOLD,
 ) -> ContentZoneData:
     """
     Detect content zone and calculate trim values.
@@ -1069,8 +1084,9 @@ def _detect_content_zone(
       polygons like "picture frames".
 
     Performance safeguards:
-    - Skips region detection if > LINE_SEGMENT_THRESHOLD edges (5000)
-    - Skips net area calculation if > POLYGON_COUNT_THRESHOLD polygons (500)
+    - Skips content zone entirely if > entity_count_threshold entities
+    - Skips region detection if > line_segment_threshold edges
+    - Skips net area calculation if > polygon_count_threshold polygons
 
     Args:
         block_def: ezdxf block definition object
@@ -1086,6 +1102,15 @@ def _detect_content_zone(
         min_side_filter: Minimum shortest side length threshold. Polygons with
             shortest straight side less than this value are filtered out.
             Default 0.0 (no filtering).
+        polygon_count_threshold: Maximum polygons for net area calculation.
+            Blocks exceeding this skip content zone detection.
+            Default: POLYGON_COUNT_THRESHOLD (500)
+        line_segment_threshold: Maximum edges for region detection.
+            Blocks exceeding this skip region detection.
+            Default: LINE_SEGMENT_THRESHOLD (5000)
+        entity_count_threshold: Maximum entities for content zone detection.
+            Blocks exceeding this skip content zone entirely.
+            Default: ENTITY_COUNT_THRESHOLD (1000)
 
     Returns:
         ContentZoneData with detected trim values, or empty data if no
@@ -1101,19 +1126,19 @@ def _detect_content_zone(
 
     # UNIT 1: Fast entity count pre-check (O(n), no coordinate extraction)
     entity_count = sum(1 for _ in block_def)
-    if entity_count > ENTITY_COUNT_THRESHOLD:
+    if entity_count > entity_count_threshold:
         logger.warning(
             f"[{block_name}] Skipping content zone: "
-            f"{entity_count} entities exceeds threshold {ENTITY_COUNT_THRESHOLD}"
+            f"{entity_count} entities exceeds threshold {entity_count_threshold}"
         )
         return _empty_content_zone_data()
 
     # UNIT 2: Fast edge count estimation (no coordinate extraction)
     estimated_edge_count = _estimate_edge_count(block_def)
-    if estimated_edge_count > LINE_SEGMENT_THRESHOLD:
+    if estimated_edge_count > line_segment_threshold:
         logger.warning(
             f"[{block_name}] Skipping region detection: "
-            f"~{estimated_edge_count} estimated edges exceeds threshold {LINE_SEGMENT_THRESHOLD}"
+            f"~{estimated_edge_count} estimated edges exceeds threshold {line_segment_threshold}"
         )
         return ContentZoneData(
             suggested_trim_left=None,
@@ -1163,10 +1188,10 @@ def _detect_content_zone(
         )
 
     # Check polygon count BEFORE net area calculation
-    if len(all_shapes) > POLYGON_COUNT_THRESHOLD:
+    if len(all_shapes) > polygon_count_threshold:
         logger.warning(
             f"[{block_name}] Skipping content zone: "
-            f"{len(all_shapes)} polygons exceeds threshold {POLYGON_COUNT_THRESHOLD}"
+            f"{len(all_shapes)} polygons exceeds threshold {polygon_count_threshold}"
         )
         return ContentZoneData(
             suggested_trim_left=None,

@@ -1167,3 +1167,51 @@ class TestExtractor:
         # Should have at least one MTEXT with multiline content
         # Note: ezdxf's entity.text property should return plain text without formatting
         assert len(mtext_entries) >= 1, "MTEXT multiline content should be extracted"
+
+    def test_extract_with_threshold_parameters(self) -> None:
+        """Test extraction with custom threshold parameters."""
+        # Test that threshold parameters are accepted and don't break extraction
+        result = extract_blocks(
+            "app/tests/assets/sample_drawing.dxf",
+            polygon_count_threshold=100,
+            line_segment_threshold=1000,
+            entity_count_threshold=500,
+        )
+
+        # Verify result is still valid ExtractionResult dict
+        assert isinstance(result, dict)
+        assert "block_counts" in result
+        assert "block_entities" in result
+
+        # Verify correct counts for each block type (unchanged)
+        assert result["block_counts"]["VALVE_GATE"] == 10
+        assert result["block_counts"]["PIPE_SUPPORT"] == 5
+        assert result["block_counts"]["EQUIPMENT_TAG"] == 3
+
+    def test_extract_with_none_thresholds_uses_defaults(self) -> None:
+        """Test extraction with None thresholds uses defaults."""
+        result = extract_blocks(
+            "app/tests/assets/sample_drawing.dxf",
+            polygon_count_threshold=None,
+            line_segment_threshold=None,
+            entity_count_threshold=None,
+        )
+
+        # Verify result is valid
+        assert isinstance(result, dict)
+        assert "block_counts" in result
+        assert len(result["block_counts"]) == 3
+
+    def test_extract_with_low_entity_threshold(self) -> None:
+        """Test extraction with very low entity threshold skips content zone."""
+        # With a very low entity threshold, content zone detection may be skipped
+        # for complex blocks, but extraction should still work
+        result = extract_blocks(
+            "app/tests/assets/sample_drawing.dxf",
+            entity_count_threshold=1,  # Very low threshold
+        )
+
+        # Extraction should still complete successfully
+        assert isinstance(result, dict)
+        assert "block_counts" in result
+        assert len(result["block_counts"]) == 3

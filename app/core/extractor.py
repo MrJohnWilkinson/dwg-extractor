@@ -26,6 +26,9 @@ from .constants import (
     DEFAULT_MIN_AREA_FILTER,
     DEFAULT_MIN_SIDE_FILTER,
     DXF_INSUNITS_MAP,
+    ENTITY_COUNT_THRESHOLD,
+    LINE_SEGMENT_THRESHOLD,
+    POLYGON_COUNT_THRESHOLD,
     SUPPORTED_EXTENSIONS,
 )
 from .geometry import (
@@ -968,6 +971,7 @@ class ExtractionResult(TypedDict):
 def extract_blocks(
     file_path: str,
     abort_event: threading.Event | None = None,
+    *,
     unit_override: int | None = None,
     gap_bridge_enabled: bool = False,
     gap_bridge_amount: float | None = None,
@@ -977,6 +981,10 @@ def extract_blocks(
     min_area_filter_amount: float | None = None,
     min_side_filter_enabled: bool = False,
     min_side_filter_amount: float | None = None,
+    # Early-exit threshold parameters
+    polygon_count_threshold: int | None = None,
+    line_segment_threshold: int | None = None,
+    entity_count_threshold: int | None = None,
 ) -> ExtractionResult:
     """
     Extract comprehensive CAD analysis from a DXF file.
@@ -1026,6 +1034,12 @@ def extract_blocks(
                                 is used. If None, 0, or negative, uses the default from
                                 DEFAULT_MIN_SIDE_FILTER for the effective unit.
                                 Defaults to None.
+        polygon_count_threshold: Maximum polygons for content zone calculation.
+                                 None uses default (500). Blocks exceeding this skip content zone.
+        line_segment_threshold: Maximum edges for region detection.
+                                None uses default (5000). Blocks exceeding this skip region detection.
+        entity_count_threshold: Maximum entities for content zone detection.
+                                None uses default (1000). Blocks exceeding this skip content zone.
 
     Returns:
         ExtractionResult TypedDict containing all analysis data.
@@ -1245,6 +1259,23 @@ def extract_blocks(
             }
 
             # Detect content zone
+            # Use passed thresholds or fall back to constants
+            effective_polygon_threshold = (
+                polygon_count_threshold
+                if polygon_count_threshold is not None
+                else POLYGON_COUNT_THRESHOLD
+            )
+            effective_line_threshold = (
+                line_segment_threshold
+                if line_segment_threshold is not None
+                else LINE_SEGMENT_THRESHOLD
+            )
+            effective_entity_threshold = (
+                entity_count_threshold
+                if entity_count_threshold is not None
+                else ENTITY_COUNT_THRESHOLD
+            )
+
             content_zone = _detect_content_zone(
                 block_def,
                 bbox,
@@ -1253,6 +1284,9 @@ def extract_blocks(
                 gap_bridge_tolerance,
                 min_area,
                 min_side,
+                polygon_count_threshold=effective_polygon_threshold,
+                line_segment_threshold=effective_line_threshold,
+                entity_count_threshold=effective_entity_threshold,
             )
             block_content_zone_data[effective_name] = content_zone
 

@@ -560,6 +560,11 @@ class DXFExtractorApp(ctk.CTk):
             min_side_filter_enabled = self.min_side_filter_var.get()
             min_side_filter_amount = self._get_min_side_filter_amount()
 
+            # Get threshold settings from SettingsManager
+            polygon_threshold = self.settings.get("polygon_count_threshold")
+            line_threshold = self.settings.get("line_segment_threshold")
+            entity_threshold = self.settings.get("entity_count_threshold")
+
             self.logger.info(
                 f"Extraction settings: unit_override={unit_override}, "
                 f"gap_bridge_enabled={gap_bridge_enabled}, "
@@ -570,6 +575,10 @@ class DXFExtractorApp(ctk.CTk):
                 f"min_area_filter_amount={min_area_filter_amount}, "
                 f"min_side_filter_enabled={min_side_filter_enabled}, "
                 f"min_side_filter_amount={min_side_filter_amount}"
+            )
+            self.logger.debug(
+                f"Threshold settings: polygon={polygon_threshold}, "
+                f"line={line_threshold}, entity={entity_threshold}"
             )
 
             # Step 1: Load file
@@ -590,6 +599,9 @@ class DXFExtractorApp(ctk.CTk):
                 min_area_filter_amount=min_area_filter_amount,
                 min_side_filter_enabled=min_side_filter_enabled,
                 min_side_filter_amount=min_side_filter_amount,
+                polygon_count_threshold=polygon_threshold,
+                line_segment_threshold=line_threshold,
+                entity_count_threshold=entity_threshold,
             )
 
             # Check for empty results
@@ -601,13 +613,18 @@ class DXFExtractorApp(ctk.CTk):
             # Step 3: Generate Excel
             self._update_progress(0.7, "Generating Excel...")
 
-            excel_path = write_excel(extraction_result, self.selected_file_path)
+            # Get custom output path based on settings
+            custom_output_path = self._get_output_path(input_path)
+
+            excel_path = write_excel(
+                extraction_result, self.selected_file_path, custom_output_path
+            )
             self.output_excel_path = excel_path
 
             # Step 4: Complete
             self._update_progress(1.0, MSG_SUCCESS)
 
-            # Show success and open file
+            # Show success and optionally open file (based on settings)
             self._show_success(excel_path)
 
         except ExtractionAbortedError:
@@ -658,16 +675,19 @@ class DXFExtractorApp(ctk.CTk):
         """Actually show success dialog (must run on main thread)."""
         self.logger.info(f"Extraction completed successfully, Excel file: {excel_path}")
 
-        messagebox.showinfo(
-            "Success",
-            f"Extraction complete!\n\nExcel file created:\n{Path(excel_path).name}",
-        )
+        # Show success dialog if enabled in settings
+        if self.settings.get("show_success_dialog"):
+            messagebox.showinfo(
+                "Success",
+                f"Extraction complete!\n\nExcel file created:\n{Path(excel_path).name}",
+            )
 
         # Enable Open Folder button
         self.open_folder_button.configure(state="normal")
 
-        # Auto-open Excel file
-        self._open_excel_file(excel_path)
+        # Auto-open Excel file if enabled in settings
+        if self.settings.get("auto_open_excel"):
+            self._open_excel_file(excel_path)
 
     def _show_error(self, message: str) -> None:
         """Show error message dialog (thread-safe)."""
@@ -957,6 +977,74 @@ class DXFExtractorApp(ctk.CTk):
         except ValueError:
             self.logger.warning("Invalid min side filter amount")
             return None
+
+    def _format_filename(self, input_path: Path) -> str:
+        """Format output filename with optional prefix and timestamp.
+
+        Args:
+            input_path: Path to the input DXF file
+
+        Returns:
+            Formatted filename (without directory) for the output Excel file
+        """
+        base_name = input_path.stem
+
+        # Get settings
+        prefix = self.settings.get("filename_prefix") or ""
+        include_timestamp = self.settings.get("include_timestamp")
+
+        # Build filename parts
+        parts = []
+
+        if prefix:
+            parts.append(prefix)
+
+        parts.append(base_name)
+
+        if include_timestamp:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            parts.append(timestamp)
+
+        # Join with underscore and add extension
+        filename = "_".join(parts) + ".xlsx"
+
+        self.logger.debug(f"Formatted filename: {filename}")
+        return filename
+
+    def _get_output_path(self, input_path: Path) -> Path:
+        """Get output file path respecting output directory setting.
+
+        Args:
+            input_path: Path to the input DXF file
+
+        Returns:
+            Full path for the output Excel file
+        """
+        filename = self._format_filename(input_path)
+
+        # Check for custom output directory
+        custom_dir = self.settings.get("output_directory")
+
+        if custom_dir:
+            output_dir = Path(custom_dir)
+            # Verify directory exists or can be created
+            if not output_dir.exists():
+                try:
+                    output_dir.mkdir(parents=True, exist_ok=True)
+                    self.logger.info(f"Created output directory: {output_dir}")
+                except OSError as e:
+                    self.logger.warning(
+                        f"Cannot create output directory {output_dir}: {e}. "
+                        "Using input file directory."
+                    )
+                    output_dir = input_path.parent
+        else:
+            # Default: same directory as input file
+            output_dir = input_path.parent
+
+        output_path = output_dir / filename
+        self.logger.debug(f"Output path: {output_path}")
+        return output_path
 
     def _on_log_level_change(self, value: str) -> None:
         """Handle log level dropdown change.
