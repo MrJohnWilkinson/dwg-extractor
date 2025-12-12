@@ -25,6 +25,7 @@ from core.geometry import (
     _extract_all_edges,
     _extract_line_cycles,
     _extract_paint_bucket_regions,
+    _get_arc_bounding_box,
     _get_block_bounding_box,
     _get_intersection_points,
     _polygon_has_curved_edges,
@@ -82,21 +83,21 @@ class TestBoundingBox:
         assert bbox[3] == 170.0  # max_y
 
     def test_bounding_box_with_arcs(self) -> None:
-        """Test bounding box extraction for blocks with ARC entities (simplified full-circle extents)."""
+        """Test bounding box extraction for blocks with ARC entities (accurate angular extents)."""
         doc = ezdxf.readfile("app/tests/assets/circles_arcs_points.dxf")
         block = doc.blocks.get("TEST_ARCS")
 
         bbox = _get_block_bounding_box(block)
 
-        # Block contains arcs (simplified to full circle extents):
-        # Arc 1: center=(100, 100), radius=50 -> bbox=(50, 50, 150, 150)
-        # Arc 2: center=(200, 150), radius=40 -> bbox=(160, 110, 240, 190)
-        # Arc 3: center=(150, 50), radius=30 -> bbox=(120, 20, 180, 80)
-        # Overall bbox: (50, 20, 240, 190)
-        assert bbox[0] == 50.0  # min_x
-        assert bbox[1] == 20.0  # min_y
-        assert bbox[2] == 240.0  # max_x
-        assert bbox[3] == 190.0  # max_y
+        # Block contains arcs with accurate angular extents:
+        # Arc 1: center=(100, 100), radius=50, 0 to 90 degrees -> bbox=(100, 100, 150, 150)
+        # Arc 2: center=(200, 150), radius=40, 45 to 180 degrees -> bbox=(160, 150, ~228.3, 190)
+        # Arc 3: center=(150, 50), radius=30, 270 to 360 degrees -> bbox=(150, 20, 180, 50)
+        # Overall bbox: (100, 20, ~228.3, 190)
+        assert bbox[0] == pytest.approx(100.0, abs=0.01)  # min_x
+        assert bbox[1] == pytest.approx(20.0, abs=0.01)  # min_y
+        assert bbox[2] == pytest.approx(228.28, abs=0.1)  # max_x (200 + 40*cos(45))
+        assert bbox[3] == pytest.approx(190.0, abs=0.01)  # max_y
 
     def test_bounding_box_with_points(self) -> None:
         """Test bounding box extraction for blocks with POINT entities."""
@@ -154,6 +155,89 @@ class TestBoundingBox:
         assert bbox[1] == 0.0  # min_y
         assert bbox[2] == 100.0  # max_x
         assert bbox[3] == 50.0  # max_y
+
+
+class TestArcBoundingBox:
+    """Test suite for _get_arc_bounding_box helper function."""
+
+    def test_quarter_arc_first_quadrant(self) -> None:
+        """Test quarter arc from 0 to 90 degrees at origin with radius 100."""
+        min_x, min_y, max_x, max_y = _get_arc_bounding_box(0, 0, 100, 0, 90)
+
+        # Arc from 0 to 90 degrees: start at (100, 0), end at (0, 100)
+        # Includes 0 deg cardinal (right) and 90 deg cardinal (top)
+        assert min_x == pytest.approx(0.0, abs=0.01)
+        assert min_y == pytest.approx(0.0, abs=0.01)
+        assert max_x == pytest.approx(100.0, abs=0.01)
+        assert max_y == pytest.approx(100.0, abs=0.01)
+
+    def test_quarter_arc_fourth_quadrant(self) -> None:
+        """Test quarter arc from 270 to 360 degrees at origin with radius 100."""
+        min_x, min_y, max_x, max_y = _get_arc_bounding_box(0, 0, 100, 270, 360)
+
+        # Arc from 270 to 360 degrees: start at (0, -100), end at (100, 0)
+        # Includes 270 deg cardinal (bottom) and 360/0 deg cardinal (right)
+        assert min_x == pytest.approx(0.0, abs=0.01)
+        assert min_y == pytest.approx(-100.0, abs=0.01)
+        assert max_x == pytest.approx(100.0, abs=0.01)
+        assert max_y == pytest.approx(0.0, abs=0.01)
+
+    def test_arc_45_to_180(self) -> None:
+        """Test arc from 45 to 180 degrees, center=(200, 150), radius=40."""
+        min_x, min_y, max_x, max_y = _get_arc_bounding_box(200, 150, 40, 45, 180)
+
+        # Arc from 45 to 180 degrees:
+        # Start point: (200 + 40*cos(45), 150 + 40*sin(45)) = (228.28, 178.28)
+        # End point: (200 - 40, 150) = (160, 150)
+        # Includes 90 deg cardinal: (200, 190)
+        # Does NOT include 0 deg (right) or 180 deg boundary point (already at end)
+        assert min_x == pytest.approx(160.0, abs=0.01)
+        assert min_y == pytest.approx(150.0, abs=0.01)
+        assert max_x == pytest.approx(228.28, abs=0.1)
+        assert max_y == pytest.approx(190.0, abs=0.01)
+
+    def test_semicircle_top(self) -> None:
+        """Test semicircle from 0 to 180 degrees (top half), center=(50, 50), radius=25."""
+        min_x, min_y, max_x, max_y = _get_arc_bounding_box(50, 50, 25, 0, 180)
+
+        # Semicircle from 0 to 180 degrees:
+        # Start point: (75, 50), End point: (25, 50)
+        # Includes 0 deg (right), 90 deg (top), and 180 deg (left) cardinals
+        assert min_x == pytest.approx(25.0, abs=0.01)
+        assert min_y == pytest.approx(50.0, abs=0.01)
+        assert max_x == pytest.approx(75.0, abs=0.01)
+        assert max_y == pytest.approx(75.0, abs=0.01)
+
+    def test_wrap_around_arc(self) -> None:
+        """Test arc from 350 to 10 degrees (crosses 0), origin, radius=100."""
+        min_x, min_y, max_x, max_y = _get_arc_bounding_box(0, 0, 100, 350, 10)
+
+        # Arc crosses 0 degrees, so max_x should include the 0 deg cardinal point
+        # Start point: (100*cos(350), 100*sin(350)) = (98.48, -17.36)
+        # End point: (100*cos(10), 100*sin(10)) = (98.48, 17.36)
+        assert max_x == pytest.approx(100.0, abs=0.01)  # Includes 0 deg cardinal
+
+    def test_full_circle_arc(self) -> None:
+        """Test arc from 0 to 360 degrees should equal full circle bbox."""
+        min_x, min_y, max_x, max_y = _get_arc_bounding_box(100, 100, 50, 0, 360)
+
+        # Full circle: should include all cardinal points
+        assert min_x == pytest.approx(50.0, abs=0.01)
+        assert min_y == pytest.approx(50.0, abs=0.01)
+        assert max_x == pytest.approx(150.0, abs=0.01)
+        assert max_y == pytest.approx(150.0, abs=0.01)
+
+    def test_arc_270_to_356_problematic_case(self) -> None:
+        """Test the original issue case: arc from 270-356 degrees incorrectly reported -779 min_x."""
+        min_x, min_y, max_x, max_y = _get_arc_bounding_box(0, -953, 779, 270, 356.1)
+
+        # Arc from 270 to 356.1 degrees at center=(0, -953):
+        # Start point: (0, -953 - 779) = (0, -1732) - at 270 deg (bottom)
+        # End point: ~(776.3, -953 + some small y)
+        # Does NOT include 180 deg (left), so min_x should NOT be -779
+        # The arc stays in right half, so min_x should be near 0 or slightly negative
+        assert min_x > -100  # NOT -779 (the old incorrect value)
+        assert min_y == pytest.approx(-953 - 779, abs=0.01)  # Includes 270 deg (bottom)
 
 
 class TestIntersectionPoints:

@@ -176,6 +176,89 @@ class GeometryAbortedError(Exception):
     pass
 
 
+def _get_arc_bounding_box(
+    center_x: float,
+    center_y: float,
+    radius: float,
+    start_angle: float,
+    end_angle: float,
+) -> tuple[float, float, float, float]:
+    """
+    Calculate the accurate bounding box of an arc based on its angular extent.
+
+    Unlike simplified full-circle bounding boxes, this function calculates
+    the actual bounds by considering only:
+    1. The arc's start point
+    2. The arc's end point
+    3. Any cardinal directions (0, 90, 180, 270 degrees) that fall within the arc span
+
+    The algorithm handles wrap-around arcs (e.g., arc from 350 to 10 degrees)
+    correctly by treating the arc span as counter-clockwise from start to end angle.
+
+    Args:
+        center_x: X-coordinate of the arc center
+        center_y: Y-coordinate of the arc center
+        radius: Radius of the arc
+        start_angle: Start angle in degrees (counter-clockwise from positive X-axis)
+        end_angle: End angle in degrees (counter-clockwise from positive X-axis)
+
+    Returns:
+        Tuple of (min_x, min_y, max_x, max_y) representing the accurate bounding box.
+
+    Examples:
+        >>> _get_arc_bounding_box(0, 0, 100, 0, 90)  # Quarter arc, first quadrant
+        (0.0, 0.0, 100.0, 100.0)
+        >>> _get_arc_bounding_box(0, 0, 100, 270, 360)  # Quarter arc, fourth quadrant
+        (0.0, -100.0, 100.0, 0.0)
+    """
+    # Normalize start angle to [0, 360) range
+    start = start_angle % 360
+    end = end_angle % 360
+
+    # Calculate start and end points
+    start_rad = math.radians(start)
+    end_rad = math.radians(end)
+
+    start_x = center_x + radius * math.cos(start_rad)
+    start_y = center_y + radius * math.sin(start_rad)
+    end_x = center_x + radius * math.cos(end_rad)
+    end_y = center_y + radius * math.sin(end_rad)
+
+    # Initialize bounds with start and end points
+    min_x = min(start_x, end_x)
+    max_x = max(start_x, end_x)
+    min_y = min(start_y, end_y)
+    max_y = max(start_y, end_y)
+
+    # Handle wrap-around: if end <= start, the arc crosses 0 degrees
+    # Extend span_end by 360 to handle the wrap-around case
+    span_end = end if end > start else end + 360
+
+    def angle_in_span(angle: float) -> bool:
+        """Check if a cardinal angle falls within the arc span."""
+        # Check the angle and angle + 360 (for wrap-around cases)
+        return start <= angle <= span_end or start <= angle + 360 <= span_end
+
+    # Check each cardinal direction and extend bounds if in span
+    # 0 degrees (right): affects max_x
+    if angle_in_span(0) or angle_in_span(360):
+        max_x = max(max_x, center_x + radius)
+
+    # 90 degrees (top): affects max_y
+    if angle_in_span(90):
+        max_y = max(max_y, center_y + radius)
+
+    # 180 degrees (left): affects min_x
+    if angle_in_span(180):
+        min_x = min(min_x, center_x - radius)
+
+    # 270 degrees (bottom): affects min_y
+    if angle_in_span(270):
+        min_y = min(min_y, center_y - radius)
+
+    return (min_x, min_y, max_x, max_y)
+
+
 def _get_block_bounding_box(
     block_def: BlockLayout,
 ) -> tuple[float, float, float, float]:
@@ -242,11 +325,16 @@ def _get_block_bounding_box(
         elif entity_type == "ARC":
             center = entity.dxf.center
             radius = entity.dxf.radius
-            # Simplified bounding box for arcs (use full circle extents)
-            min_x = min(min_x, center.x - radius)
-            max_x = max(max_x, center.x + radius)
-            min_y = min(min_y, center.y - radius)
-            max_y = max(max_y, center.y + radius)
+            start_angle = entity.dxf.start_angle
+            end_angle = entity.dxf.end_angle
+            # Accurate bounding box based on arc's angular extent
+            arc_min_x, arc_min_y, arc_max_x, arc_max_y = _get_arc_bounding_box(
+                center.x, center.y, radius, start_angle, end_angle
+            )
+            min_x = min(min_x, arc_min_x)
+            max_x = max(max_x, arc_max_x)
+            min_y = min(min_y, arc_min_y)
+            max_y = max(max_y, arc_max_y)
             has_geometry = True
 
         elif entity_type == "POINT":

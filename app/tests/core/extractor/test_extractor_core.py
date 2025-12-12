@@ -569,21 +569,21 @@ class TestExtractor:
         assert bbox[3] == 170.0  # max_y
 
     def test_get_block_bounding_box_with_arcs(self) -> None:
-        """Test bounding box extraction for blocks with ARC entities (simplified full-circle extents)."""
+        """Test bounding box extraction for blocks with ARC entities (accurate angular extents)."""
         doc = ezdxf.readfile("app/tests/assets/circles_arcs_points.dxf")
         block = doc.blocks.get("TEST_ARCS")
 
         bbox = _get_block_bounding_box(block)
 
-        # Block contains arcs (simplified to full circle extents):
-        # Arc 1: center=(100, 100), radius=50 -> bbox=(50, 50, 150, 150)
-        # Arc 2: center=(200, 150), radius=40 -> bbox=(160, 110, 240, 190)
-        # Arc 3: center=(150, 50), radius=30 -> bbox=(120, 20, 180, 80)
-        # Overall bbox: (50, 20, 240, 190)
-        assert bbox[0] == 50.0  # min_x
-        assert bbox[1] == 20.0  # min_y
-        assert bbox[2] == 240.0  # max_x
-        assert bbox[3] == 190.0  # max_y
+        # Block contains arcs with accurate angular extents:
+        # Arc 1: center=(100, 100), radius=50, 0 to 90 degrees -> bbox=(100, 100, 150, 150)
+        # Arc 2: center=(200, 150), radius=40, 45 to 180 degrees -> bbox=(160, 150, ~228.3, 190)
+        # Arc 3: center=(150, 50), radius=30, 270 to 360 degrees -> bbox=(150, 20, 180, 50)
+        # Overall bbox: (100, 20, ~228.3, 190)
+        assert bbox[0] == pytest.approx(100.0, abs=0.01)  # min_x
+        assert bbox[1] == pytest.approx(20.0, abs=0.01)  # min_y
+        assert bbox[2] == pytest.approx(228.28, abs=0.1)  # max_x (200 + 40*cos(45))
+        assert bbox[3] == pytest.approx(190.0, abs=0.01)  # max_y
 
     def test_get_block_bounding_box_with_points(self) -> None:
         """Test bounding box extraction for blocks with POINT entities."""
