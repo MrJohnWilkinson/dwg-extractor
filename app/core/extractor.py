@@ -985,6 +985,12 @@ def extract_blocks(
     min_area_filter_amount: float | None = None,
     min_side_filter_enabled: bool = False,
     min_side_filter_amount: float | None = None,
+    # Pre-Filters
+    skip_curved_entities: bool = False,
+    min_line_length_filter_enabled: bool = False,
+    min_line_length_filter_amount: float | None = None,
+    # Post-Filters
+    curved_filter_enabled: bool = False,
     # Early-exit threshold parameters
     polygon_count_threshold: int | None = None,
     line_segment_threshold: int | None = None,
@@ -1038,6 +1044,16 @@ def extract_blocks(
                                 is used. If None, 0, or negative, uses the default from
                                 DEFAULT_MIN_SIDE_FILTER for the effective unit.
                                 Defaults to None.
+        skip_curved_entities: If True, skip CIRCLE and ARC entities during edge
+                              extraction for content zone detection. Default False.
+        min_line_length_filter_enabled: Enable minimum line length filtering.
+                                        When True, short LINE entities are filtered out.
+                                        Default False.
+        min_line_length_filter_amount: Minimum line length threshold. Lines shorter
+                                       than this are excluded. If None or <= 0, filter is inactive.
+        curved_filter_enabled: Enable curved polygon post-filtering.
+                               When True, polygons containing curved edges are filtered out.
+                               Default False.
         polygon_count_threshold: Maximum polygons for content zone calculation.
                                  None uses default (500). Blocks exceeding this skip content zone.
         line_segment_threshold: Maximum edges for region detection.
@@ -1135,6 +1151,19 @@ def extract_blocks(
             f"Using polygon filters: min_area={min_area}, min_side={min_side} "
             f"(area_filter={'enabled' if min_area_filter_enabled else 'disabled'}, "
             f"side_filter={'enabled' if min_side_filter_enabled else 'disabled'})"
+        )
+
+        # Calculate effective min line length
+        min_line_length = 0.0
+        if min_line_length_filter_enabled and min_line_length_filter_amount:
+            min_line_length = min_line_length_filter_amount
+        logger.info(
+            f"Using pre-filters: skip_curved={skip_curved_entities}, "
+            f"min_line_length={min_line_length} "
+            f"(min_line_filter={'enabled' if min_line_length_filter_enabled else 'disabled'})"
+        )
+        logger.info(
+            f"Using post-filters: curved_filter={'enabled' if curved_filter_enabled else 'disabled'}"
         )
 
         msp = doc.modelspace()
@@ -1293,6 +1322,9 @@ def extract_blocks(
                 gap_bridge_tolerance,
                 min_area,
                 min_side,
+                skip_curved_entities,
+                min_line_length,
+                curved_filter_enabled,
                 polygon_count_threshold=effective_polygon_threshold,
                 line_segment_threshold=effective_line_threshold,
                 entity_count_threshold=effective_entity_threshold,

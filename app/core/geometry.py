@@ -734,6 +734,8 @@ def _extract_paint_bucket_regions(
     abort_event: threading.Event | None = None,
     precision_tolerance: float = 1e-6,
     gap_bridge_tolerance: float = 0.0,
+    skip_curved_entities: bool = False,
+    min_line_length: float = 0.0,
 ) -> list[Polygon]:
     """
     Extract all visual regions using paint-bucket algorithm.
@@ -759,6 +761,10 @@ def _extract_paint_bucket_regions(
         gap_bridge_tolerance: Gap bridge snap tolerance for bridging intentional
             gaps. Default 0.0 (disabled). Set > 0 to bridge gaps up to this size.
             Mutually exclusive with precision_tolerance.
+        skip_curved_entities: If True, skip CIRCLE and ARC entities during edge
+            extraction. Default False.
+        min_line_length: Skip LINE entities shorter than this threshold (drawing units).
+            Default 0.0 (no filtering).
 
     Returns:
         List of Polygon objects (coordinate tuples) representing all visual regions.
@@ -767,7 +773,11 @@ def _extract_paint_bucket_regions(
         GeometryAbortedError: If abort_event is set during processing.
     """
     t_start = time.perf_counter()
-    edges = _extract_all_edges(block_def)
+    edges = _extract_all_edges(
+        block_def,
+        skip_curved_entities=skip_curved_entities,
+        min_line_length=min_line_length,
+    )
     t_edges = time.perf_counter()
     if t_edges - t_start > 0.2:
         logger.debug(f"Edge extraction: {t_edges - t_start:.2f}s ({len(edges)} edges)")
@@ -1172,6 +1182,9 @@ def _detect_content_zone(
     gap_bridge_tolerance: float = 0.0,
     min_area_filter: float = 0.0,
     min_side_filter: float = 0.0,
+    skip_curved_entities: bool = False,
+    min_line_length: float = 0.0,
+    curved_filter_enabled: bool = False,
     *,
     polygon_count_threshold: int = POLYGON_COUNT_THRESHOLD,
     line_segment_threshold: int = LINE_SEGMENT_THRESHOLD,
@@ -1217,6 +1230,12 @@ def _detect_content_zone(
         min_side_filter: Minimum shortest side length threshold. Polygons with
             shortest straight side less than this value are filtered out.
             Default 0.0 (no filtering).
+        skip_curved_entities: If True, skip CIRCLE and ARC entities during edge
+            extraction. Default False (pre-filter).
+        min_line_length: Skip LINE entities shorter than this threshold during edge
+            extraction. Default 0.0 (pre-filter).
+        curved_filter_enabled: If True, filter out polygons that contain curved edges
+            (detected via vertex analysis). Default False (post-filter).
         polygon_count_threshold: Maximum polygons for net area calculation.
             Blocks exceeding this skip content zone detection.
             Default: POLYGON_COUNT_THRESHOLD (500)
@@ -1270,7 +1289,12 @@ def _detect_content_zone(
     # Use paint-bucket algorithm for accurate region detection
     t0 = time.perf_counter()
     all_shapes = _extract_paint_bucket_regions(
-        block_def, abort_event, precision_tolerance, gap_bridge_tolerance
+        block_def,
+        abort_event,
+        precision_tolerance,
+        gap_bridge_tolerance,
+        skip_curved_entities,
+        min_line_length,
     )
     t1 = time.perf_counter()
     original_polygon_count = len(all_shapes)
@@ -1280,6 +1304,17 @@ def _detect_content_zone(
             f"({original_polygon_count} polygons)"
         )
     logger.debug(f"[{block_name}] Found {original_polygon_count} paint-bucket regions")
+
+    # Post-filter: Curved lines filter (before side filter for efficiency)
+    if curved_filter_enabled:
+        pre_curved_count = len(all_shapes)
+        all_shapes = [
+            s for s in all_shapes
+            if not _polygon_has_curved_edges(s)
+        ]
+        logger.debug(
+            f"[{block_name}] Curved filter: {pre_curved_count} -> {len(all_shapes)} polygons"
+        )
 
     # Step 1: Early side filter (uses gross geometry)
     # Applied BEFORE net area calculation for efficiency
