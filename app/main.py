@@ -26,12 +26,6 @@ from core.constants import (
     DEFAULT_GAP_CLOSURE_TOLERANCE,
     DEFAULT_MIN_AREA_FILTER,
     DEFAULT_MIN_SIDE_FILTER,
-    GAP_BRIDGE_MAX,
-    GAP_BRIDGE_MIN,
-    MIN_AREA_FILTER_MAX,
-    MIN_AREA_FILTER_MIN,
-    MIN_SIDE_FILTER_MAX,
-    MIN_SIDE_FILTER_MIN,
     MSG_ABORTED,
     MSG_ABORTING,
     MSG_ERROR_FILE_NOT_FOUND,
@@ -40,14 +34,13 @@ from core.constants import (
     MSG_PROCESSING,
     MSG_SELECT_FILE,
     MSG_SUCCESS,
-    PRECISION_FIX_MAX,
-    PRECISION_FIX_MIN,
     UNIT_SELECTION_OPTIONS,
 )
 from core.excel_writer import write_excel
 from core.extractor import ExtractionAbortedError, extract_blocks
 from core.geometry import GeometryAbortedError
 from core.logger import create_debug_file_handler, create_queue_handler, setup_logger
+from core.settings import SettingsManager
 
 
 # Set CustomTkinter appearance
@@ -64,6 +57,14 @@ class DXFExtractorApp(ctk.CTk):
         # Initialize logger
         self.logger: logging.Logger = setup_logger(__name__)
         self.logger.info("DXF Block Extractor application started")
+
+        # Initialize settings manager and load persisted settings
+        self.settings = SettingsManager()
+        settings_loaded = self.settings.load()
+        if settings_loaded:
+            self.logger.info("Loaded settings from config file")
+        else:
+            self.logger.debug("Using default settings (no config file found)")
 
         # Window configuration
         self.title("DXF Block Extractor")
@@ -83,22 +84,32 @@ class DXFExtractorApp(ctk.CTk):
 
         # Unit selection, precision fix, and gap bridge settings
         self.unit_selection_var = ctk.StringVar(value="DXF/DWG")
-        self.precision_fix_var = ctk.BooleanVar(value=True)
+        self.precision_fix_var = ctk.BooleanVar(
+            value=self.settings.get("precision_fix_enabled")
+        )
         self.precision_fix_amount_var = ctk.StringVar(value="3.0")
-        self.gap_bridge_var = ctk.BooleanVar(value=False)
+        self.gap_bridge_var = ctk.BooleanVar(
+            value=self.settings.get("gap_bridge_enabled")
+        )
         self.gap_bridge_amount_var = ctk.StringVar(value="3.0")
 
         # Min Area Filter settings
-        self.min_area_filter_var = ctk.BooleanVar(value=False)
+        self.min_area_filter_var = ctk.BooleanVar(
+            value=self.settings.get("min_area_filter_enabled")
+        )
         self.min_area_filter_amount_var = ctk.StringVar(value="100000.0")
 
         # Min Side Filter settings
-        self.min_side_filter_var = ctk.BooleanVar(value=False)
+        self.min_side_filter_var = ctk.BooleanVar(
+            value=self.settings.get("min_side_filter_enabled")
+        )
         self.min_side_filter_amount_var = ctk.StringVar(value="10.0")
 
         # Log file generation settings
-        self.log_file_var = ctk.BooleanVar(value=False)  # Default: no log file
-        self.file_log_level_var = ctk.StringVar(value="DEBUG")
+        self.log_file_var = ctk.BooleanVar(value=self.settings.get("generate_log_file"))
+        self.file_log_level_var = ctk.StringVar(
+            value=self.settings.get("file_log_level")
+        )
 
         # Create UI
         self._create_widgets()
@@ -158,6 +169,15 @@ class DXFExtractorApp(ctk.CTk):
             state="disabled",
         )
         self.open_folder_button.pack(side="left", padx=(10, 0))
+
+        # Settings button
+        self.settings_button = ctk.CTkButton(
+            button_frame,
+            text="Settings",
+            width=80,
+            command=self._open_advanced_settings,
+        )
+        self.settings_button.pack(side="left", padx=(10, 0))
 
         # Abort button (initially hidden - shown during extraction)
         self.abort_button = ctk.CTkButton(
@@ -400,6 +420,28 @@ class DXFExtractorApp(ctk.CTk):
         )
         self.log_text.pack(fill="both", expand=True, padx=5, pady=5)
 
+        # Sync entry widget states with initial checkbox values
+        if self.precision_fix_var.get():
+            self.precision_fix_entry.configure(state="normal")
+        else:
+            self.precision_fix_entry.configure(state="disabled")
+
+        if self.gap_bridge_var.get():
+            self.gap_bridge_entry.configure(state="normal")
+        # gap_bridge_entry is already disabled by default in widget creation
+
+        if self.min_area_filter_var.get():
+            self.min_area_filter_entry.configure(state="normal")
+        # min_area_filter_entry is already disabled by default
+
+        if self.min_side_filter_var.get():
+            self.min_side_filter_entry.configure(state="normal")
+        # min_side_filter_entry is already disabled by default
+
+        if self.log_file_var.get():
+            self.file_log_level_menu.configure(state="normal")
+        # file_log_level_menu is already disabled by default
+
     def _browse_file(self) -> None:
         """Handle browse button click - open file dialog."""
         self.logger.info("User clicked Browse button")
@@ -452,6 +494,7 @@ class DXFExtractorApp(ctk.CTk):
         self.browse_button.pack_forget()
         self.extract_button.pack_forget()
         self.open_folder_button.pack_forget()
+        self.settings_button.pack_forget()  # Hide settings button during extraction
         self.abort_button.pack(side="left", padx=10)
 
     def _abort_extraction(self) -> None:
@@ -469,6 +512,7 @@ class DXFExtractorApp(ctk.CTk):
         self.browse_button.pack(side="left", padx=(0, 10))
         self.extract_button.pack(side="left")
         self.open_folder_button.pack(side="left", padx=(10, 0))
+        self.settings_button.pack(side="left", padx=(10, 0))  # Restore settings button
         self.abort_event = None
 
     def _extraction_worker(self) -> None:
@@ -686,6 +730,13 @@ class DXFExtractorApp(ctk.CTk):
             # Don't show error to user - this is a convenience feature
             self.logger.warning(f"Failed to open output folder: {str(e)}")
 
+    def _open_advanced_settings(self) -> None:
+        """Open the Advanced Settings window.
+
+        Currently a placeholder - will be implemented in Unit 6 (C2).
+        """
+        self.logger.info("Advanced Settings not yet implemented")
+
     def _poll_log_queue(self) -> None:
         """Poll log queue and update text widget."""
         level_filter = getattr(logging, self.log_level_var.get())
@@ -735,6 +786,9 @@ class DXFExtractorApp(ctk.CTk):
         else:
             self.precision_fix_entry.configure(state="disabled")
 
+        # Sync settings to manager and save
+        self._sync_settings_to_manager()
+
     def _update_precision_fix_default(self) -> None:
         """Update precision fix amount to default for selected unit."""
         selection = self.unit_selection_var.get()
@@ -762,6 +816,9 @@ class DXFExtractorApp(ctk.CTk):
         else:
             self.gap_bridge_entry.configure(state="disabled")
 
+        # Sync settings to manager and save
+        self._sync_settings_to_manager()
+
     def _update_gap_bridge_default(self) -> None:
         """Update gap bridge amount to default for selected unit."""
         selection = self.unit_selection_var.get()
@@ -783,6 +840,9 @@ class DXFExtractorApp(ctk.CTk):
         else:
             self.min_area_filter_entry.configure(state="disabled")
 
+        # Sync settings to manager and save
+        self._sync_settings_to_manager()
+
     def _on_min_side_filter_toggle(self) -> None:
         """Handle min side filter checkbox toggle."""
         enabled = self.min_side_filter_var.get()
@@ -793,6 +853,9 @@ class DXFExtractorApp(ctk.CTk):
             self._update_min_side_filter_default()
         else:
             self.min_side_filter_entry.configure(state="disabled")
+
+        # Sync settings to manager and save
+        self._sync_settings_to_manager()
 
     def _update_min_area_filter_default(self) -> None:
         """Update min area filter amount to default for selected unit."""
@@ -824,10 +887,11 @@ class DXFExtractorApp(ctk.CTk):
             return None
         try:
             amount = float(self.gap_bridge_amount_var.get())
-            if GAP_BRIDGE_MIN <= amount <= GAP_BRIDGE_MAX:
+            is_valid, error_msg = self.settings.validate("gap_bridge_amount", amount)
+            if is_valid:
                 return amount
             else:
-                self.logger.warning(f"Gap bridge amount {amount} out of range")
+                self.logger.warning(f"Gap bridge amount validation failed: {error_msg}")
                 return None
         except ValueError:
             self.logger.warning("Invalid gap bridge amount")
@@ -839,10 +903,13 @@ class DXFExtractorApp(ctk.CTk):
             return None
         try:
             amount = float(self.precision_fix_amount_var.get())
-            if PRECISION_FIX_MIN <= amount <= PRECISION_FIX_MAX:
+            is_valid, error_msg = self.settings.validate("precision_fix_amount", amount)
+            if is_valid:
                 return amount
             else:
-                self.logger.warning(f"Precision fix amount {amount} out of range")
+                self.logger.warning(
+                    f"Precision fix amount validation failed: {error_msg}"
+                )
                 return None
         except ValueError:
             self.logger.warning("Invalid precision fix amount")
@@ -854,10 +921,15 @@ class DXFExtractorApp(ctk.CTk):
             return None
         try:
             amount = float(self.min_area_filter_amount_var.get())
-            if MIN_AREA_FILTER_MIN <= amount <= MIN_AREA_FILTER_MAX:
+            is_valid, error_msg = self.settings.validate(
+                "min_area_filter_amount", amount
+            )
+            if is_valid:
                 return amount
             else:
-                self.logger.warning(f"Min area filter amount {amount} out of range")
+                self.logger.warning(
+                    f"Min area filter amount validation failed: {error_msg}"
+                )
                 return None
         except ValueError:
             self.logger.warning("Invalid min area filter amount")
@@ -869,10 +941,15 @@ class DXFExtractorApp(ctk.CTk):
             return None
         try:
             amount = float(self.min_side_filter_amount_var.get())
-            if MIN_SIDE_FILTER_MIN <= amount <= MIN_SIDE_FILTER_MAX:
+            is_valid, error_msg = self.settings.validate(
+                "min_side_filter_amount", amount
+            )
+            if is_valid:
                 return amount
             else:
-                self.logger.warning(f"Min side filter amount {amount} out of range")
+                self.logger.warning(
+                    f"Min side filter amount validation failed: {error_msg}"
+                )
                 return None
         except ValueError:
             self.logger.warning("Invalid min side filter amount")
@@ -892,6 +969,28 @@ class DXFExtractorApp(ctk.CTk):
             self.file_log_level_menu.configure(state="normal")
         else:
             self.file_log_level_menu.configure(state="disabled")
+
+        # Sync settings to manager and save
+        self._sync_settings_to_manager()
+
+    def _sync_settings_to_manager(self) -> None:
+        """Synchronize current GUI settings to SettingsManager.
+
+        Called when filter settings change to persist user preferences.
+        """
+        # Sync filter boolean flags
+        self.settings.set("precision_fix_enabled", self.precision_fix_var.get())
+        self.settings.set("gap_bridge_enabled", self.gap_bridge_var.get())
+        self.settings.set("min_area_filter_enabled", self.min_area_filter_var.get())
+        self.settings.set("min_side_filter_enabled", self.min_side_filter_var.get())
+
+        # Sync logging settings
+        self.settings.set("generate_log_file", self.log_file_var.get())
+        self.settings.set("file_log_level", self.file_log_level_var.get())
+
+        # Save to disk
+        self.settings.save()
+        self.logger.debug("Settings synchronized and saved")
 
     def destroy(self) -> None:
         """Override destroy to clean up queue handler and log application close."""
