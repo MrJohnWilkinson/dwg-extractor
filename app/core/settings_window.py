@@ -580,7 +580,67 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
         )
         info_label.pack(side="left", fill="x", expand=True, pady=10, padx=(0, 12))
 
-        # Display current filter values (read-only)
+        # PRE-FILTERS subsection
+        prefilter_label = ctk.CTkLabel(
+            scroll_frame,
+            text="Pre-Filters",
+            font=ctk.CTkFont(size=12, weight="bold"),
+        )
+        prefilter_label.pack(anchor="w", pady=(10, 5))
+
+        prefilter_desc = ctk.CTkLabel(
+            scroll_frame,
+            text="Applied before polygon detection to reduce processing",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        prefilter_desc.pack(anchor="w", pady=(0, 10))
+
+        # Pre-filter setting rows
+        self._create_setting_row(
+            scroll_frame,
+            "skip_curved_entities",
+            "Skip Curved Entities",
+            "Excludes CIRCLE and ARC entities from edge extraction. "
+            "Reduces polygon detection workload for drawings with many curves.",
+            readonly=True,
+        )
+
+        self._create_setting_row(
+            scroll_frame,
+            "min_line_length_filter_enabled",
+            "Min Line Length Filter",
+            "Filters out LINE entities shorter than the threshold. "
+            "Useful for removing small detail lines.",
+            readonly=True,
+        )
+
+        self._create_setting_row(
+            scroll_frame,
+            "min_line_length_filter_amount",
+            "Min Line Length Amount",
+            "Minimum LINE entity length in drawing units. "
+            "Lines shorter than this are excluded.",
+            readonly=True,
+        )
+
+        # POST-FILTERS subsection
+        postfilter_label = ctk.CTkLabel(
+            scroll_frame,
+            text="Post-Filters",
+            font=ctk.CTkFont(size=12, weight="bold"),
+        )
+        postfilter_label.pack(anchor="w", pady=(15, 5))
+
+        postfilter_desc = ctk.CTkLabel(
+            scroll_frame,
+            text="Applied after polygon detection to validate shapes",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        postfilter_desc.pack(anchor="w", pady=(0, 10))
+
+        # Post-filter setting rows
         self._create_setting_row(
             scroll_frame,
             "precision_fix_enabled",
@@ -653,6 +713,16 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
             readonly=True,
         )
 
+        self._create_setting_row(
+            scroll_frame,
+            "curved_filter_enabled",
+            "Curved Lines Filter",
+            "Excludes polygons containing curved edges (arcs, circles). "
+            "Useful for focusing on rectangular shapes only.",
+            readonly=True,
+        )
+
+        # Unit override (standalone - applies to both filter types)
         self._create_setting_row(
             scroll_frame,
             "unit_override",
