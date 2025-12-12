@@ -1055,9 +1055,9 @@ class DXFExtractorApp(ctk.CTk):
         level = getattr(logging, value)
 
         # Set source logger levels to enable/disable DEBUG capture
-        logging.getLogger("app.core.extractor").setLevel(level)
-        logging.getLogger("app.core.geometry").setLevel(level)
-        logging.getLogger("app.main").setLevel(level)
+        logging.getLogger("core.extractor").setLevel(level)
+        logging.getLogger("core.geometry").setLevel(level)
+        logging.getLogger("__main__").setLevel(level)
 
     def _on_log_file_toggle(self) -> None:
         """Handle log file checkbox toggle - enable/disable level dropdown."""
