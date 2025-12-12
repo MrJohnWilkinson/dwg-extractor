@@ -331,10 +331,10 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
             entry.pack()
             entry.var = var
 
-            # Bind validation on focus out
-            entry.bind(
-                "<FocusOut>",
-                lambda e, k=setting_key, w=entry: self._validate_entry(k, w),
+            # Real-time validation using trace_add (replaces FocusOut binding)
+            var.trace_add(
+                "write",
+                lambda *_, k=setting_key, w=entry: self._validate_entry(k, w),
             )
 
             self._entry_widgets[setting_key] = entry
@@ -540,16 +540,35 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
         # Section header
         self._create_section_header(scroll_frame, "Filter Settings", "filters")
 
-        # Info label - filters are controlled from main window
-        info_label = ctk.CTkLabel(
+        # PROMINENT INFO BANNER - styled frame with info indicator
+        info_frame = ctk.CTkFrame(
             scroll_frame,
-            text="Note: Filter settings are controlled from the main window. "
-            "This tab shows current values for reference.",
-            font=ctk.CTkFont(size=10),
-            text_color="gray",
-            wraplength=550,
+            fg_color=("gray85", "gray25"),  # Subtle but distinct background
+            corner_radius=8,
         )
-        info_label.pack(anchor="w", pady=(0, 10))
+        info_frame.pack(fill="x", pady=(0, 15), padx=5)
+
+        # Info icon/indicator
+        info_indicator = ctk.CTkLabel(
+            info_frame,
+            text="i",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            text_color=("gray40", "gray70"),
+            width=24,
+        )
+        info_indicator.pack(side="left", padx=(12, 8), pady=10)
+
+        # Info text
+        info_label = ctk.CTkLabel(
+            info_frame,
+            text="Filter settings are configured in the main window.\n"
+            "This tab displays current values for reference only.",
+            font=ctk.CTkFont(size=11),
+            text_color=("gray30", "gray80"),
+            anchor="w",
+            justify="left",
+        )
+        info_label.pack(side="left", fill="x", expand=True, pady=10, padx=(0, 12))
 
         # Display current filter values (read-only)
         self._create_setting_row(
