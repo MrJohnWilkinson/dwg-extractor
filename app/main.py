@@ -200,8 +200,8 @@ class DXFExtractorApp(ctk.CTk):
         # Settings button
         self.settings_button = ctk.CTkButton(
             button_frame,
-            text="Settings",
-            width=80,
+            text="Advanced Settings",
+            width=120,
             command=self._open_advanced_settings,
         )
         self.settings_button.pack(side="left", padx=(10, 0))

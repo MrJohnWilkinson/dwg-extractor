@@ -92,6 +92,7 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
         self.title("Advanced Settings")
         self.geometry("650x600")
         self.resizable(True, True)
+        self.minsize(650, 600)  # Prevent window from being too small
 
         # Make modal
         self.transient(parent)
@@ -162,8 +163,8 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
         # Left side - Save as Default
         self.save_default_button = ctk.CTkButton(
             button_frame,
-            text="Save as Default",
-            width=120,
+            text="Save All as Default",
+            width=140,
             command=self._on_save_as_default,
         )
         self.save_default_button.pack(side="left")
@@ -171,8 +172,8 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
         # Right side - Cancel and Apply
         self.apply_button = ctk.CTkButton(
             button_frame,
-            text="Apply",
-            width=100,
+            text="Apply All Changes",
+            width=130,
             command=self._on_apply,
         )
         self.apply_button.pack(side="right")
@@ -977,7 +978,8 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
             # Show brief confirmation
             self.save_default_button.configure(text="Saved!")
             self.after(
-                1500, lambda: self.save_default_button.configure(text="Save as Default")
+                1500,
+                lambda: self.save_default_button.configure(text="Save All as Default"),
             )
         else:
             logger.error("Failed to save settings")
