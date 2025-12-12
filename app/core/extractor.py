@@ -13,6 +13,7 @@ Usage:
 
 import re
 import threading
+import time
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -1228,6 +1229,9 @@ def extract_blocks(
             else:
                 effective_name = block_name
 
+            # Start timing for this block
+            block_start = time.perf_counter()
+
             # Count entities
             entity_count = sum(1 for _ in block_def)
             block_entities[effective_name] = entity_count
@@ -1289,6 +1293,13 @@ def extract_blocks(
                 entity_count_threshold=effective_entity_threshold,
             )
             block_content_zone_data[effective_name] = content_zone
+
+            # Log timing for slow blocks (> 1 second)
+            block_duration = time.perf_counter() - block_start
+            if block_duration > 1.0:
+                logger.info(
+                    f"[TIMING] Block '{effective_name}' completed in {block_duration:.1f}s"
+                )
 
         logger.info(f"Analyzed {len(block_entities)} block definitions")
         logger.info(

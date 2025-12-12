@@ -21,6 +21,7 @@ Usage:
 
 import math
 import threading
+import time
 from typing import Any
 
 from ezdxf.layouts import BlockLayout
@@ -741,7 +742,11 @@ def _extract_paint_bucket_regions(
     Raises:
         GeometryAbortedError: If abort_event is set during processing.
     """
+    t_start = time.perf_counter()
     edges = _extract_all_edges(block_def)
+    t_edges = time.perf_counter()
+    if t_edges - t_start > 0.2:
+        logger.debug(f"Edge extraction: {t_edges - t_start:.2f}s ({len(edges)} edges)")
 
     if not edges:
         return []
@@ -752,6 +757,7 @@ def _extract_paint_bucket_regions(
     # Precision Fix: snap individual edge coordinates to grid BEFORE union
     # Fixes floating-point artifacts at line endpoints
     # Note: Mutually exclusive with gap bridge (GUI enforces this)
+    t_snap_start = time.perf_counter()
     if precision_tolerance > 0:
         edges = [_snap_linestring_coords(e, precision_tolerance) for e in edges]
         logger.debug(f"Applied precision fix snap: tolerance={precision_tolerance}")
@@ -763,14 +769,25 @@ def _extract_paint_bucket_regions(
         all_edges_geom = unary_union(edges)
         edges = [snap(e, all_edges_geom, gap_bridge_tolerance) for e in edges]
         logger.debug(f"Applied gap bridge snap: tolerance={gap_bridge_tolerance}")
+    t_snap = time.perf_counter()
+    if precision_tolerance > 0 or gap_bridge_tolerance > 0:
+        if t_snap - t_snap_start > 0.2:
+            logger.debug(f"Edge snapping: {t_snap - t_snap_start:.2f}s")
 
     # Single authoritative intersection computation via unary_union
     merged = unary_union(edges)
+    t_union = time.perf_counter()
+    if t_union - t_snap > 0.2:
+        logger.debug(f"Unary union: {t_union - t_snap:.2f}s")
+
     if merged.is_empty:
         return []
 
     line_segments = list(merged.geoms) if hasattr(merged, "geoms") else [merged]
     polygons = list(polygonize(line_segments))
+    t_poly = time.perf_counter()
+    if t_poly - t_union > 0.2:
+        logger.debug(f"Polygonize: {t_poly - t_union:.2f}s ({len(polygons)} polygons)")
 
     # Convert to internal Polygon format
     result: list[Polygon] = []
@@ -1153,14 +1170,22 @@ def _detect_content_zone(
         )
 
     # Use paint-bucket algorithm for accurate region detection
+    t0 = time.perf_counter()
     all_shapes = _extract_paint_bucket_regions(
         block_def, abort_event, precision_tolerance, gap_bridge_tolerance
     )
+    t1 = time.perf_counter()
     original_polygon_count = len(all_shapes)
+    if t1 - t0 > 0.5:
+        logger.info(
+            f"[{block_name}] Paint bucket regions: {t1 - t0:.2f}s "
+            f"({original_polygon_count} polygons)"
+        )
     logger.debug(f"[{block_name}] Found {original_polygon_count} paint-bucket regions")
 
     # Step 1: Early side filter (uses gross geometry)
     # Applied BEFORE net area calculation for efficiency
+    t2 = time.perf_counter()
     if min_side_filter > 0:
         pre_side_count = len(all_shapes)
         all_shapes = [
@@ -1172,6 +1197,9 @@ def _detect_content_zone(
             f"[{block_name}] Side filter: {pre_side_count} -> {len(all_shapes)} polygons "
             f"(min_side={min_side_filter})"
         )
+    t3 = time.perf_counter()
+    if min_side_filter > 0 and t3 - t2 > 0.5:
+        logger.info(f"[{block_name}] Side filtering: {t3 - t2:.2f}s")
 
     if len(all_shapes) == 0:
         logger.debug(f"[{block_name}] No closed shapes found")
@@ -1206,10 +1234,18 @@ def _detect_content_zone(
         )
 
     # Calculate net areas (O(n^2) but bounded by threshold)
+    t4 = time.perf_counter()
     net_areas = _calculate_net_areas(all_shapes, abort_event)
+    t5 = time.perf_counter()
+    if t5 - t4 > 0.5:
+        logger.info(
+            f"[{block_name}] Net area calculation: {t5 - t4:.2f}s "
+            f"({len(all_shapes)} polygons)"
+        )
 
     # Step 2: Filter by NET area (post-calculation)
     # Applied AFTER net area calculation to correctly handle nested polygons
+    t6 = time.perf_counter()
     if min_area_filter > 0:
         pre_area_count = len(net_areas)
         net_areas = [
@@ -1221,6 +1257,9 @@ def _detect_content_zone(
             f"[{block_name}] Net area filter: {pre_area_count} -> {len(net_areas)} polygons "
             f"(min_area={min_area_filter})"
         )
+    t7 = time.perf_counter()
+    if min_area_filter > 0 and t7 - t6 > 0.5:
+        logger.info(f"[{block_name}] Area filtering: {t7 - t6:.2f}s")
 
     if not net_areas:
         logger.debug(f"[{block_name}] No content zone detected (all polygons filtered)")
