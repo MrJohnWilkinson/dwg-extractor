@@ -1216,7 +1216,9 @@ class TestExtractor:
         assert "block_counts" in result
         assert len(result["block_counts"]) == 3
 
-    def test_timing_note_logged_for_slow_blocks(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_timing_note_logged_for_slow_blocks(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test that [TIMING] note appears for blocks that take >3 seconds."""
         import logging
         from unittest.mock import patch
