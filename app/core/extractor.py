@@ -55,6 +55,9 @@ from .types import (
 
 logger = setup_logger(__name__)
 
+# Threshold for logging slow block processing (seconds)
+SLOW_BLOCK_THRESHOLD_SECONDS = 3.0
+
 
 class ExtractionAbortedError(Exception):
     """Raised when extraction is aborted by user."""
@@ -1298,6 +1301,10 @@ def extract_blocks(
 
             # Log block processing end with timing
             block_duration = time.perf_counter() - block_start
+            if block_duration > SLOW_BLOCK_THRESHOLD_SECONDS:
+                logger.info(
+                    f"[TIMING] Block '{effective_name}' took {block_duration:.3f}s (>3s threshold)"
+                )
             logger.info(f"[BLOCK END] '{effective_name}' ({block_duration:.3f}s)")
 
         logger.info(f"Analyzed {len(block_entities)} block definitions")

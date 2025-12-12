@@ -1215,3 +1215,79 @@ class TestExtractor:
         assert isinstance(result, dict)
         assert "block_counts" in result
         assert len(result["block_counts"]) == 3
+
+    def test_timing_note_logged_for_slow_blocks(self, caplog: pytest.LogCaptureFixture) -> None:
+        """Test that [TIMING] note appears for blocks that take >3 seconds."""
+        import logging
+        from unittest.mock import patch
+
+        caplog.set_level(logging.INFO)
+
+        # Mock time.perf_counter to simulate a 4-second block processing time
+        # First call returns 0.0 (start), second call returns 4.0 (end)
+        call_count = [0]
+
+        def mock_perf_counter() -> float:
+            call_count[0] += 1
+            # Alternate between returning start and end times
+            # Each block has start/end pair, so we need to track which call we're on
+            # Odd calls (1, 3, 5...) = start time (return 0.0)
+            # Even calls (2, 4, 6...) = end time (return 4.0 for slow block)
+            if call_count[0] % 2 == 1:
+                return 0.0
+            else:
+                return 4.0  # 4 seconds elapsed (>3s threshold)
+
+        with patch("core.extractor.time.perf_counter", side_effect=mock_perf_counter):
+            extract_blocks("app/tests/assets/sample_drawing.dxf")
+
+        # Verify [TIMING] message appears in logs
+        timing_logs = [r for r in caplog.records if "[TIMING]" in r.message]
+        assert len(timing_logs) > 0, "Expected [TIMING] log messages for slow blocks"
+
+        # Verify [TIMING] message contains expected elements
+        for timing_log in timing_logs:
+            assert "took" in timing_log.message
+            assert ">3s threshold" in timing_log.message
+
+        # Verify [TIMING] appears before [BLOCK END] in log sequence
+        log_messages = [r.message for r in caplog.records]
+        for i, msg in enumerate(log_messages):
+            if "[TIMING]" in msg:
+                # Find the next [BLOCK END] message
+                remaining_messages = log_messages[i + 1 :]
+                block_end_found = any("[BLOCK END]" in m for m in remaining_messages)
+                assert block_end_found, "[TIMING] should appear before [BLOCK END]"
+
+    def test_timing_note_not_logged_for_fast_blocks(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test that [TIMING] note does NOT appear for blocks that take <3 seconds."""
+        import logging
+        from unittest.mock import patch
+
+        caplog.set_level(logging.INFO)
+
+        # Mock time.perf_counter to simulate fast block processing (<3 seconds)
+        call_count = [0]
+
+        def mock_perf_counter() -> float:
+            call_count[0] += 1
+            # Odd calls = start time, even calls = end time
+            if call_count[0] % 2 == 1:
+                return 0.0
+            else:
+                return 1.0  # 1 second elapsed (<3s threshold)
+
+        with patch("core.extractor.time.perf_counter", side_effect=mock_perf_counter):
+            extract_blocks("app/tests/assets/sample_drawing.dxf")
+
+        # Verify no [TIMING] messages appear in logs
+        timing_logs = [r for r in caplog.records if "[TIMING]" in r.message]
+        assert len(timing_logs) == 0, (
+            "Expected no [TIMING] log messages for fast blocks"
+        )
+
+        # Verify [BLOCK END] messages still appear
+        block_end_logs = [r for r in caplog.records if "[BLOCK END]" in r.message]
+        assert len(block_end_logs) > 0, "Expected [BLOCK END] log messages"
