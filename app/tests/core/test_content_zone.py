@@ -281,7 +281,7 @@ class TestEntityCountThreshold:
     """Test suite for entity count threshold skip behavior (Unit 1)."""
 
     def test_entity_count_threshold_skip(self) -> None:
-        """Verify blocks with >1000 entities are skipped and return empty ContentZoneData."""
+        """Verify blocks with >30 entities are skipped and return empty ContentZoneData."""
         doc = ezdxf.readfile("app/tests/assets/high_entity_count_test.dxf")
         block = doc.blocks.get("HIGH_ENTITY_COUNT")
 
@@ -301,7 +301,7 @@ class TestEntityCountThreshold:
         assert result["polygon_count"] == 0
 
     def test_entity_count_threshold_not_skip(self) -> None:
-        """Verify blocks with <1000 entities proceed with detection."""
+        """Verify blocks with <30 entities proceed with detection."""
         doc = ezdxf.readfile("app/tests/assets/high_entity_count_test.dxf")
         block = doc.blocks.get("LOW_ENTITY_COUNT")
 
@@ -322,7 +322,7 @@ class TestEntityCountThreshold:
         assert isinstance(result["content_zone_detected"], bool)
 
     def test_entity_count_exactly_threshold(self) -> None:
-        """Verify blocks with exactly 1000 entities are NOT skipped (> not >=)."""
+        """Verify blocks with exactly 30 entities are NOT skipped (> not >=)."""
         doc = ezdxf.readfile("app/tests/assets/high_entity_count_test.dxf")
         block = doc.blocks.get("EXACTLY_ENTITY_THRESHOLD")
 
@@ -341,11 +341,11 @@ class TestEntityCountThreshold:
         assert isinstance(result["content_zone_detected"], bool)
 
     def test_entity_count_just_over_threshold(self) -> None:
-        """Verify blocks with 1001 entities ARE skipped (first to be skipped)."""
+        """Verify blocks with 31 entities ARE skipped (first to be skipped)."""
         doc = ezdxf.readfile("app/tests/assets/high_entity_count_test.dxf")
         block = doc.blocks.get("JUST_OVER_ENTITY_THRESHOLD")
 
-        # Verify entity count is exactly 1001
+        # Verify entity count is exactly 31
         entity_count = sum(1 for _ in block)
         assert entity_count == ENTITY_COUNT_THRESHOLD + 1
 
@@ -850,8 +850,8 @@ class TestContentZoneDetection:
         """Properly handle abort event."""
         doc = ezdxf.new()
         block = doc.blocks.new(name="TEST")
-        # Create multiple polygons to trigger abort check
-        for i in range(15):
+        # Create a few polygons (under edge threshold) to trigger abort check
+        for i in range(5):
             x = i * 20
             block.add_lwpolyline(
                 [(x, 0), (x + 15, 0), (x + 15, 15), (x, 15)], close=True
@@ -1605,10 +1605,10 @@ class TestCurvedFilterIntegration:
         doc = ezdxf.new()
         block = doc.blocks.new(name="CURVED_DISABLED")
 
-        # Create a circle approximation (many points on curve)
+        # Create a circle approximation (12 points to stay under edge threshold)
         circle_points = [
-            (50 + 25 * m.cos(m.radians(i * 10)), 50 + 25 * m.sin(m.radians(i * 10)))
-            for i in range(36)
+            (50 + 25 * m.cos(m.radians(i * 30)), 50 + 25 * m.sin(m.radians(i * 30)))
+            for i in range(12)
         ]
         block.add_lwpolyline(circle_points, close=True)
 
@@ -1632,10 +1632,11 @@ class TestCurvedFilterIntegration:
         doc = ezdxf.new()
         block = doc.blocks.new(name="CURVED_ENABLED")
 
-        # Create a circle approximation (many points on curve) - will be filtered
+        # Create a circle approximation (24 points for proper curve detection)
+        # 15 degrees per segment ensures small angular deviations are detected
         circle_points = [
-            (50 + 25 * m.cos(m.radians(i * 10)), 50 + 25 * m.sin(m.radians(i * 10)))
-            for i in range(36)
+            (50 + 25 * m.cos(m.radians(i * 15)), 50 + 25 * m.sin(m.radians(i * 15)))
+            for i in range(24)
         ]
         block.add_lwpolyline(circle_points, close=True)
 
@@ -1682,16 +1683,16 @@ class TestCurvedFilterIntegration:
         assert result["filtered_polygon_count"] == 3
 
     def test_curved_filter_with_circle_approximation(self) -> None:
-        """Use a polygon approximating a circle (many vertices on curved path)."""
+        """Use a polygon approximating a circle (vertices on curved path)."""
         import math as m
 
         doc = ezdxf.new()
         block = doc.blocks.new(name="CIRCLE_APPROX")
 
-        # High-resolution circle approximation (72 points)
+        # Circle approximation with 16 points (under edge threshold of 30)
         circle_points = [
-            (100 + 50 * m.cos(m.radians(i * 5)), 100 + 50 * m.sin(m.radians(i * 5)))
-            for i in range(72)
+            (100 + 50 * m.cos(m.radians(i * 22.5)), 100 + 50 * m.sin(m.radians(i * 22.5)))
+            for i in range(16)
         ]
         block.add_lwpolyline(circle_points, close=True)
 
@@ -1720,10 +1721,10 @@ class TestCurvedFilterIntegration:
         # Small rectangle (25 sq units) - will be filtered by area
         block.add_lwpolyline([(110, 0), (115, 0), (115, 5), (110, 5)], close=True)
 
-        # Circle approximation - will be filtered by curved filter
+        # Circle approximation (18 points for curve detection) - will be filtered by curved filter
         circle_points = [
-            (200 + 30 * m.cos(m.radians(i * 10)), 50 + 30 * m.sin(m.radians(i * 10)))
-            for i in range(36)
+            (200 + 30 * m.cos(m.radians(i * 20)), 50 + 30 * m.sin(m.radians(i * 20)))
+            for i in range(18)
         ]
         block.add_lwpolyline(circle_points, close=True)
 
@@ -1742,36 +1743,32 @@ class TestCurvedFilterIntegration:
         assert result["polygon_count"] == 3
         assert result["filtered_polygon_count"] == 1
 
-    def test_curved_filter_all_filtered_returns_empty(self) -> None:
-        """Verify behavior when all polygons are filtered."""
+    def test_curved_filter_single_curved_all_filtered(self) -> None:
+        """Verify behavior when all polygons are filtered by curved filter."""
         import math as m
 
         doc = ezdxf.new()
-        block = doc.blocks.new(name="ALL_CURVED")
+        block = doc.blocks.new(name="SINGLE_CURVED")
 
-        # Only curved polygons
-        circle1_points = [
-            (50 + 25 * m.cos(m.radians(i * 10)), 50 + 25 * m.sin(m.radians(i * 10)))
-            for i in range(36)
+        # Single curved polygon (24 points with 15-degree segments for curve detection)
+        # 24 edges is under the threshold of 30
+        circle_points = [
+            (50 + 25 * m.cos(m.radians(i * 15)), 50 + 25 * m.sin(m.radians(i * 15)))
+            for i in range(24)
         ]
-        block.add_lwpolyline(circle1_points, close=True)
-
-        circle2_points = [
-            (150 + 30 * m.cos(m.radians(i * 10)), 50 + 30 * m.sin(m.radians(i * 10)))
-            for i in range(36)
-        ]
-        block.add_lwpolyline(circle2_points, close=True)
+        block.add_lwpolyline(circle_points, close=True)
 
         bbox = _get_block_bounding_box(block)
 
-        # All polygons should be filtered
+        # With curved_filter_enabled, the single curved polygon should be filtered
         result = _detect_content_zone(
             block, bbox, curved_filter_enabled=True
         )
 
+        # The curved polygon is filtered, leaving nothing
         assert result["content_zone_detected"] is False
-        assert result["polygon_count"] == 2  # Original count
-        assert result["filtered_polygon_count"] == 0  # All filtered
+        assert result["polygon_count"] == 1  # Original count
+        assert result["filtered_polygon_count"] == 0  # Filtered by curved filter
 
 
 class TestTiedShapeHandling:

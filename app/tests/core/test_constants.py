@@ -47,20 +47,20 @@ class TestContentZoneThresholds:
     """Tests for content zone detection threshold constants."""
 
     def test_polygon_threshold_reasonable(self) -> None:
-        """Threshold should be between 10 and 1000.
+        """Threshold should be between 1 and 10000.
 
-        With Shapely's efficient GEOS-based operations, the threshold can be
-        much higher than the original O(n^3) implementation. 500 is conservative.
+        Lower values improve performance by skipping complex blocks earlier.
+        Default of 30 provides aggressive early-exit.
         """
-        assert 10 <= POLYGON_COUNT_THRESHOLD <= 1000
+        assert 1 <= POLYGON_COUNT_THRESHOLD <= 10000
 
     def test_line_threshold_reasonable(self) -> None:
-        """Threshold should be between 1000 and 10000.
+        """Threshold should be between 1 and 10000.
 
-        With Shapely's efficient GEOS-based polygonize(), the threshold can be
-        much higher than the original DFS implementation. 5000 is conservative.
+        Lower values improve performance by skipping complex blocks earlier.
+        Default of 30 provides aggressive early-exit.
         """
-        assert 1000 <= LINE_SEGMENT_THRESHOLD <= 10000
+        assert 1 <= LINE_SEGMENT_THRESHOLD <= 10000
 
 
 class TestContentZoneExcelColumns:
@@ -587,9 +587,9 @@ class TestSettingsDefaultConstants:
             DEFAULT_POLYGON_COUNT_THRESHOLD,
         )
 
-        assert DEFAULT_POLYGON_COUNT_THRESHOLD == 500
-        assert DEFAULT_LINE_SEGMENT_THRESHOLD == 5000
-        assert DEFAULT_ENTITY_COUNT_THRESHOLD == 1000
+        assert DEFAULT_POLYGON_COUNT_THRESHOLD == 30
+        assert DEFAULT_LINE_SEGMENT_THRESHOLD == 30
+        assert DEFAULT_ENTITY_COUNT_THRESHOLD == 30
 
     def test_precision_setting_defaults(self) -> None:
         """Test precision setting default values."""

@@ -166,23 +166,20 @@ MSG_ABORTED: str = "Extraction aborted"
 # Content Zone Detection Thresholds
 # Conservative limits for Shapely-based geometry operations
 
-POLYGON_COUNT_THRESHOLD: int = 500
+POLYGON_COUNT_THRESHOLD: int = 30
 """Maximum polygons for content zone net area calculation.
 Blocks with more polygons skip content zone detection.
-Rationale: With Shapely's efficient GEOS operations, can handle 500 polygons
-in reasonable time (previously 30 with O(n^3) manual calculation)."""
+Default of 30 provides aggressive early-exit for performance."""
 
-LINE_SEGMENT_THRESHOLD: int = 5000
+LINE_SEGMENT_THRESHOLD: int = 30
 """Maximum LINE segments for cycle detection using Shapely polygonize.
 Blocks with more LINE segments skip LINE cycle extraction.
-Rationale: With Shapely's GEOS-based polygonize(), can handle 5000 segments
-efficiently (previously 200 with DFS-based cycle detection)."""
+Default of 30 provides aggressive early-exit for performance."""
 
-ENTITY_COUNT_THRESHOLD: int = 1000
+ENTITY_COUNT_THRESHOLD: int = 30
 """Maximum entities in block for content zone detection.
 Blocks with more entities skip content zone entirely.
-Rationale: High entity counts strongly correlate with complex geometry
-that will exceed polygon thresholds anyway."""
+Default of 30 provides aggressive early-exit for performance."""
 
 # Arc Flattening Configuration
 ARC_FLATTENING_SAGITTA: float = 0.1
@@ -349,15 +346,15 @@ Small value ensures only true curved edges are detected."""
 # Note: POLYGON_COUNT_THRESHOLD, LINE_SEGMENT_THRESHOLD, ENTITY_COUNT_THRESHOLD
 # already exist above (lines 162-178). These DEFAULT_ versions are for the
 # settings system; the originals remain for backward compatibility.
-DEFAULT_POLYGON_COUNT_THRESHOLD: int = 500
-DEFAULT_LINE_SEGMENT_THRESHOLD: int = 5000
-DEFAULT_ENTITY_COUNT_THRESHOLD: int = 1000
+DEFAULT_POLYGON_COUNT_THRESHOLD: int = 30
+DEFAULT_LINE_SEGMENT_THRESHOLD: int = 30
+DEFAULT_ENTITY_COUNT_THRESHOLD: int = 30
 
-POLYGON_COUNT_THRESHOLD_MIN: int = 100
+POLYGON_COUNT_THRESHOLD_MIN: int = 1
 POLYGON_COUNT_THRESHOLD_MAX: int = 10000
-LINE_SEGMENT_THRESHOLD_MIN: int = 1000
-LINE_SEGMENT_THRESHOLD_MAX: int = 50000
-ENTITY_COUNT_THRESHOLD_MIN: int = 100
+LINE_SEGMENT_THRESHOLD_MIN: int = 1
+LINE_SEGMENT_THRESHOLD_MAX: int = 10000
+ENTITY_COUNT_THRESHOLD_MIN: int = 1
 ENTITY_COUNT_THRESHOLD_MAX: int = 10000
 
 # Precision setting defaults

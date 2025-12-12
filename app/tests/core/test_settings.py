@@ -82,8 +82,8 @@ class TestSettingsManagerGetSet:
         self, settings_manager: SettingsManager
     ) -> None:
         """Verify set returns False for invalid value."""
-        # Value below minimum
-        result = settings_manager.set("polygon_count_threshold", 10)
+        # Value below minimum (min is now 1)
+        result = settings_manager.set("polygon_count_threshold", 0)
         assert result is False
 
     def test_set_invalid_value_does_not_change_setting(
@@ -91,7 +91,7 @@ class TestSettingsManagerGetSet:
     ) -> None:
         """Verify invalid set does not change current value."""
         settings_manager.set("polygon_count_threshold", 600)
-        settings_manager.set("polygon_count_threshold", 10)  # Invalid, below min
+        settings_manager.set("polygon_count_threshold", 0)  # Invalid, below min
         assert settings_manager.get("polygon_count_threshold") == 600
 
     def test_set_none_for_optional_setting(
@@ -128,7 +128,7 @@ class TestSettingsManagerValidation:
 
     def test_validate_value_below_min(self, settings_manager: SettingsManager) -> None:
         """Verify validation fails for value below minimum."""
-        is_valid, error = settings_manager.validate("polygon_count_threshold", 50)
+        is_valid, error = settings_manager.validate("polygon_count_threshold", 0)
         assert is_valid is False
         assert f">= {POLYGON_COUNT_THRESHOLD_MIN}" in error
 
@@ -346,7 +346,7 @@ class TestSettingsManagerDictOperations:
         """Verify from_dict skips invalid values without raising."""
         settings_manager.from_dict(
             {
-                "polygon_count_threshold": 10,  # Below min
+                "polygon_count_threshold": 0,  # Below min (min is now 1)
                 "auto_open_excel": False,  # Valid
             }
         )
@@ -523,7 +523,7 @@ class TestSettingsManagerPersistence:
         settings_manager.config_path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "settings": {
-                "polygon_count_threshold": 10,  # Below min
+                "polygon_count_threshold": 0,  # Below min (min is now 1)
                 "auto_open_excel": False,  # Valid
             }
         }
