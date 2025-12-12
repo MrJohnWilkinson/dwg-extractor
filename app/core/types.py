@@ -297,6 +297,14 @@ class AppSettings(TypedDict, total=False):
     min_side_filter_enabled: bool
     min_side_filter_amount: float | None
 
+    # Pre-Filters (applied before polygon detection)
+    skip_curved_entities: bool
+    min_line_length_filter_enabled: bool
+    min_line_length_filter_amount: float | None
+
+    # Post-Filters (applied after polygon detection)
+    curved_filter_enabled: bool
+
     # Performance (early-exit thresholds only - no thread settings)
     polygon_count_threshold: int
     line_segment_threshold: int

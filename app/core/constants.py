@@ -310,6 +310,35 @@ MIN_SIDE_FILTER_MAX: float = 100000.0
 """Maximum side filter amount. Large value allows extreme cases while
 preventing overflow issues in calculations."""
 
+# Pre-Filter Constants: Skip Curved Entities
+DEFAULT_SKIP_CURVED_ENTITIES: bool = False
+"""Default for skip curved entities pre-filter.
+When True, excludes CIRCLE and ARC entities from edge extraction."""
+
+# Pre-Filter Constants: Min Line Length Filter
+DEFAULT_MIN_LINE_LENGTH_FILTER_ENABLED: bool = False
+"""Default for min line length filter enabled state.
+When True, excludes LINE entities below a length threshold."""
+
+DEFAULT_MIN_LINE_LENGTH_FILTER: float = 0.5
+"""Default minimum line length threshold in drawing units.
+Lines shorter than this are excluded from edge extraction."""
+
+MIN_LINE_LENGTH_FILTER_MIN: float = 0.0
+"""Minimum line length filter amount (0 = no line length filtering)."""
+
+MIN_LINE_LENGTH_FILTER_MAX: float = 100.0
+"""Maximum line length filter amount. Reasonable limit for CAD drawings."""
+
+# Post-Filter Constants: Curved Lines Filter
+DEFAULT_CURVED_FILTER_ENABLED: bool = False
+"""Default for curved filter enabled state.
+When True, excludes polygons containing curved edges after detection."""
+
+CURVED_FILTER_TOLERANCE: float = 0.01
+"""Tolerance for detecting curved edges in polygons.
+Small value ensures only true curved edges are detected."""
+
 # =============================================================================
 # GUI Settings Defaults and Validation Ranges
 # =============================================================================
@@ -419,6 +448,32 @@ SETTINGS_VALIDATION_REGISTRY: dict[str, "SettingValidation"] = {
         "max_value": MIN_SIDE_FILTER_MAX,
         "default": None,
         "unit_aware": True,
+    },
+    # Pre-Filters
+    "skip_curved_entities": {
+        "min_value": None,
+        "max_value": None,
+        "default": DEFAULT_SKIP_CURVED_ENTITIES,
+        "unit_aware": False,
+    },
+    "min_line_length_filter_enabled": {
+        "min_value": None,
+        "max_value": None,
+        "default": DEFAULT_MIN_LINE_LENGTH_FILTER_ENABLED,
+        "unit_aware": False,
+    },
+    "min_line_length_filter_amount": {
+        "min_value": MIN_LINE_LENGTH_FILTER_MIN,
+        "max_value": MIN_LINE_LENGTH_FILTER_MAX,
+        "default": DEFAULT_MIN_LINE_LENGTH_FILTER,
+        "unit_aware": False,
+    },
+    # Post-Filters
+    "curved_filter_enabled": {
+        "min_value": None,
+        "max_value": None,
+        "default": DEFAULT_CURVED_FILTER_ENABLED,
+        "unit_aware": False,
     },
     # Performance
     "polygon_count_threshold": {

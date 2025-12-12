@@ -8,10 +8,15 @@ Tests cover:
 """
 
 from core.constants import (
+    CURVED_FILTER_TOLERANCE,
+    DEFAULT_CURVED_FILTER_ENABLED,
     DEFAULT_GAP_CLOSURE_TOLERANCE,
     DEFAULT_MIN_AREA_FILTER,
+    DEFAULT_MIN_LINE_LENGTH_FILTER,
+    DEFAULT_MIN_LINE_LENGTH_FILTER_ENABLED,
     DEFAULT_MIN_SIDE_FILTER,
     DEFAULT_PRECISION_SNAP_TOLERANCE,
+    DEFAULT_SKIP_CURVED_ENTITIES,
     DXF_INSUNITS_MAP,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
     EXCEL_COLUMN_BLOCK_LAYER_COUNT,
@@ -26,6 +31,8 @@ from core.constants import (
     LINE_SEGMENT_THRESHOLD,
     MIN_AREA_FILTER_MAX,
     MIN_AREA_FILTER_MIN,
+    MIN_LINE_LENGTH_FILTER_MAX,
+    MIN_LINE_LENGTH_FILTER_MIN,
     MIN_SIDE_FILTER_MAX,
     MIN_SIDE_FILTER_MIN,
     POLYGON_COUNT_THRESHOLD,
@@ -341,6 +348,73 @@ class TestMinSideFilterConstants:
         )
 
 
+class TestPreFilterConstants:
+    """Tests for pre-filter constants (Skip Curved Entities and Min Line Length)."""
+
+    def test_default_skip_curved_entities_is_false(self) -> None:
+        """DEFAULT_SKIP_CURVED_ENTITIES should be False (disabled by default)."""
+        assert DEFAULT_SKIP_CURVED_ENTITIES is False, (
+            f"DEFAULT_SKIP_CURVED_ENTITIES should be False, got {DEFAULT_SKIP_CURVED_ENTITIES}"
+        )
+
+    def test_default_min_line_length_filter_enabled_is_false(self) -> None:
+        """DEFAULT_MIN_LINE_LENGTH_FILTER_ENABLED should be False (disabled by default)."""
+        assert DEFAULT_MIN_LINE_LENGTH_FILTER_ENABLED is False, (
+            f"DEFAULT_MIN_LINE_LENGTH_FILTER_ENABLED should be False, "
+            f"got {DEFAULT_MIN_LINE_LENGTH_FILTER_ENABLED}"
+        )
+
+    def test_default_min_line_length_filter_value(self) -> None:
+        """DEFAULT_MIN_LINE_LENGTH_FILTER should be 0.5."""
+        assert DEFAULT_MIN_LINE_LENGTH_FILTER == 0.5, (
+            f"DEFAULT_MIN_LINE_LENGTH_FILTER should be 0.5, "
+            f"got {DEFAULT_MIN_LINE_LENGTH_FILTER}"
+        )
+
+    def test_min_line_length_filter_min_value(self) -> None:
+        """MIN_LINE_LENGTH_FILTER_MIN should be 0.0."""
+        assert MIN_LINE_LENGTH_FILTER_MIN == 0.0, (
+            f"MIN_LINE_LENGTH_FILTER_MIN should be 0.0, got {MIN_LINE_LENGTH_FILTER_MIN}"
+        )
+
+    def test_min_line_length_filter_max_value(self) -> None:
+        """MIN_LINE_LENGTH_FILTER_MAX should be 100.0."""
+        assert MIN_LINE_LENGTH_FILTER_MAX == 100.0, (
+            f"MIN_LINE_LENGTH_FILTER_MAX should be 100.0, got {MIN_LINE_LENGTH_FILTER_MAX}"
+        )
+
+    def test_min_line_length_filter_min_less_than_max(self) -> None:
+        """MIN_LINE_LENGTH_FILTER_MIN should be less than MIN_LINE_LENGTH_FILTER_MAX."""
+        assert MIN_LINE_LENGTH_FILTER_MIN < MIN_LINE_LENGTH_FILTER_MAX, (
+            f"MIN_LINE_LENGTH_FILTER_MIN ({MIN_LINE_LENGTH_FILTER_MIN}) must be < "
+            f"MIN_LINE_LENGTH_FILTER_MAX ({MIN_LINE_LENGTH_FILTER_MAX})"
+        )
+
+
+class TestCurvedFilterConstants:
+    """Tests for curved filter constants (post-filter)."""
+
+    def test_default_curved_filter_enabled_is_false(self) -> None:
+        """DEFAULT_CURVED_FILTER_ENABLED should be False (disabled by default)."""
+        assert DEFAULT_CURVED_FILTER_ENABLED is False, (
+            f"DEFAULT_CURVED_FILTER_ENABLED should be False, "
+            f"got {DEFAULT_CURVED_FILTER_ENABLED}"
+        )
+
+    def test_curved_filter_tolerance_value(self) -> None:
+        """CURVED_FILTER_TOLERANCE should be 0.01."""
+        assert CURVED_FILTER_TOLERANCE == 0.01, (
+            f"CURVED_FILTER_TOLERANCE should be 0.01, got {CURVED_FILTER_TOLERANCE}"
+        )
+
+    def test_curved_filter_tolerance_in_reasonable_range(self) -> None:
+        """CURVED_FILTER_TOLERANCE should be in reasonable range (0.001 to 1.0)."""
+        assert 0.001 <= CURVED_FILTER_TOLERANCE <= 1.0, (
+            f"CURVED_FILTER_TOLERANCE ({CURVED_FILTER_TOLERANCE}) should be "
+            "between 0.001 and 1.0"
+        )
+
+
 class TestAllBlocksSheetConstants:
     """Tests for All Blocks consolidated sheet constants."""
 
@@ -386,7 +460,7 @@ class TestSettingsValidationRegistry:
     """Test suite for SETTINGS_VALIDATION_REGISTRY."""
 
     def test_registry_has_all_settings(self) -> None:
-        """Test that registry contains all 25 expected settings."""
+        """Test that registry contains all 29 expected settings."""
         from core.constants import SETTINGS_VALIDATION_REGISTRY
 
         expected_settings = [
@@ -400,6 +474,12 @@ class TestSettingsValidationRegistry:
             "min_area_filter_amount",
             "min_side_filter_enabled",
             "min_side_filter_amount",
+            # Pre-Filters
+            "skip_curved_entities",
+            "min_line_length_filter_enabled",
+            "min_line_length_filter_amount",
+            # Post-Filters
+            "curved_filter_enabled",
             # Performance
             "polygon_count_threshold",
             "line_segment_threshold",
@@ -421,7 +501,7 @@ class TestSettingsValidationRegistry:
             "log_viewer_auto_scroll",
             "log_viewer_max_lines",
         ]
-        assert len(SETTINGS_VALIDATION_REGISTRY) == 25
+        assert len(SETTINGS_VALIDATION_REGISTRY) == 29
         for setting in expected_settings:
             assert setting in SETTINGS_VALIDATION_REGISTRY, (
                 f"Missing setting: {setting}"

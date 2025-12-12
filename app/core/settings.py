@@ -52,6 +52,11 @@ SETTINGS_VERSION: int = 1
 SETTINGS_SECTIONS: dict[str, list[str]] = {
     "filters": [
         "unit_override",
+        # Pre-Filters
+        "skip_curved_entities",
+        "min_line_length_filter_enabled",
+        "min_line_length_filter_amount",
+        # Post-Filters (existing + new)
         "precision_fix_enabled",
         "precision_fix_amount",
         "gap_bridge_enabled",
@@ -60,6 +65,7 @@ SETTINGS_SECTIONS: dict[str, list[str]] = {
         "min_area_filter_amount",
         "min_side_filter_enabled",
         "min_side_filter_amount",
+        "curved_filter_enabled",
     ],
     "performance": [
         "polygon_count_threshold",
