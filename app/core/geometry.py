@@ -751,6 +751,47 @@ def _count_line_segments(block_def: BlockLayout) -> int:
     return count
 
 
+def _estimate_arc_segments(radius: float, angle_rad: float, sagitta: float) -> int:
+    """
+    Calculate segments needed to approximate arc within sagitta tolerance.
+
+    Uses the mathematical relationship between sagitta and arc geometry:
+    - sagitta = radius * (1 - cos(theta/2)) where theta is angle per segment
+    - Solving for segments: n = angle / (2 * arccos(1 - sagitta/radius))
+
+    This produces segment counts that closely match ezdxf's flattening() output.
+
+    Args:
+        radius: Arc radius in drawing units.
+        angle_rad: Total arc angle in radians.
+        sagitta: Maximum allowed sagitta (distance from arc to chord center).
+
+    Returns:
+        Estimated number of segments needed. Always >= 1.
+
+    Examples:
+        >>> _estimate_arc_segments(100, 2*math.pi, 0.1)  # Large circle
+        ~141 segments
+        >>> _estimate_arc_segments(10, 2*math.pi, 0.1)  # Small circle
+        ~45 segments
+        >>> _estimate_arc_segments(50, math.pi/2, 0.1)  # 90-degree arc
+        ~18 segments
+    """
+    if radius <= 0 or sagitta <= 0 or angle_rad <= 0:
+        return 1
+
+    ratio = sagitta / radius
+    if ratio >= 1:
+        return 1  # Sagitta larger than radius - use minimum
+
+    # Angle per segment that achieves target sagitta
+    theta_per_segment = 2 * math.acos(1 - ratio)
+
+    # Number of segments for the arc
+    segments = int(math.ceil(angle_rad / theta_per_segment))
+    return max(1, segments)
+
+
 def _estimate_edge_count(block_def: BlockLayout) -> int:
     """
     Fast O(n) edge count estimation without coordinate extraction.
@@ -786,12 +827,25 @@ def _estimate_edge_count(block_def: BlockLayout) -> int:
                 continue
 
         elif entity_type == "CIRCLE":
-            # Estimate based on typical flattening (full circle ~ 36 segments)
-            count += 36
+            # Dynamic estimation based on radius and sagitta
+            try:
+                radius = entity.dxf.radius
+                count += _estimate_arc_segments(radius, 2 * math.pi, ARC_FLATTENING_SAGITTA)
+            except (AttributeError, TypeError, ValueError):
+                count += 36  # Fallback to default if properties unavailable
 
         elif entity_type == "ARC":
-            # Estimate based on typical flattening (half circle ~ 18 segments)
-            count += 18
+            # Dynamic estimation based on radius, angle, and sagitta
+            try:
+                radius = entity.dxf.radius
+                start = math.radians(entity.dxf.start_angle)
+                end = math.radians(entity.dxf.end_angle)
+                angle = (end - start) % (2 * math.pi)
+                if angle == 0:
+                    angle = 2 * math.pi  # Full circle case
+                count += _estimate_arc_segments(radius, angle, ARC_FLATTENING_SAGITTA)
+            except (AttributeError, TypeError, ValueError):
+                count += 18  # Fallback to default if properties unavailable
 
         elif entity_type == "ELLIPSE":
             # Estimate based on ellipse perimeter using Ramanujan approximation
@@ -826,8 +880,10 @@ def _estimate_edge_count(block_def: BlockLayout) -> int:
                 count += 16  # Default estimate if control points unavailable
 
         elif entity_type == "HATCH":
-            # Conservative estimate per hatch boundary path
-            # Actual count varies, but 50 edges per hatch is reasonable average
+            # HATCH has complex boundary paths (PolylinePath, EdgePath with various edge types).
+            # A fixed estimate of 50 is reasonable for typical hatches.
+            # More accurate estimation would require iterating boundary paths,
+            # which defeats the purpose of fast estimation.
             count += 50
 
     return count

@@ -391,31 +391,38 @@ class TestEdgeEstimation:
         assert estimated == 7
 
     def test_estimate_edge_count_circles(self) -> None:
-        """Verify circles estimated as ~36 edges."""
+        """Verify circles estimated dynamically based on radius."""
         doc = ezdxf.new()
         block = doc.blocks.new(name="CIRCLES")
-        # Add 2 circles
-        block.add_circle((10, 10), 5)
-        block.add_circle((30, 30), 10)
+        # Add 2 circles with different radii
+        block.add_circle((10, 10), 5)   # Small circle
+        block.add_circle((30, 30), 10)  # Larger circle
 
         estimated = _estimate_edge_count(block)
 
-        # 2 circles * 36 edges each = 72 edges
-        assert estimated == 72
+        # Dynamic estimation: larger circle should have more segments than small one
+        # Both should estimate > 0 edges
+        assert estimated > 0
+        # Estimate should be within 10% of actual flattening
+        actual = len(_extract_all_edges(block))
+        assert abs(estimated - actual) <= actual * 0.10
 
     def test_estimate_edge_count_arcs(self) -> None:
-        """Verify arcs estimated as ~18 edges."""
+        """Verify arcs estimated dynamically based on radius and angle."""
         doc = ezdxf.new()
         block = doc.blocks.new(name="ARCS")
-        # Add 3 arcs
-        block.add_arc((10, 10), 5, 0, 90)
-        block.add_arc((30, 30), 10, 45, 180)
-        block.add_arc((50, 50), 7, 0, 270)
+        # Add 3 arcs with different radii and angles
+        block.add_arc((10, 10), 5, 0, 90)      # 90-degree arc
+        block.add_arc((30, 30), 10, 45, 180)   # 135-degree arc
+        block.add_arc((50, 50), 7, 0, 270)     # 270-degree arc
 
         estimated = _estimate_edge_count(block)
 
-        # 3 arcs * 18 edges each = 54 edges
-        assert estimated == 54
+        # Dynamic estimation: should estimate > 0 edges
+        assert estimated > 0
+        # Estimate should be within 10% of actual flattening
+        actual = len(_extract_all_edges(block))
+        assert abs(estimated - actual) <= actual * 0.10
 
     def test_estimate_edge_count_hatches(self) -> None:
         """Verify hatches estimated as ~50 edges each."""
@@ -445,15 +452,19 @@ class TestEdgeEstimation:
         block.add_line((10, 0), (10, 10))
         # 1 closed polyline with 4 vertices = 4 edges
         block.add_lwpolyline([(20, 0), (30, 0), (30, 10), (20, 10)], close=True)
-        # 1 circle = 36 edges
+        # 1 circle (dynamic segments based on radius)
         block.add_circle((50, 50), 5)
-        # 1 arc = 18 edges
+        # 1 arc (dynamic segments based on radius and angle)
         block.add_arc((70, 70), 10, 0, 180)
 
         estimated = _estimate_edge_count(block)
 
-        # 2 + 4 + 36 + 18 = 60 edges
-        assert estimated == 60
+        # Should have: 2 lines + 4 polyline + dynamic circle + dynamic arc
+        # At minimum should exceed the line and polyline contribution
+        assert estimated > 6  # At least lines + polyline
+        # Estimate should be within 10% of actual flattening
+        actual = len(_extract_all_edges(block))
+        assert abs(estimated - actual) <= actual * 0.10
 
     def test_estimate_vs_actual_accuracy(self) -> None:
         """Compare estimation to actual _extract_all_edges() count.

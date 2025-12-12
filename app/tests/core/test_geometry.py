@@ -14,7 +14,10 @@ import pytest
 from shapely.geometry import LineString
 from shapely.ops import polygonize, snap, unary_union
 
+import math
+
 from core.constants import (
+    ARC_FLATTENING_SAGITTA,
     DEFAULT_GAP_CLOSURE_TOLERANCE,
     PRECISION_SNAP_TOLERANCE,
 )
@@ -22,7 +25,11 @@ from core.geometry import (
     GeometryAbortedError,
     _calculate_segments,
     _categorize_rotation,
+    _estimate_arc_segments,
+    _estimate_edge_count,
     _extract_all_edges,
+    _extract_arc_edges,
+    _extract_circle_edges,
     _extract_line_cycles,
     _extract_paint_bucket_regions,
     _get_arc_bounding_box,
@@ -2905,3 +2912,168 @@ class TestMixedEntitiesIntegration:
 
         # Only the LINE entity should remain
         assert len(edges) == 1
+
+
+class TestEstimateArcSegments:
+    """Test suite for _estimate_arc_segments helper function."""
+
+    def test_full_circle_large_radius(self) -> None:
+        """Large radius circle should produce more segments."""
+        # Large circle: radius=100, full circle, sagitta=0.1
+        segments = _estimate_arc_segments(100, 2 * math.pi, 0.1)
+
+        # Should produce ~71 segments for large circle (matches ezdxf flattening)
+        assert 50 < segments < 100
+
+    def test_full_circle_small_radius(self) -> None:
+        """Small radius circle should produce fewer segments."""
+        # Small circle: radius=10, full circle, sagitta=0.1
+        segments = _estimate_arc_segments(10, 2 * math.pi, 0.1)
+
+        # Should produce ~23 segments for small circle (matches ezdxf flattening)
+        assert 15 < segments < 35
+
+    def test_quarter_arc(self) -> None:
+        """90-degree arc should produce ~1/4 of full circle segments."""
+        full_circle = _estimate_arc_segments(50, 2 * math.pi, 0.1)
+        quarter_arc = _estimate_arc_segments(50, math.pi / 2, 0.1)
+
+        # Quarter arc should be approximately 1/4 of full circle
+        assert 0.20 < (quarter_arc / full_circle) < 0.30
+
+    def test_half_arc(self) -> None:
+        """180-degree arc should produce ~1/2 of full circle segments."""
+        full_circle = _estimate_arc_segments(50, 2 * math.pi, 0.1)
+        half_arc = _estimate_arc_segments(50, math.pi, 0.1)
+
+        # Half arc should be approximately 1/2 of full circle
+        assert 0.45 < (half_arc / full_circle) < 0.55
+
+    def test_invalid_radius_returns_one(self) -> None:
+        """Zero or negative radius should return 1."""
+        assert _estimate_arc_segments(0, 2 * math.pi, 0.1) == 1
+        assert _estimate_arc_segments(-10, 2 * math.pi, 0.1) == 1
+
+    def test_invalid_sagitta_returns_one(self) -> None:
+        """Zero or negative sagitta should return 1."""
+        assert _estimate_arc_segments(50, 2 * math.pi, 0) == 1
+        assert _estimate_arc_segments(50, 2 * math.pi, -0.1) == 1
+
+    def test_sagitta_larger_than_radius_returns_one(self) -> None:
+        """Sagitta >= radius should return 1 (edge case)."""
+        assert _estimate_arc_segments(0.05, 2 * math.pi, 0.1) == 1
+
+    def test_larger_sagitta_fewer_segments(self) -> None:
+        """Larger sagitta tolerance should produce fewer segments."""
+        fine = _estimate_arc_segments(50, 2 * math.pi, 0.01)    # Fine tolerance
+        coarse = _estimate_arc_segments(50, 2 * math.pi, 1.0)   # Coarse tolerance
+
+        assert fine > coarse
+
+
+class TestEdgeCountEstimation:
+    """Test suite for _estimate_edge_count with formula-based estimation."""
+
+    def test_circle_estimation_matches_flattening(self) -> None:
+        """Verify CIRCLE estimation closely matches actual flattening output."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CIRCLE_TEST")
+        block.add_circle(center=(0, 0), radius=50)
+
+        estimated = _estimate_edge_count(block)
+
+        # Get actual edge count from flattening
+        circle_entity = list(block)[0]
+        actual_edges = _extract_circle_edges(circle_entity)
+        actual_count = len(actual_edges)
+
+        # Estimation should be within 10% of actual
+        assert abs(estimated - actual_count) <= actual_count * 0.10
+
+    def test_arc_estimation_matches_flattening(self) -> None:
+        """Verify ARC estimation closely matches actual flattening output."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="ARC_TEST")
+        block.add_arc(center=(0, 0), radius=50, start_angle=0, end_angle=90)
+
+        estimated = _estimate_edge_count(block)
+
+        # Get actual edge count from flattening
+        arc_entity = list(block)[0]
+        actual_edges = _extract_arc_edges(arc_entity)
+        actual_count = len(actual_edges)
+
+        # Estimation should be within 10% of actual
+        assert abs(estimated - actual_count) <= actual_count * 0.10
+
+    def test_large_circle_more_segments_than_small(self) -> None:
+        """Large circles should estimate more segments than small circles."""
+        doc = ezdxf.new()
+
+        small_block = doc.blocks.new(name="SMALL_CIRCLE")
+        small_block.add_circle(center=(0, 0), radius=10)
+
+        large_block = doc.blocks.new(name="LARGE_CIRCLE")
+        large_block.add_circle(center=(0, 0), radius=100)
+
+        small_estimate = _estimate_edge_count(small_block)
+        large_estimate = _estimate_edge_count(large_block)
+
+        assert large_estimate > small_estimate
+        # Large circle (100 radius) should have roughly 3x more segments than small (10 radius)
+        # because segments scale with sqrt(radius) for fixed sagitta
+        assert large_estimate > small_estimate * 2
+
+    def test_full_arc_more_segments_than_quarter_arc(self) -> None:
+        """Full arc (360) should estimate more segments than quarter arc (90)."""
+        doc = ezdxf.new()
+
+        quarter_block = doc.blocks.new(name="QUARTER_ARC")
+        quarter_block.add_arc(center=(0, 0), radius=50, start_angle=0, end_angle=90)
+
+        full_block = doc.blocks.new(name="FULL_ARC")
+        full_block.add_arc(center=(0, 0), radius=50, start_angle=0, end_angle=360)
+
+        quarter_estimate = _estimate_edge_count(quarter_block)
+        full_estimate = _estimate_edge_count(full_block)
+
+        assert full_estimate > quarter_estimate
+        # Full arc should have ~4x more segments than quarter arc
+        assert 3 < (full_estimate / quarter_estimate) < 5
+
+    def test_mixed_block_estimation(self) -> None:
+        """Test estimation with mixed entity types."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="MIXED_TEST")
+
+        # 4 LINE edges
+        block.add_line((0, 0), (100, 0))
+        block.add_line((100, 0), (100, 50))
+        block.add_line((100, 50), (0, 50))
+        block.add_line((0, 50), (0, 0))
+
+        # 1 CIRCLE (should be >0 segments)
+        block.add_circle(center=(50, 25), radius=20)
+
+        estimate = _estimate_edge_count(block)
+
+        # Should be at least 4 (lines) + some circle segments
+        assert estimate > 4
+
+    def test_uses_existing_test_asset(self) -> None:
+        """Verify estimation works with existing test DXF file."""
+        doc = ezdxf.readfile("app/tests/assets/circle_arc_hatch_edges_test.dxf")
+
+        # Test SIZE_TEST block which has small and large circles
+        size_test_block = doc.blocks.get("SIZE_TEST")
+        estimate = _estimate_edge_count(size_test_block)
+
+        # Should have > 0 segments for both circles
+        assert estimate > 0
+
+        # Test MIXED_ENTITIES block
+        mixed_block = doc.blocks.get("MIXED_ENTITIES")
+        mixed_estimate = _estimate_edge_count(mixed_block)
+
+        # Should include LINE, CIRCLE, ARC, and HATCH contributions
+        assert mixed_estimate > 50  # At least HATCH (50) + other entities
