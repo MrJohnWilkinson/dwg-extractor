@@ -41,6 +41,7 @@ from core.extractor import ExtractionAbortedError, extract_blocks
 from core.geometry import GeometryAbortedError
 from core.logger import create_debug_file_handler, create_queue_handler, setup_logger
 from core.settings import SettingsManager
+from core.settings_window import AdvancedSettingsWindow
 
 
 # Set CustomTkinter appearance
@@ -731,11 +732,13 @@ class DXFExtractorApp(ctk.CTk):
             self.logger.warning(f"Failed to open output folder: {str(e)}")
 
     def _open_advanced_settings(self) -> None:
-        """Open the Advanced Settings window.
+        """Open the Advanced Settings window."""
+        self.logger.info("Opening Advanced Settings window")
+        window = AdvancedSettingsWindow(self, self.settings)
+        self.wait_window(window)  # Block until window closes
 
-        Currently a placeholder - will be implemented in Unit 6 (C2).
-        """
-        self.logger.info("Advanced Settings not yet implemented")
+        # Refresh main window if needed (settings may have changed)
+        self.logger.debug("Advanced Settings window closed")
 
     def _poll_log_queue(self) -> None:
         """Poll log queue and update text widget."""
