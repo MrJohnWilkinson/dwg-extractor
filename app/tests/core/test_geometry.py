@@ -2548,7 +2548,6 @@ class TestNestedInsertBoundingBox:
 
     def test_nested_insert_rotated(self) -> None:
         """Test nested INSERT with rotation expands bbox correctly."""
-        import math
         doc = ezdxf.readfile("app/tests/assets/nested_insert_bbox_test.dxf")
         outer_rotated = doc.blocks.get("OUTER_ROTATED")
 
@@ -2661,3 +2660,248 @@ class TestNestedInsertBoundingBox:
         # INNER_BOX has no nested INSERTs, so both should be the same
         assert bbox_without_doc == bbox_with_doc
         assert bbox_without_doc == pytest.approx((0.0, 0.0, 10.0, 10.0), abs=0.001)
+
+
+class TestEllipseSupport:
+    """Test suite for ELLIPSE entity support in geometry functions."""
+
+    def test_ellipse_bbox_circular(self) -> None:
+        """Test bounding box for near-circular ellipse (ratio ~0.9)."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("ELLIPSE_CIRCULAR")
+
+        bbox = _get_block_bounding_box(block)
+
+        # Center (50, 50), major axis 50 along X, ratio 0.9
+        # Semi-major = 50, semi-minor = 45
+        # Expected bbox: (50-50, 50-45, 50+50, 50+45) = (0, 5, 100, 95)
+        assert bbox[0] == pytest.approx(0.0, abs=0.5)  # min_x
+        assert bbox[1] == pytest.approx(5.0, abs=0.5)  # min_y
+        assert bbox[2] == pytest.approx(100.0, abs=0.5)  # max_x
+        assert bbox[3] == pytest.approx(95.0, abs=0.5)  # max_y
+
+    def test_ellipse_bbox_elongated(self) -> None:
+        """Test bounding box for elongated ellipse (ratio ~0.5)."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("ELLIPSE_ELONGATED")
+
+        bbox = _get_block_bounding_box(block)
+
+        # Center (100, 50), major axis 80 along X, ratio 0.5
+        # Semi-major = 80, semi-minor = 40
+        # Expected bbox: (100-80, 50-40, 100+80, 50+40) = (20, 10, 180, 90)
+        assert bbox[0] == pytest.approx(20.0, abs=0.5)  # min_x
+        assert bbox[1] == pytest.approx(10.0, abs=0.5)  # min_y
+        assert bbox[2] == pytest.approx(180.0, abs=0.5)  # max_x
+        assert bbox[3] == pytest.approx(90.0, abs=0.5)  # max_y
+
+    def test_ellipse_bbox_very_elongated(self) -> None:
+        """Test bounding box for very elongated ellipse (ratio ~0.2)."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("ELLIPSE_VERY_ELONGATED")
+
+        bbox = _get_block_bounding_box(block)
+
+        # Center (150, 50), major axis 100 along X, ratio 0.2
+        # Semi-major = 100, semi-minor = 20
+        # Expected bbox: (150-100, 50-20, 150+100, 50+20) = (50, 30, 250, 70)
+        assert bbox[0] == pytest.approx(50.0, abs=0.5)  # min_x
+        assert bbox[1] == pytest.approx(30.0, abs=0.5)  # min_y
+        assert bbox[2] == pytest.approx(250.0, abs=0.5)  # max_x
+        assert bbox[3] == pytest.approx(70.0, abs=0.5)  # max_y
+
+    def test_ellipse_bbox_arc(self) -> None:
+        """Test bounding box for partial ellipse (elliptical arc, upper half)."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("ELLIPSE_ARC")
+
+        bbox = _get_block_bounding_box(block)
+
+        # Center (100, 100), major axis 60 along X, ratio 0.5
+        # Semi-major = 60, semi-minor = 30
+        # Upper half (0 to pi): y ranges from 100 to 130, x from 40 to 160
+        # Bottom should be at center y (100), not 100-30=70
+        assert bbox[0] == pytest.approx(40.0, abs=0.5)  # min_x
+        assert bbox[1] == pytest.approx(100.0, abs=0.5)  # min_y (arc starts/ends at y=100)
+        assert bbox[2] == pytest.approx(160.0, abs=0.5)  # max_x
+        assert bbox[3] == pytest.approx(130.0, abs=0.5)  # max_y (top of arc)
+
+    def test_extract_ellipse_edges_returns_linestrings(self) -> None:
+        """Test that ellipse edge extraction produces valid LineStrings."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("ELLIPSE_CIRCULAR")
+
+        edges = _extract_all_edges(block)
+
+        assert len(edges) > 0
+        # All edges should be LineString objects
+        for edge in edges:
+            assert isinstance(edge, LineString)
+
+    def test_extract_ellipse_edges_count(self) -> None:
+        """Test that ellipse produces reasonable number of edges for its size."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("ELLIPSE_CIRCULAR")
+
+        edges = _extract_all_edges(block)
+
+        # A near-circular ellipse with semi-major 50 should produce many segments
+        # Minimum expected: 16 edges (4 per quadrant)
+        assert len(edges) >= 16
+
+    def test_estimate_edge_count_with_ellipse(self) -> None:
+        """Test that edge count estimation includes ellipse contribution."""
+        from core.geometry import _estimate_edge_count
+
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("ELLIPSE_CIRCULAR")
+
+        estimated = _estimate_edge_count(block)
+
+        # Should estimate at least 8 edges for any ellipse
+        assert estimated >= 8
+
+    def test_ellipse_skip_curved_entities(self) -> None:
+        """Test that ELLIPSE is skipped when skip_curved_entities=True."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("ELLIPSE_CIRCULAR")
+
+        edges_with_ellipse = _extract_all_edges(block, skip_curved_entities=False)
+        edges_without_ellipse = _extract_all_edges(block, skip_curved_entities=True)
+
+        assert len(edges_with_ellipse) > 0
+        assert len(edges_without_ellipse) == 0
+
+
+class TestSplineSupport:
+    """Test suite for SPLINE entity support in geometry functions."""
+
+    def test_spline_bbox_simple(self) -> None:
+        """Test bounding box for simple spline (4 fit points)."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("SPLINE_SIMPLE")
+
+        bbox = _get_block_bounding_box(block)
+
+        # Fit points: (0, 0), (50, 100), (100, 100), (150, 0)
+        # The spline should pass through these points approximately
+        # Bbox should contain all fit points (with floating point tolerance)
+        assert bbox[0] <= 0.1  # min_x near 0 (floating point tolerance)
+        assert bbox[1] <= 0.1  # min_y near 0 (floating point tolerance)
+        assert bbox[2] >= 149.9  # max_x near 150
+        assert bbox[3] >= 100  # max_y >= 100
+
+    def test_spline_bbox_complex(self) -> None:
+        """Test bounding box for complex spline (9 fit points forming a wave)."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("SPLINE_COMPLEX")
+
+        bbox = _get_block_bounding_box(block)
+
+        # Fit points range from (0, 50) to (200, 50) with y ranging 0-100
+        assert bbox[0] <= 0  # min_x <= 0
+        assert bbox[1] <= 0  # min_y can dip below fit points
+        assert bbox[2] >= 200  # max_x >= 200
+        assert bbox[3] >= 100  # max_y >= 100
+
+    def test_spline_bbox_closed(self) -> None:
+        """Test bounding box for closed spline produces valid geometry."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("SPLINE_CLOSED")
+
+        bbox = _get_block_bounding_box(block)
+
+        # Control points: (50,0), (100,25), (75,75), (25,75), (0,25)
+        # Closed splines created via set_closed() can extend significantly
+        # beyond the control points. Just verify valid bbox was computed.
+        assert bbox[0] < bbox[2]  # min_x < max_x (valid width)
+        assert bbox[1] < bbox[3]  # min_y < max_y (valid height)
+        # Verify the bbox is not all zeros (actual geometry was processed)
+        assert bbox != (0.0, 0.0, 0.0, 0.0)
+
+    def test_extract_spline_edges_returns_linestrings(self) -> None:
+        """Test that spline edge extraction produces valid LineStrings."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("SPLINE_SIMPLE")
+
+        edges = _extract_all_edges(block)
+
+        assert len(edges) > 0
+        # All edges should be LineString objects
+        for edge in edges:
+            assert isinstance(edge, LineString)
+
+    def test_extract_spline_edges_count(self) -> None:
+        """Test that spline produces reasonable number of edges."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("SPLINE_SIMPLE")
+
+        edges = _extract_all_edges(block)
+
+        # A simple spline should produce at least some segments
+        assert len(edges) >= 4
+
+    def test_estimate_edge_count_with_spline(self) -> None:
+        """Test that edge count estimation includes spline contribution."""
+        from core.geometry import _estimate_edge_count
+
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("SPLINE_SIMPLE")
+
+        estimated = _estimate_edge_count(block)
+
+        # Should estimate at least 16 edges (minimum for splines)
+        assert estimated >= 16
+
+    def test_spline_skip_curved_entities(self) -> None:
+        """Test that SPLINE is skipped when skip_curved_entities=True."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("SPLINE_SIMPLE")
+
+        edges_with_spline = _extract_all_edges(block, skip_curved_entities=False)
+        edges_without_spline = _extract_all_edges(block, skip_curved_entities=True)
+
+        assert len(edges_with_spline) > 0
+        assert len(edges_without_spline) == 0
+
+
+class TestMixedEntitiesIntegration:
+    """Integration tests for blocks with mixed ELLIPSE + SPLINE + LINE entities."""
+
+    def test_mixed_entities_bbox(self) -> None:
+        """Test bounding box with ELLIPSE + SPLINE + LINE entities combined."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("MIXED_ENTITIES")
+
+        bbox = _get_block_bounding_box(block)
+
+        # Mixed block contains:
+        # - Ellipse: center (50,50), major 40, ratio 0.6 -> bbox ~ (10, 26, 90, 74)
+        # - Spline: fit points (0,100), (50,150), (100,100) -> y up to ~150
+        # - Line: (0,0) to (150,0)
+        # Overall bbox should encompass all entities
+        assert bbox[0] <= 0  # Line starts at x=0
+        assert bbox[1] <= 0  # Line is at y=0
+        assert bbox[2] >= 150  # Line ends at x=150
+        assert bbox[3] >= 150  # Spline reaches y~150
+
+    def test_mixed_entities_edge_extraction(self) -> None:
+        """Test edge extraction from block with mixed entity types."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("MIXED_ENTITIES")
+
+        edges = _extract_all_edges(block)
+
+        # Should have edges from ellipse + spline + line
+        # 1 line + many ellipse segments + many spline segments
+        assert len(edges) > 10
+
+    def test_mixed_entities_skip_curved_only_line_remains(self) -> None:
+        """Test that skip_curved_entities leaves only LINE entities."""
+        doc = ezdxf.readfile("app/tests/assets/ellipse_spline_test.dxf")
+        block = doc.blocks.get("MIXED_ENTITIES")
+
+        edges = _extract_all_edges(block, skip_curved_entities=True)
+
+        # Only the LINE entity should remain
+        assert len(edges) == 1

@@ -425,6 +425,41 @@ def _get_block_bounding_box(
             max_y = max(max_y, arc_max_y)
             has_geometry = True
 
+        elif entity_type == "ELLIPSE":
+            try:
+                # Use flattening to get accurate ellipse boundary points
+                vertices = list(entity.flattening(ARC_FLATTENING_SAGITTA))  # type: ignore[attr-defined]
+                for vertex in vertices:
+                    min_x = min(min_x, vertex.x)
+                    max_x = max(max_x, vertex.x)
+                    min_y = min(min_y, vertex.y)
+                    max_y = max(max_y, vertex.y)
+                has_geometry = True
+            except (AttributeError, TypeError, ValueError):
+                pass  # Skip malformed ellipses
+
+        elif entity_type == "SPLINE":
+            try:
+                # Use flattening to get accurate spline boundary points
+                vertices = list(entity.flattening(ARC_FLATTENING_SAGITTA))  # type: ignore[attr-defined]
+                for vertex in vertices:
+                    min_x = min(min_x, vertex.x)
+                    max_x = max(max_x, vertex.x)
+                    min_y = min(min_y, vertex.y)
+                    max_y = max(max_y, vertex.y)
+                has_geometry = True
+            except (AttributeError, TypeError, ValueError):
+                # Fallback to control points for degenerate splines
+                try:
+                    for point in entity.control_points:  # type: ignore[attr-defined]
+                        min_x = min(min_x, point.x)
+                        max_x = max(max_x, point.x)
+                        min_y = min(min_y, point.y)
+                        max_y = max(max_y, point.y)
+                    has_geometry = True
+                except (AttributeError, TypeError):
+                    pass  # Skip completely malformed splines
+
         elif entity_type == "POINT":
             location = entity.dxf.location
             min_x = min(min_x, location.x)
@@ -758,6 +793,38 @@ def _estimate_edge_count(block_def: BlockLayout) -> int:
             # Estimate based on typical flattening (half circle ~ 18 segments)
             count += 18
 
+        elif entity_type == "ELLIPSE":
+            # Estimate based on ellipse perimeter using Ramanujan approximation
+            try:
+                # Get semi-major and semi-minor axes
+                major_axis = entity.dxf.major_axis
+                a = major_axis.magnitude  # Semi-major axis length
+                ratio = entity.dxf.ratio  # Ratio of minor to major axis
+                b = a * ratio  # Semi-minor axis length
+
+                # Ramanujan approximation for ellipse perimeter
+                h = ((a - b) ** 2) / ((a + b) ** 2) if (a + b) > 0 else 0
+                perimeter = math.pi * (a + b) * (1 + (3 * h) / (10 + math.sqrt(4 - 3 * h)))
+
+                # Estimate segments based on sagitta (use max radius for conservative estimate)
+                max_radius = max(a, b)
+                if max_radius > 0 and ARC_FLATTENING_SAGITTA > 0:
+                    estimated = int(perimeter / (2 * math.sqrt(2 * max_radius * ARC_FLATTENING_SAGITTA)))
+                    count += max(8, estimated)
+                else:
+                    count += 36  # Default fallback
+            except (AttributeError, TypeError, ValueError):
+                count += 36  # Default estimate if properties unavailable
+
+        elif entity_type == "SPLINE":
+            # Estimate based on control point count
+            # Each span between control points typically generates ~4 segments
+            try:
+                cp_count = len(list(entity.control_points))  # type: ignore[attr-defined]
+                count += max(cp_count * 4, 16)  # At least 16 segments
+            except (AttributeError, TypeError):
+                count += 16  # Default estimate if control points unavailable
+
         elif entity_type == "HATCH":
             # Conservative estimate per hatch boundary path
             # Actual count varies, but 50 edges per hatch is reasonable average
@@ -819,6 +886,73 @@ def _extract_arc_edges(entity: Any) -> list[LineString]:
         return edges
     except (AttributeError, TypeError, ValueError):
         return []
+
+
+def _extract_ellipse_edges(entity: Any) -> list[LineString]:
+    """Extract edges from ELLIPSE entity using adaptive flattening.
+
+    Uses ezdxf's built-in flattening method with distance-based precision.
+    The distance controls the maximum distance from curve to chord, producing
+    more segments for larger ellipses and fewer for smaller ones.
+
+    Args:
+        entity: ezdxf ELLIPSE entity
+
+    Returns:
+        List of LineString objects representing the ellipse as line segments.
+        Returns empty list if flattening fails.
+    """
+    try:
+        # Note: ELLIPSE flattening uses 'distance' parameter, not 'sagitta'
+        points = list(entity.flattening(distance=ARC_FLATTENING_SAGITTA))
+        edges: list[LineString] = []
+        for i in range(len(points) - 1):
+            edges.append(
+                LineString(
+                    [(points[i].x, points[i].y), (points[i + 1].x, points[i + 1].y)]
+                )
+            )
+        return edges
+    except (AttributeError, TypeError, ValueError):
+        return []
+
+
+def _extract_spline_edges(entity: Any) -> list[LineString]:
+    """Extract edges from SPLINE entity using adaptive flattening.
+
+    Uses ezdxf's built-in flattening method with distance-based precision.
+    Falls back to control points as edges for degenerate splines.
+
+    Args:
+        entity: ezdxf SPLINE entity
+
+    Returns:
+        List of LineString objects representing the spline as line segments.
+        Returns empty list if both flattening and control point fallback fail.
+    """
+    try:
+        # Note: SPLINE flattening uses 'distance' parameter, not 'sagitta'
+        points = list(entity.flattening(distance=ARC_FLATTENING_SAGITTA))
+        edges: list[LineString] = []
+        for i in range(len(points) - 1):
+            edges.append(
+                LineString(
+                    [(points[i].x, points[i].y), (points[i + 1].x, points[i + 1].y)]
+                )
+            )
+        return edges
+    except (AttributeError, TypeError, ValueError):
+        # Fallback to control points as edges for degenerate splines
+        try:
+            cps = list(entity.control_points)
+            fallback_edges: list[LineString] = []
+            for i in range(len(cps) - 1):
+                fallback_edges.append(
+                    LineString([(cps[i].x, cps[i].y), (cps[i + 1].x, cps[i + 1].y)])
+                )
+            return fallback_edges
+        except (AttributeError, TypeError):
+            return []
 
 
 def _snap_linestring_coords(line: LineString, tolerance: float) -> LineString:
@@ -892,11 +1026,13 @@ def _extract_all_edges(
     - LWPOLYLINE/POLYLINE entities (all vertices as edges, closing edge if closed)
     - CIRCLE entities (adaptive flattening to line segments) - skipped if skip_curved_entities=True
     - ARC entities (adaptive flattening to line segments) - skipped if skip_curved_entities=True
+    - ELLIPSE entities (adaptive flattening to line segments) - skipped if skip_curved_entities=True
+    - SPLINE entities (adaptive flattening to line segments) - skipped if skip_curved_entities=True
     - HATCH boundary paths (PolylinePath and EdgePath variants)
 
     Args:
         block_def: ezdxf block definition object
-        skip_curved_entities: If True, skip CIRCLE and ARC entities. Default False.
+        skip_curved_entities: If True, skip CIRCLE, ARC, ELLIPSE, and SPLINE entities. Default False.
         min_line_length: Skip LINE entities shorter than this threshold (drawing units).
                          Default 0.0 (no filtering).
 
@@ -944,6 +1080,18 @@ def _extract_all_edges(
             if skip_curved_entities:
                 continue
             edges.extend(_extract_arc_edges(entity))
+
+        elif entity_type == "ELLIPSE":
+            # PRE-FILTER: Skip curved entities if enabled
+            if skip_curved_entities:
+                continue
+            edges.extend(_extract_ellipse_edges(entity))
+
+        elif entity_type == "SPLINE":
+            # PRE-FILTER: Skip curved entities if enabled
+            if skip_curved_entities:
+                continue
+            edges.extend(_extract_spline_edges(entity))
 
         elif entity_type == "HATCH":
             edges.extend(_extract_hatch_boundary_edges(entity))
