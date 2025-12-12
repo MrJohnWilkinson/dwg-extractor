@@ -332,3 +332,76 @@ class TestEdgeCases:
         assert manager2.get("gap_bridge_amount") == 4.0
         assert manager2.get("unit_override") == 4
         assert manager2.get("log_viewer_level") == "DEBUG"
+
+
+class TestPreFilterSettingsSync:
+    """Tests for pre-filter and curved filter settings synchronization."""
+
+    def test_syncs_skip_curved_entities(self, settings_manager: SettingsManager) -> None:
+        """Verify skip_curved_entities boolean is synced."""
+        settings_manager.set("skip_curved_entities", True)
+        assert settings_manager.get("skip_curved_entities") is True
+
+        settings_manager.set("skip_curved_entities", False)
+        assert settings_manager.get("skip_curved_entities") is False
+
+    def test_syncs_min_line_length_filter_enabled(
+        self, settings_manager: SettingsManager
+    ) -> None:
+        """Verify min_line_length_filter_enabled boolean is synced."""
+        settings_manager.set("min_line_length_filter_enabled", True)
+        assert settings_manager.get("min_line_length_filter_enabled") is True
+
+        settings_manager.set("min_line_length_filter_enabled", False)
+        assert settings_manager.get("min_line_length_filter_enabled") is False
+
+    def test_syncs_min_line_length_filter_amount(
+        self, settings_manager: SettingsManager
+    ) -> None:
+        """Verify min_line_length_filter_amount is synced."""
+        settings_manager.set("min_line_length_filter_amount", 1.5)
+        assert settings_manager.get("min_line_length_filter_amount") == 1.5
+
+    def test_syncs_curved_filter_enabled(
+        self, settings_manager: SettingsManager
+    ) -> None:
+        """Verify curved_filter_enabled boolean is synced."""
+        settings_manager.set("curved_filter_enabled", True)
+        assert settings_manager.get("curved_filter_enabled") is True
+
+        settings_manager.set("curved_filter_enabled", False)
+        assert settings_manager.get("curved_filter_enabled") is False
+
+    def test_min_line_length_filter_amount_validates_range(
+        self, settings_manager: SettingsManager
+    ) -> None:
+        """Verify min_line_length_filter_amount respects validation range."""
+        # Valid value
+        result = settings_manager.set("min_line_length_filter_amount", 50.0)
+        assert result is True
+        assert settings_manager.get("min_line_length_filter_amount") == 50.0
+
+        # Value above max (100.0) should be rejected
+        result = settings_manager.set("min_line_length_filter_amount", 150.0)
+        assert result is False
+
+    def test_new_filter_settings_persist(self, tmp_path: Path) -> None:
+        """Verify new filter settings persist across save/load cycle."""
+        config_path = tmp_path / "settings.json"
+
+        # First session: set and save
+        manager1 = SettingsManager(config_path=config_path)
+        manager1.set("skip_curved_entities", True)
+        manager1.set("min_line_length_filter_enabled", True)
+        manager1.set("min_line_length_filter_amount", 2.5)
+        manager1.set("curved_filter_enabled", True)
+        manager1.save()
+
+        # Second session: load and verify
+        manager2 = SettingsManager(config_path=config_path)
+        manager2.load()
+
+        assert manager2.get("skip_curved_entities") is True
+        assert manager2.get("min_line_length_filter_enabled") is True
+        assert manager2.get("min_line_length_filter_amount") == 2.5
+        assert manager2.get("curved_filter_enabled") is True

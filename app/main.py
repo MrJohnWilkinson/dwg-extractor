@@ -106,6 +106,22 @@ class DXFExtractorApp(ctk.CTk):
         )
         self.min_side_filter_amount_var = ctk.StringVar(value="10.0")
 
+        # Pre-Filter settings
+        self.skip_curved_entities_var = ctk.BooleanVar(
+            value=self.settings.get("skip_curved_entities")
+        )
+        self.min_line_length_filter_var = ctk.BooleanVar(
+            value=self.settings.get("min_line_length_filter_enabled")
+        )
+        self.min_line_length_filter_amount_var = ctk.StringVar(
+            value=str(self.settings.get("min_line_length_filter_amount") or "")
+        )
+
+        # Curved Lines Filter setting (post-filter)
+        self.curved_filter_var = ctk.BooleanVar(
+            value=self.settings.get("curved_filter_enabled")
+        )
+
         # Log file generation settings
         self.log_file_var = ctk.BooleanVar(value=self.settings.get("generate_log_file"))
         self.file_log_level_var = ctk.StringVar(
@@ -135,6 +151,12 @@ class DXFExtractorApp(ctk.CTk):
             "write",
             lambda *_: self._sync_numeric_setting(
                 "min_side_filter_amount", self.min_side_filter_amount_var
+            ),
+        )
+        self.min_line_length_filter_amount_var.trace_add(
+            "write",
+            lambda *_: self._sync_numeric_setting(
+                "min_line_length_filter_amount", self.min_line_length_filter_amount_var
             ),
         )
 
@@ -247,6 +269,104 @@ class DXFExtractorApp(ctk.CTk):
             text_color="gray",
         )
         units_hint.pack(side="left")
+
+        # Pre-Filters section header
+        prefilter_header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        prefilter_header_frame.pack(fill="x", pady=(10, 5))
+
+        prefilter_label = ctk.CTkLabel(
+            prefilter_header_frame,
+            text="PRE-FILTERS",
+            font=ctk.CTkFont(size=11, weight="bold"),
+        )
+        prefilter_label.pack(side="left")
+
+        prefilter_hint = ctk.CTkLabel(
+            prefilter_header_frame,
+            text="(reduces processing before polygon detection)",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        prefilter_hint.pack(side="left", padx=(10, 0))
+
+        # Pre-filter separator
+        prefilter_sep = ctk.CTkFrame(self.main_frame, height=2, fg_color="gray40")
+        prefilter_sep.pack(fill="x", pady=(0, 10))
+
+        # Skip Curved Entities checkbox
+        skip_curved_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        skip_curved_frame.pack(pady=(5, 10))
+
+        self.skip_curved_checkbox = ctk.CTkCheckBox(
+            skip_curved_frame,
+            text="Skip Curved Entities",
+            variable=self.skip_curved_entities_var,
+            command=self._on_skip_curved_toggle,
+            font=ctk.CTkFont(size=12),
+        )
+        self.skip_curved_checkbox.pack(side="left", padx=(0, 10))
+
+        skip_curved_hint = ctk.CTkLabel(
+            skip_curved_frame,
+            text="(excludes circles and arcs)",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        skip_curved_hint.pack(side="left")
+
+        # Separator
+        separator_prefilter1 = ctk.CTkFrame(self.main_frame, height=1, fg_color="gray50")
+        separator_prefilter1.pack(fill="x", pady=5)
+
+        # Min Line Length Filter row
+        min_line_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        min_line_frame.pack(pady=(5, 10))
+
+        self.min_line_length_checkbox = ctk.CTkCheckBox(
+            min_line_frame,
+            text="Min Line Length Filter",
+            variable=self.min_line_length_filter_var,
+            command=self._on_min_line_length_toggle,
+            font=ctk.CTkFont(size=12),
+        )
+        self.min_line_length_checkbox.pack(side="left", padx=(0, 10))
+
+        min_line_amount_label = ctk.CTkLabel(
+            min_line_frame,
+            text="Amount:",
+            font=ctk.CTkFont(size=12),
+        )
+        min_line_amount_label.pack(side="left", padx=(0, 5))
+
+        self.min_line_length_entry = ctk.CTkEntry(
+            min_line_frame,
+            width=80,
+            textvariable=self.min_line_length_filter_amount_var,
+            state="disabled",
+        )
+        self.min_line_length_entry.pack(side="left")
+
+        # Filters section header (post-filters)
+        filter_header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        filter_header_frame.pack(fill="x", pady=(15, 5))
+
+        filter_label = ctk.CTkLabel(
+            filter_header_frame,
+            text="FILTERS",
+            font=ctk.CTkFont(size=11, weight="bold"),
+        )
+        filter_label.pack(side="left")
+
+        filter_hint = ctk.CTkLabel(
+            filter_header_frame,
+            text="(validates shapes after polygon detection)",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        filter_hint.pack(side="left", padx=(10, 0))
+
+        filter_sep = ctk.CTkFrame(self.main_frame, height=2, fg_color="gray40")
+        filter_sep.pack(fill="x", pady=(0, 10))
 
         # First separator
         separator1 = ctk.CTkFrame(self.main_frame, height=1, fg_color="gray50")
@@ -381,6 +501,31 @@ class DXFExtractorApp(ctk.CTk):
         )
         self.min_side_filter_entry.pack(side="left")
 
+        # Fifth separator
+        separator5 = ctk.CTkFrame(self.main_frame, height=1, fg_color="gray50")
+        separator5.pack(fill="x", pady=5)
+
+        # Curved Lines Filter row
+        curved_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        curved_frame.pack(pady=(5, 10))
+
+        self.curved_filter_checkbox = ctk.CTkCheckBox(
+            curved_frame,
+            text="Curved Lines Filter",
+            variable=self.curved_filter_var,
+            command=self._on_curved_filter_toggle,
+            font=ctk.CTkFont(size=12),
+        )
+        self.curved_filter_checkbox.pack(side="left", padx=(0, 10))
+
+        curved_hint = ctk.CTkLabel(
+            curved_frame,
+            text="(excludes polygons with curved edges)",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        curved_hint.pack(side="left")
+
         # Progress bar
         self.progress_bar = ctk.CTkProgressBar(self.main_frame, width=400, height=20)
         self.progress_bar.pack(pady=(0, 15))
@@ -484,6 +629,10 @@ class DXFExtractorApp(ctk.CTk):
         if self.min_side_filter_var.get():
             self.min_side_filter_entry.configure(state="normal")
         # min_side_filter_entry is already disabled by default
+
+        if self.min_line_length_filter_var.get():
+            self.min_line_length_entry.configure(state="normal")
+        # min_line_length_entry is already disabled by default
 
         if self.log_file_var.get():
             self.file_log_level_menu.configure(state="normal")
@@ -618,6 +767,21 @@ class DXFExtractorApp(ctk.CTk):
             min_side_filter_enabled = self.min_side_filter_var.get()
             min_side_filter_amount = self._get_min_side_filter_amount()
 
+            # Pre-Filters
+            skip_curved_entities = self.skip_curved_entities_var.get()
+            min_line_length_filter_enabled = self.min_line_length_filter_var.get()
+            min_line_length_filter_amount = None
+            if min_line_length_filter_enabled:
+                try:
+                    min_line_length_filter_amount = float(
+                        self.min_line_length_filter_amount_var.get()
+                    )
+                except ValueError:
+                    pass
+
+            # Post-Filters
+            curved_filter_enabled = self.curved_filter_var.get()
+
             # Get threshold settings from SettingsManager
             polygon_threshold = self.settings.get("polygon_count_threshold")
             line_threshold = self.settings.get("line_segment_threshold")
@@ -632,7 +796,11 @@ class DXFExtractorApp(ctk.CTk):
                 f"min_area_filter_enabled={min_area_filter_enabled}, "
                 f"min_area_filter_amount={min_area_filter_amount}, "
                 f"min_side_filter_enabled={min_side_filter_enabled}, "
-                f"min_side_filter_amount={min_side_filter_amount}"
+                f"min_side_filter_amount={min_side_filter_amount}, "
+                f"skip_curved_entities={skip_curved_entities}, "
+                f"min_line_length_filter_enabled={min_line_length_filter_enabled}, "
+                f"min_line_length_filter_amount={min_line_length_filter_amount}, "
+                f"curved_filter_enabled={curved_filter_enabled}"
             )
             self.logger.debug(
                 f"Threshold settings: polygon={polygon_threshold}, "
@@ -657,6 +825,10 @@ class DXFExtractorApp(ctk.CTk):
                 min_area_filter_amount=min_area_filter_amount,
                 min_side_filter_enabled=min_side_filter_enabled,
                 min_side_filter_amount=min_side_filter_amount,
+                skip_curved_entities=skip_curved_entities,
+                min_line_length_filter_enabled=min_line_length_filter_enabled,
+                min_line_length_filter_amount=min_line_length_filter_amount,
+                curved_filter_enabled=curved_filter_enabled,
                 polygon_count_threshold=polygon_threshold,
                 line_segment_threshold=line_threshold,
                 entity_count_threshold=entity_threshold,
@@ -965,6 +1137,21 @@ class DXFExtractorApp(ctk.CTk):
         # Sync settings to manager and save
         self._sync_settings_to_manager()
 
+    def _on_skip_curved_toggle(self) -> None:
+        """Handle skip curved entities checkbox toggle."""
+        self._sync_settings_to_manager()
+
+    def _on_min_line_length_toggle(self) -> None:
+        """Handle min line length filter checkbox toggle."""
+        enabled = self.min_line_length_filter_var.get()
+        state = "normal" if enabled else "disabled"
+        self.min_line_length_entry.configure(state=state)
+        self._sync_settings_to_manager()
+
+    def _on_curved_filter_toggle(self) -> None:
+        """Handle curved filter checkbox toggle."""
+        self._sync_settings_to_manager()
+
     def _update_min_area_filter_default(self) -> None:
         """Update min area filter amount to default for selected unit."""
         selection = self.unit_selection_var.get()
@@ -1185,6 +1372,18 @@ class DXFExtractorApp(ctk.CTk):
         self._sync_numeric_setting(
             "min_side_filter_amount", self.min_side_filter_amount_var
         )
+
+        # Pre-Filters
+        self.settings.set("skip_curved_entities", self.skip_curved_entities_var.get())
+        self.settings.set(
+            "min_line_length_filter_enabled", self.min_line_length_filter_var.get()
+        )
+        self._sync_numeric_setting(
+            "min_line_length_filter_amount", self.min_line_length_filter_amount_var
+        )
+
+        # Post-Filters (curved)
+        self.settings.set("curved_filter_enabled", self.curved_filter_var.get())
 
         # Sync unit override
         unit_override = self._get_selected_unit_override()
