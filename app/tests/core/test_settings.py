@@ -571,6 +571,54 @@ class TestSettingsManagerPersistence:
         assert manager2.get("filename_prefix") == "session1_"
 
 
+class TestLogViewerLevelPersistence:
+    """Tests for log_viewer_level settings synchronization."""
+
+    def test_log_viewer_level_default_is_info(
+        self, settings_manager: SettingsManager
+    ) -> None:
+        """Verify log_viewer_level defaults to INFO when not set."""
+        value = settings_manager.get("log_viewer_level")
+        assert value == "INFO"
+
+    def test_log_viewer_level_persists_after_save_load(self, tmp_path: Path) -> None:
+        """Verify log_viewer_level is saved and restored correctly."""
+        config_path = tmp_path / "settings.json"
+
+        # First session: set and save
+        manager1 = SettingsManager(config_path=config_path)
+        manager1.set("log_viewer_level", "DEBUG")
+        manager1.save()
+
+        # Second session: load and verify
+        manager2 = SettingsManager(config_path=config_path)
+        manager2.load()
+        assert manager2.get("log_viewer_level") == "DEBUG"
+
+    def test_log_viewer_level_accepts_valid_levels(
+        self, settings_manager: SettingsManager
+    ) -> None:
+        """Verify log_viewer_level accepts all valid log level strings."""
+        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR"]
+
+        for level in valid_levels:
+            result = settings_manager.set("log_viewer_level", level)
+            assert result is True, f"Failed to set log_viewer_level to {level}"
+            assert settings_manager.get("log_viewer_level") == level
+
+    def test_log_viewer_level_validation(
+        self, settings_manager: SettingsManager
+    ) -> None:
+        """Verify log_viewer_level validation passes for valid string."""
+        is_valid, error = settings_manager.validate("log_viewer_level", "DEBUG")
+        assert is_valid is True
+        assert error == ""
+
+    def test_log_viewer_level_in_logging_section(self) -> None:
+        """Verify log_viewer_level is in the logging settings section."""
+        assert "log_viewer_level" in SETTINGS_SECTIONS["logging"]
+
+
 class TestSettingsManagerThreadSafety:
     """Tests for thread safety."""
 

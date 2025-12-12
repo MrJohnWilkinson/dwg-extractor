@@ -370,8 +370,8 @@ class DXFExtractorApp(ctk.CTk):
         self.log_frame = ctk.CTkFrame(self.main_frame)
         self.log_frame.pack(fill="both", expand=True, pady=10)
 
-        # Log level selector
-        self.log_level_var = ctk.StringVar(value="INFO")
+        # Log level selector - initialize from settings
+        self.log_level_var = ctk.StringVar(value=self.settings.get("log_viewer_level"))
         self.log_level_menu = ctk.CTkOptionMenu(
             self.log_frame,
             values=["DEBUG", "INFO", "WARNING", "ERROR"],
@@ -379,6 +379,15 @@ class DXFExtractorApp(ctk.CTk):
             command=self._on_log_level_change,
         )
         self.log_level_menu.pack(anchor="w", padx=5, pady=5)
+
+        # Log level hint label
+        log_level_hint = ctk.CTkLabel(
+            self.log_frame,
+            text="Controls message capture and display",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        log_level_hint.pack(anchor="w", padx=5, pady=(0, 5))
 
         # Log file options row
         log_file_options_frame = ctk.CTkFrame(self.log_frame, fg_color="transparent")
@@ -411,6 +420,17 @@ class DXFExtractorApp(ctk.CTk):
             state="disabled",
         )
         self.file_log_level_menu.pack(side="left")
+
+        # File logging hint label (shown when file logging is enabled)
+        self.file_logging_hint = ctk.CTkLabel(
+            self.log_frame,
+            text="DEBUG messages will be captured to file",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        # Initially hidden, shown when log file checkbox is checked
+        if self.log_file_var.get():
+            self.file_logging_hint.pack(anchor="w", padx=5, pady=(0, 5))
 
         # Log text area
         self.log_text = ctk.CTkTextbox(
@@ -518,6 +538,10 @@ class DXFExtractorApp(ctk.CTk):
 
     def _extraction_worker(self) -> None:
         """Background worker thread for extraction process."""
+        # Source loggers that need DEBUG level for file logging
+        source_logger_names = ["core.extractor", "core.geometry", "__main__"]
+        original_logger_levels: dict[str, int] = {}
+
         try:
             # Validate file path exists
             if not self.selected_file_path:
@@ -539,6 +563,14 @@ class DXFExtractorApp(ctk.CTk):
                 self.debug_file_handler.setLevel(file_level)
 
                 logging.getLogger().addHandler(self.debug_file_handler)
+
+                # Decouple file logging: temporarily set source loggers to DEBUG
+                # so that DEBUG messages are generated for file logging,
+                # regardless of GUI log viewer level setting
+                for logger_name in source_logger_names:
+                    source_logger = logging.getLogger(logger_name)
+                    original_logger_levels[logger_name] = source_logger.level
+                    source_logger.setLevel(logging.DEBUG)
 
                 self.logger.info(
                     f"Debug log ({self.file_log_level_var.get()}): {log_path}"
@@ -648,6 +680,10 @@ class DXFExtractorApp(ctk.CTk):
             self._show_error(f"Extraction failed: {str(e)}")
 
         finally:
+            # Restore original source logger levels
+            for logger_name, original_level in original_logger_levels.items():
+                logging.getLogger(logger_name).setLevel(original_level)
+
             # Clean up debug file handler
             if self.debug_file_handler:
                 logging.getLogger().removeHandler(self.debug_file_handler)
@@ -1050,7 +1086,8 @@ class DXFExtractorApp(ctk.CTk):
         """Handle log level dropdown change.
 
         Sets source logger levels dynamically so DEBUG messages
-        are captured when DEBUG is selected.
+        are captured when DEBUG is selected. Also persists the
+        setting for next application startup.
         """
         level = getattr(logging, value)
 
@@ -1059,12 +1096,20 @@ class DXFExtractorApp(ctk.CTk):
         logging.getLogger("core.geometry").setLevel(level)
         logging.getLogger("__main__").setLevel(level)
 
+        # Persist the setting
+        self.settings.set("log_viewer_level", value)
+        self.settings.save()
+
     def _on_log_file_toggle(self) -> None:
-        """Handle log file checkbox toggle - enable/disable level dropdown."""
+        """Handle log file checkbox toggle - enable/disable level dropdown and hint."""
         if self.log_file_var.get():
             self.file_log_level_menu.configure(state="normal")
+            # Show the file logging hint
+            self.file_logging_hint.pack(anchor="w", padx=5, pady=(0, 5))
         else:
             self.file_log_level_menu.configure(state="disabled")
+            # Hide the file logging hint
+            self.file_logging_hint.pack_forget()
 
         # Sync settings to manager and save
         self._sync_settings_to_manager()
@@ -1083,6 +1128,7 @@ class DXFExtractorApp(ctk.CTk):
         # Sync logging settings
         self.settings.set("generate_log_file", self.log_file_var.get())
         self.settings.set("file_log_level", self.file_log_level_var.get())
+        self.settings.set("log_viewer_level", self.log_level_var.get())
 
         # Save to disk
         self.settings.save()

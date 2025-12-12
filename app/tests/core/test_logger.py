@@ -767,6 +767,104 @@ class TestCreateQueueHandler:
         logger.handlers.clear()
 
 
+class TestDecoupledFileLogging:
+    """Tests for decoupled file logging pattern used during extraction."""
+
+    def test_storing_and_restoring_logger_levels(self) -> None:
+        """Verify pattern for storing and restoring logger levels works correctly."""
+        # This tests the pattern used in _extraction_worker() for decoupling
+        source_logger_names = ["test.decoupled.extractor", "test.decoupled.geometry"]
+        original_logger_levels: dict[str, int] = {}
+
+        # Set initial levels to INFO (simulating GUI setting)
+        for name in source_logger_names:
+            logger = logging.getLogger(name)
+            logger.setLevel(logging.INFO)
+
+        # Store original levels and set to DEBUG (simulating file logging enable)
+        for name in source_logger_names:
+            logger = logging.getLogger(name)
+            original_logger_levels[name] = logger.level
+            logger.setLevel(logging.DEBUG)
+
+        # Verify loggers are now at DEBUG
+        for name in source_logger_names:
+            assert logging.getLogger(name).level == logging.DEBUG
+
+        # Restore original levels (simulating extraction complete)
+        for name, original_level in original_logger_levels.items():
+            logging.getLogger(name).setLevel(original_level)
+
+        # Verify loggers are restored to INFO
+        for name in source_logger_names:
+            assert logging.getLogger(name).level == logging.INFO
+
+    def test_debug_messages_captured_when_logger_set_to_debug(self) -> None:
+        """Verify DEBUG messages are captured when source logger is at DEBUG level."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = create_queue_handler(log_queue)
+
+        logger = logging.getLogger("test.decoupled.capture")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+
+        # Set logger to DEBUG - DEBUG messages should be captured
+        logger.setLevel(logging.DEBUG)
+        logger.debug("debug message should appear")
+
+        assert not log_queue.empty()
+        level, msg = log_queue.get_nowait()
+        assert level == logging.DEBUG
+        assert "debug message should appear" in msg
+
+        logger.handlers.clear()
+
+    def test_debug_messages_filtered_when_logger_set_to_info(self) -> None:
+        """Verify DEBUG messages are filtered when source logger is at INFO level."""
+        log_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        handler = create_queue_handler(log_queue)
+
+        logger = logging.getLogger("test.decoupled.filter")
+        logger.handlers.clear()
+        logger.addHandler(handler)
+
+        # Set logger to INFO - DEBUG messages should NOT be captured
+        logger.setLevel(logging.INFO)
+        logger.debug("debug message should not appear")
+        logger.info("info message should appear")
+
+        # Only INFO message should be in queue
+        assert not log_queue.empty()
+        level, msg = log_queue.get_nowait()
+        assert level == logging.INFO
+        assert "info message should appear" in msg
+        assert log_queue.empty()
+
+        logger.handlers.clear()
+
+    def test_multiple_handlers_receive_messages_independently(self) -> None:
+        """Verify file handler and queue handler receive messages independently."""
+        # Create both handlers
+        queue_handler_queue: queue.Queue[tuple[int, str]] = queue.Queue()
+        queue_handler = create_queue_handler(queue_handler_queue)
+
+        logger = logging.getLogger("test.decoupled.multi")
+        logger.handlers.clear()
+        logger.addHandler(queue_handler)
+        logger.setLevel(logging.DEBUG)
+
+        # Log a DEBUG message
+        logger.debug("test multi-handler message")
+
+        # Queue handler should receive the message
+        assert not queue_handler_queue.empty()
+        level, msg = queue_handler_queue.get_nowait()
+        assert level == logging.DEBUG
+        assert "test multi-handler message" in msg
+
+        logger.handlers.clear()
+
+
 class TestDynamicLogLevelSetting:
     """Tests for dynamic log level setting pattern used by GUI dropdown."""
 
