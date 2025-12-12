@@ -1280,8 +1280,8 @@ def extract_blocks(
                         nested_block_parents[nested_name] = set()
                     nested_block_parents[nested_name].add(effective_name)
 
-            # Analyze block geometry
-            bbox = _get_block_bounding_box(block_def)
+            # Analyze block geometry (with nested INSERT expansion)
+            bbox = _get_block_bounding_box(block_def, doc)
             native_width = round(bbox[2] - bbox[0], 2)
             native_height = round(bbox[3] - bbox[1], 2)
 

@@ -259,17 +259,99 @@ def _get_arc_bounding_box(
     return (min_x, min_y, max_x, max_y)
 
 
+def _transform_bbox_points(
+    bbox: tuple[float, float, float, float],
+    insert: Any,
+) -> list[tuple[float, float]]:
+    """
+    Transform a bounding box by an INSERT entity's transformation properties.
+
+    Applies the INSERT entity's scale, rotation, and translation to all four
+    corners of the bounding box. The transformation order is: scale -> rotation
+    -> translation, matching CAD system conventions.
+
+    Args:
+        bbox: Tuple of (min_x, min_y, max_x, max_y) representing the source bounding box.
+        insert: ezdxf INSERT entity with dxf.insert (position), dxf.xscale, dxf.yscale,
+                and dxf.rotation properties.
+
+    Returns:
+        List of 4 transformed (x, y) corner points.
+
+    Examples:
+        >>> # Identity transform (scale=1, rotation=0, position=0,0)
+        >>> _transform_bbox_points((0, 0, 10, 10), insert)  # insert at origin, no scale/rotation
+        [(0.0, 0.0), (10.0, 0.0), (10.0, 10.0), (0.0, 10.0)]
+
+        >>> # Translation only (position offset)
+        >>> _transform_bbox_points((0, 0, 10, 10), insert)  # insert at (5, 5)
+        [(5.0, 5.0), (15.0, 5.0), (15.0, 15.0), (5.0, 15.0)]
+    """
+    min_x, min_y, max_x, max_y = bbox
+
+    # Extract INSERT transformation properties
+    insert_point = insert.dxf.insert
+    insert_x = insert_point.x
+    insert_y = insert_point.y
+    scale_x = insert.dxf.xscale
+    scale_y = insert.dxf.yscale
+    rotation_deg = insert.dxf.rotation
+    rotation_rad = math.radians(rotation_deg)
+
+    # Define all 4 corners of the bbox
+    corners = [
+        (min_x, min_y),  # bottom-left
+        (max_x, min_y),  # bottom-right
+        (max_x, max_y),  # top-right
+        (min_x, max_y),  # top-left
+    ]
+
+    # Transform each corner: scale -> rotation -> translation
+    transformed: list[tuple[float, float]] = []
+    cos_r = math.cos(rotation_rad)
+    sin_r = math.sin(rotation_rad)
+
+    for x, y in corners:
+        # Step 1: Apply scale
+        x_scaled = x * scale_x
+        y_scaled = y * scale_y
+
+        # Step 2: Apply rotation
+        x_rotated = x_scaled * cos_r - y_scaled * sin_r
+        y_rotated = x_scaled * sin_r + y_scaled * cos_r
+
+        # Step 3: Apply translation
+        x_final = x_rotated + insert_x
+        y_final = y_rotated + insert_y
+
+        transformed.append((x_final, y_final))
+
+    return transformed
+
+
 def _get_block_bounding_box(
     block_def: BlockLayout,
+    doc: Any | None = None,
+    processed_blocks: set[str] | None = None,
 ) -> tuple[float, float, float, float]:
     """
-    Extract the bounding box (extents) of a block definition at 0° rotation.
+    Extract the bounding box (extents) of a block definition at 0 degree rotation.
 
     This function iterates through all entities in the block definition and calculates
     the minimum and maximum X and Y coordinates to determine the block's bounding box.
 
+    When a `doc` parameter is provided, INSERT entities (block references) are processed
+    recursively. The nested block's bounding box is calculated and transformed by the
+    INSERT's scale, rotation, and position, then included in the overall bounding box.
+    Circular references are detected and prevented using the `processed_blocks` set.
+
     Args:
         block_def: ezdxf block definition object
+        doc: Optional ezdxf Drawing document for nested block lookup. When provided,
+             INSERT entities are recursively expanded. Default None (INSERTs ignored).
+        processed_blocks: Optional set of block names already processed in the current
+             recursion chain. Used internally to prevent infinite loops on circular
+             block references. Default None (initialized automatically).
 
     Returns:
         Tuple of (min_x, min_y, max_x, max_y) representing the bounding box extents.
@@ -279,6 +361,10 @@ def _get_block_bounding_box(
         >>> block_def = doc.blocks.get('SHELF_4FT')
         >>> _get_block_bounding_box(block_def)
         (0.0, 0.0, 1200.0, 600.0)
+
+        >>> # With nested INSERT expansion
+        >>> _get_block_bounding_box(block_def, doc)
+        (0.0, 0.0, 1200.0, 600.0)  # May be larger if nested blocks extend beyond
     """
     min_x = float("inf")
     min_y = float("inf")
@@ -346,6 +432,50 @@ def _get_block_bounding_box(
             min_y = min(min_y, location.y)
             max_y = max(max_y, location.y)
             has_geometry = True
+
+        elif entity_type == "INSERT" and doc is not None:
+            # Handle nested block references (INSERT entities)
+            # Initialize processed_blocks set if not provided
+            if processed_blocks is None:
+                processed_blocks = set()
+
+            # Get the current block name for circular reference tracking
+            current_block_name = block_def.name
+
+            # Get the nested block name from the INSERT entity
+            nested_block_name = entity.dxf.name
+
+            # Check if nested block exists in document
+            if nested_block_name in doc.blocks:
+                # Check for circular reference
+                if nested_block_name not in processed_blocks:
+                    # Get the nested block definition
+                    nested_block = doc.blocks[nested_block_name]
+
+                    # Create new processed set including current block
+                    new_processed = processed_blocks | {current_block_name}
+
+                    # Recursively get nested block's bounding box
+                    nested_bbox = _get_block_bounding_box(
+                        nested_block, doc, new_processed
+                    )
+
+                    # Only process if nested block has valid geometry
+                    if nested_bbox != (0.0, 0.0, 0.0, 0.0):
+                        # Transform nested bbox corners by INSERT properties
+                        transformed_points = _transform_bbox_points(nested_bbox, entity)
+
+                        # Update bounds from transformed corners
+                        for tx, ty in transformed_points:
+                            min_x = min(min_x, tx)
+                            max_x = max(max_x, tx)
+                            min_y = min(min_y, ty)
+                            max_y = max(max_y, ty)
+                        has_geometry = True
+                else:
+                    logger.debug(
+                        f"Bounding box: skipping circular reference to {nested_block_name}"
+                    )
 
     # Return zeros if no geometry found
     if not has_geometry:

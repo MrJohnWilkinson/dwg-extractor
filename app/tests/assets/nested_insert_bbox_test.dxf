@@ -549,7 +549,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-50
+6C
   9
 $SURFTAB1
  70
@@ -929,11 +929,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{B9BCF3AF-0AAC-4C35-B8DD-8680DB2614DB}
+{67225847-3551-42B2-836B-4483A72DC70B}
   9
 $VERSIONGUID
   2
-{EFEDEAB4-AF39-49D7-872C-6D70B0DC3E40}
+{34390EB4-5C32-49AC-8D3C-B3A970E5DD53}
   9
 $EXTNAMES
 290
@@ -1701,7 +1701,7 @@ ACAD
   0
 APPID
   5
-4D
+69
 330
 3
 100
@@ -1715,7 +1715,7 @@ HATCHBACKGROUNDCOLOR
   0
 APPID
   5
-4E
+6A
 330
 3
 100
@@ -1891,7 +1891,7 @@ BLOCK_RECORD
 100
 AcDbSymbolTable
  70
-7
+10
   0
 BLOCK_RECORD
   5
@@ -1943,7 +1943,7 @@ AcDbSymbolTableRecord
 100
 AcDbBlockTableRecord
   2
-LWPOLY_90DEG_ARC
+INNER_BOX
 340
 0
  70
@@ -1963,7 +1963,7 @@ AcDbSymbolTableRecord
 100
 AcDbBlockTableRecord
   2
-LWPOLY_STRAIGHT
+OUTER_SIMPLE
 340
 0
  70
@@ -1975,7 +1975,7 @@ LWPOLY_STRAIGHT
   0
 BLOCK_RECORD
   5
-37
+39
 330
 9
 100
@@ -1983,27 +1983,7 @@ AcDbSymbolTableRecord
 100
 AcDbBlockTableRecord
   2
-LWPOLY_MIXED
-340
-0
- 70
-0
-280
-1
-281
-0
-  0
-BLOCK_RECORD
-  5
-3B
-330
-9
-100
-AcDbSymbolTableRecord
-100
-AcDbBlockTableRecord
-  2
-LWPOLY_CLOSED_ARC
+OUTER_SCALED
 340
 0
  70
@@ -2023,7 +2003,87 @@ AcDbSymbolTableRecord
 100
 AcDbBlockTableRecord
   2
-LWPOLY_INWARD_ARC
+OUTER_ROTATED
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+45
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+CIRCULAR_A
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+49
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+CIRCULAR_B
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+51
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+OUTER_COMBO
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+57
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+DEEP_OUTER
 340
 0
  70
@@ -2129,7 +2189,7 @@ AcDbEntity
 100
 AcDbBlockBegin
   2
-LWPOLY_90DEG_ARC
+INNER_BOX
  70
 0
  10
@@ -2139,7 +2199,7 @@ LWPOLY_90DEG_ARC
  30
 0.0
   3
-LWPOLY_90DEG_ARC
+INNER_BOX
   1
 
   0
@@ -2155,23 +2215,25 @@ AcDbEntity
 100
 AcDbPolyline
  90
-3
+4
  70
-0
+1
  10
 0.0
  20
 0.0
  10
-100.0
+10.0
  20
 0.0
- 42
-0.41421356237309503
  10
-100.0
+10.0
  20
-100.0
+10.0
+ 10
+0.0
+ 20
+10.0
   0
 ENDBLK
   5
@@ -2197,7 +2259,7 @@ AcDbEntity
 100
 AcDbBlockBegin
   2
-LWPOLY_STRAIGHT
+OUTER_SIMPLE
  70
 0
  10
@@ -2207,7 +2269,7 @@ LWPOLY_STRAIGHT
  30
 0.0
   3
-LWPOLY_STRAIGHT
+OUTER_SIMPLE
   1
 
   0
@@ -2223,21 +2285,45 @@ AcDbEntity
 100
 AcDbPolyline
  90
-3
+4
  70
+1
+ 10
+0.0
+ 20
+0.0
+ 10
+50.0
+ 20
+0.0
+ 10
+50.0
+ 20
+30.0
+ 10
+0.0
+ 20
+30.0
+  0
+INSERT
+  5
+37
+330
+33
+100
+AcDbEntity
+  8
 0
+100
+AcDbBlockReference
+  2
+INNER_BOX
  10
-0.0
+5.0
  20
+5.0
+ 30
 0.0
- 10
-100.0
- 20
-0.0
- 10
-100.0
- 20
-100.0
   0
 ENDBLK
   5
@@ -2253,9 +2339,9 @@ AcDbBlockEnd
   0
 BLOCK
   5
-38
+3A
 330
-37
+39
 100
 AcDbEntity
   8
@@ -2263,7 +2349,7 @@ AcDbEntity
 100
 AcDbBlockBegin
   2
-LWPOLY_MIXED
+OUTER_SCALED
  70
 0
  10
@@ -2273,87 +2359,15 @@ LWPOLY_MIXED
  30
 0.0
   3
-LWPOLY_MIXED
+OUTER_SCALED
   1
 
   0
 LWPOLYLINE
-  5
-3A
-330
-37
-100
-AcDbEntity
-  8
-0
-100
-AcDbPolyline
- 90
-4
- 70
-1
- 10
-0.0
- 20
-0.0
- 10
-100.0
- 20
-0.0
- 42
-0.41421356237309503
- 10
-100.0
- 20
-100.0
- 10
-0.0
- 20
-100.0
-  0
-ENDBLK
-  5
-39
-330
-37
-100
-AcDbEntity
-  8
-0
-100
-AcDbBlockEnd
-  0
-BLOCK
   5
 3C
 330
-3B
-100
-AcDbEntity
-  8
-0
-100
-AcDbBlockBegin
-  2
-LWPOLY_CLOSED_ARC
- 70
-0
- 10
-0.0
- 20
-0.0
- 30
-0.0
-  3
-LWPOLY_CLOSED_ARC
-  1
-
-  0
-LWPOLYLINE
-  5
-3E
-330
-3B
+39
 100
 AcDbEntity
   8
@@ -2369,25 +2383,47 @@ AcDbPolyline
  20
 0.0
  10
-100.0
+50.0
  20
 0.0
  10
-100.0
- 20
 50.0
- 42
-1.0
+ 20
+30.0
  10
 0.0
  20
-50.0
+30.0
   0
-ENDBLK
+INSERT
   5
 3D
 330
+39
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockReference
+  2
+INNER_BOX
+ 10
+5.0
+ 20
+5.0
+ 30
+0.0
+ 41
+2.0
+ 42
+2.0
+  0
+ENDBLK
+  5
 3B
+330
+39
 100
 AcDbEntity
   8
@@ -2407,7 +2443,7 @@ AcDbEntity
 100
 AcDbBlockBegin
   2
-LWPOLY_INWARD_ARC
+OUTER_ROTATED
  70
 0
  10
@@ -2417,7 +2453,7 @@ LWPOLY_INWARD_ARC
  30
 0.0
   3
-LWPOLY_INWARD_ARC
+OUTER_ROTATED
   1
 
   0
@@ -2433,29 +2469,419 @@ AcDbEntity
 100
 AcDbPolyline
  90
-3
+4
  70
+1
+ 10
+0.0
+ 20
+0.0
+ 10
+50.0
+ 20
+0.0
+ 10
+50.0
+ 20
+30.0
+ 10
+0.0
+ 20
+30.0
+  0
+INSERT
+  5
+43
+330
+3F
+100
+AcDbEntity
+  8
 0
+100
+AcDbBlockReference
+  2
+INNER_BOX
  10
-0.0
+25.0
  20
+15.0
+ 30
 0.0
- 10
-100.0
- 20
-0.0
- 42
--0.41421356237309503
- 10
-100.0
- 20
-100.0
+ 50
+45.0
   0
 ENDBLK
   5
 41
 330
 3F
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+46
+330
+45
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+CIRCULAR_A
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+CIRCULAR_A
+  1
+
+  0
+LWPOLYLINE
+  5
+48
+330
+45
+100
+AcDbEntity
+  8
+0
+100
+AcDbPolyline
+ 90
+4
+ 70
+1
+ 10
+0.0
+ 20
+0.0
+ 10
+20.0
+ 20
+0.0
+ 10
+20.0
+ 20
+20.0
+ 10
+0.0
+ 20
+20.0
+  0
+INSERT
+  5
+4F
+330
+45
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockReference
+  2
+CIRCULAR_B
+ 10
+5.0
+ 20
+5.0
+ 30
+0.0
+  0
+ENDBLK
+  5
+47
+330
+45
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+4A
+330
+49
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+CIRCULAR_B
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+CIRCULAR_B
+  1
+
+  0
+LWPOLYLINE
+  5
+4C
+330
+49
+100
+AcDbEntity
+  8
+0
+100
+AcDbPolyline
+ 90
+4
+ 70
+1
+ 10
+0.0
+ 20
+0.0
+ 10
+10.0
+ 20
+0.0
+ 10
+10.0
+ 20
+10.0
+ 10
+0.0
+ 20
+10.0
+  0
+INSERT
+  5
+4D
+330
+49
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockReference
+  2
+CIRCULAR_A
+ 10
+2.0
+ 20
+2.0
+ 30
+0.0
+  0
+ENDBLK
+  5
+4B
+330
+49
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+52
+330
+51
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+OUTER_COMBO
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+OUTER_COMBO
+  1
+
+  0
+LWPOLYLINE
+  5
+54
+330
+51
+100
+AcDbEntity
+  8
+0
+100
+AcDbPolyline
+ 90
+4
+ 70
+1
+ 10
+0.0
+ 20
+0.0
+ 10
+60.0
+ 20
+0.0
+ 10
+60.0
+ 20
+40.0
+ 10
+0.0
+ 20
+40.0
+  0
+INSERT
+  5
+55
+330
+51
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockReference
+  2
+INNER_BOX
+ 10
+30.0
+ 20
+20.0
+ 30
+0.0
+ 41
+1.5
+ 42
+1.5
+ 50
+30.0
+  0
+ENDBLK
+  5
+53
+330
+51
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+58
+330
+57
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+DEEP_OUTER
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+DEEP_OUTER
+  1
+
+  0
+LWPOLYLINE
+  5
+5A
+330
+57
+100
+AcDbEntity
+  8
+0
+100
+AcDbPolyline
+ 90
+4
+ 70
+1
+ 10
+0.0
+ 20
+0.0
+ 10
+100.0
+ 20
+0.0
+ 10
+100.0
+ 20
+60.0
+ 10
+0.0
+ 20
+60.0
+  0
+INSERT
+  5
+5B
+330
+57
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockReference
+  2
+OUTER_SIMPLE
+ 10
+10.0
+ 20
+10.0
+ 30
+0.0
+  0
+ENDBLK
+  5
+59
+330
+57
 100
 AcDbEntity
   8
@@ -2471,7 +2897,7 @@ ENTITIES
   0
 INSERT
   5
-43
+5D
 330
 17
 100
@@ -2481,7 +2907,7 @@ AcDbEntity
 100
 AcDbBlockReference
   2
-LWPOLY_90DEG_ARC
+OUTER_SIMPLE
  10
 0.0
  20
@@ -2491,7 +2917,7 @@ LWPOLY_90DEG_ARC
   0
 INSERT
   5
-45
+5F
 330
 17
 100
@@ -2501,9 +2927,49 @@ AcDbEntity
 100
 AcDbBlockReference
   2
-LWPOLY_STRAIGHT
+OUTER_SCALED
  10
-200.0
+0.0
+ 20
+50.0
+ 30
+0.0
+  0
+INSERT
+  5
+61
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockReference
+  2
+OUTER_ROTATED
+ 10
+0.0
+ 20
+100.0
+ 30
+0.0
+  0
+INSERT
+  5
+63
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockReference
+  2
+CIRCULAR_A
+ 10
+100.0
  20
 0.0
  30
@@ -2511,7 +2977,7 @@ LWPOLY_STRAIGHT
   0
 INSERT
   5
-47
+65
 330
 17
 100
@@ -2521,17 +2987,17 @@ AcDbEntity
 100
 AcDbBlockReference
   2
-LWPOLY_MIXED
+OUTER_COMBO
  10
-0.0
+100.0
  20
-200.0
+50.0
  30
 0.0
   0
 INSERT
   5
-49
+67
 330
 17
 100
@@ -2541,31 +3007,11 @@ AcDbEntity
 100
 AcDbBlockReference
   2
-LWPOLY_CLOSED_ARC
+DEEP_OUTER
  10
-200.0
- 20
-200.0
- 30
 0.0
-  0
-INSERT
-  5
-4B
-330
-17
-100
-AcDbEntity
-  8
-0
-100
-AcDbBlockReference
-  2
-LWPOLY_INWARD_ARC
- 10
-400.0
  20
-0.0
+150.0
  30
 0.0
   0
@@ -3559,7 +4005,7 @@ CREATED_BY_EZDXF
   3
 WRITTEN_BY_EZDXF
 350
-4F
+6B
   0
 DICTIONARYVAR
   5
@@ -3571,11 +4017,11 @@ DictionaryVariables
 280
 0
   1
-1.4.3 @ 2025-12-12T23:03:26.920445+00:00
+1.4.3 @ 2025-12-12T23:03:26.968788+00:00
   0
 DICTIONARYVAR
   5
-4F
+6B
 330
 2D
 100
@@ -3583,7 +4029,7 @@ DictionaryVariables
 280
 0
   1
-1.4.3 @ 2025-12-12T23:03:26.922244+00:00
+1.4.3 @ 2025-12-12T23:03:26.971537+00:00
   0
 ENDSEC
   0

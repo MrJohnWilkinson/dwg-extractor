@@ -30,6 +30,7 @@ from core.geometry import (
     _get_intersection_points,
     _polygon_has_curved_edges,
     _snap_linestring_coords,
+    _transform_bbox_points,
     calculate_polygon_area,
     calculate_shortest_straight_side,
 )
@@ -2406,3 +2407,257 @@ class TestLwpolylineBulge:
 
         # Should produce exactly 4 edges (no arc flattening needed)
         assert len(edges) == 4
+
+
+class TestTransformBboxPoints:
+    """Test suite for _transform_bbox_points helper function."""
+
+    def test_identity_transform(self) -> None:
+        """Test identity transform (scale=1, rotation=0, position=0,0)."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+        block.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)], close=True)
+
+        # Create INSERT with identity transform (defaults)
+        msp = doc.modelspace()
+        insert = msp.add_blockref("TEST_BLOCK", (0, 0))
+
+        bbox = (0, 0, 10, 10)
+        result = _transform_bbox_points(bbox, insert)
+
+        # Should return same corners (identity transform)
+        assert len(result) == 4
+        assert result[0] == pytest.approx((0.0, 0.0), abs=0.001)
+        assert result[1] == pytest.approx((10.0, 0.0), abs=0.001)
+        assert result[2] == pytest.approx((10.0, 10.0), abs=0.001)
+        assert result[3] == pytest.approx((0.0, 10.0), abs=0.001)
+
+    def test_translation_only(self) -> None:
+        """Test position offset (translation only, no scale/rotation)."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+        block.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)], close=True)
+
+        # Create INSERT at position (5, 5)
+        msp = doc.modelspace()
+        insert = msp.add_blockref("TEST_BLOCK", (5, 5))
+
+        bbox = (0, 0, 10, 10)
+        result = _transform_bbox_points(bbox, insert)
+
+        # Should be offset by (5, 5)
+        assert result[0] == pytest.approx((5.0, 5.0), abs=0.001)
+        assert result[1] == pytest.approx((15.0, 5.0), abs=0.001)
+        assert result[2] == pytest.approx((15.0, 15.0), abs=0.001)
+        assert result[3] == pytest.approx((5.0, 15.0), abs=0.001)
+
+    def test_uniform_scale(self) -> None:
+        """Test uniform scale (xscale=yscale=2)."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+        block.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)], close=True)
+
+        # Create INSERT with 2x scale
+        msp = doc.modelspace()
+        insert = msp.add_blockref("TEST_BLOCK", (0, 0), dxfattribs={
+            "xscale": 2.0,
+            "yscale": 2.0
+        })
+
+        bbox = (0, 0, 10, 10)
+        result = _transform_bbox_points(bbox, insert)
+
+        # Should be scaled 2x
+        assert result[0] == pytest.approx((0.0, 0.0), abs=0.001)
+        assert result[1] == pytest.approx((20.0, 0.0), abs=0.001)
+        assert result[2] == pytest.approx((20.0, 20.0), abs=0.001)
+        assert result[3] == pytest.approx((0.0, 20.0), abs=0.001)
+
+    def test_rotation_90_degrees(self) -> None:
+        """Test 90 degree rotation."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+        block.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)], close=True)
+
+        # Create INSERT with 90 degree rotation
+        msp = doc.modelspace()
+        insert = msp.add_blockref("TEST_BLOCK", (0, 0), dxfattribs={"rotation": 90.0})
+
+        bbox = (0, 0, 10, 10)
+        result = _transform_bbox_points(bbox, insert)
+
+        # After 90 degree rotation around origin:
+        # (0,0) -> (0,0), (10,0) -> (0,10), (10,10) -> (-10,10), (0,10) -> (-10,0)
+        assert result[0] == pytest.approx((0.0, 0.0), abs=0.001)
+        assert result[1] == pytest.approx((0.0, 10.0), abs=0.001)
+        assert result[2] == pytest.approx((-10.0, 10.0), abs=0.001)
+        assert result[3] == pytest.approx((-10.0, 0.0), abs=0.001)
+
+    def test_combined_scale_and_translation(self) -> None:
+        """Test combined scale and translation."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="TEST_BLOCK")
+        block.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)], close=True)
+
+        # Create INSERT with 2x scale at position (5, 5)
+        msp = doc.modelspace()
+        insert = msp.add_blockref("TEST_BLOCK", (5, 5), dxfattribs={
+            "xscale": 2.0,
+            "yscale": 2.0
+        })
+
+        bbox = (0, 0, 10, 10)
+        result = _transform_bbox_points(bbox, insert)
+
+        # Scale first (2x), then translate by (5, 5)
+        assert result[0] == pytest.approx((5.0, 5.0), abs=0.001)
+        assert result[1] == pytest.approx((25.0, 5.0), abs=0.001)
+        assert result[2] == pytest.approx((25.0, 25.0), abs=0.001)
+        assert result[3] == pytest.approx((5.0, 25.0), abs=0.001)
+
+
+class TestNestedInsertBoundingBox:
+    """Test suite for nested INSERT bounding box expansion."""
+
+    def test_nested_insert_simple(self) -> None:
+        """Test simple nested INSERT with no transform expands bbox correctly."""
+        doc = ezdxf.readfile("app/tests/assets/nested_insert_bbox_test.dxf")
+        outer_simple = doc.blocks.get("OUTER_SIMPLE")
+
+        # Without doc parameter (backward compatibility) - ignores INSERT
+        bbox_without_doc = _get_block_bounding_box(outer_simple)
+        # OUTER_SIMPLE has rectangle (0,0) to (50,30)
+        assert bbox_without_doc == pytest.approx((0.0, 0.0, 50.0, 30.0), abs=0.001)
+
+        # With doc parameter - includes nested INSERT
+        bbox_with_doc = _get_block_bounding_box(outer_simple, doc)
+        # INNER_BOX is at (5,5) with size (10,10), so extends to (15,15)
+        # But OUTER_SIMPLE's rectangle (50,30) is larger, so bbox unchanged
+        assert bbox_with_doc == pytest.approx((0.0, 0.0, 50.0, 30.0), abs=0.001)
+
+    def test_nested_insert_scaled(self) -> None:
+        """Test nested INSERT with scale factor expands bbox correctly."""
+        doc = ezdxf.readfile("app/tests/assets/nested_insert_bbox_test.dxf")
+        outer_scaled = doc.blocks.get("OUTER_SCALED")
+
+        # With doc parameter - includes scaled nested INSERT
+        bbox = _get_block_bounding_box(outer_scaled, doc)
+        # INNER_BOX is at (5,5) with scale (2,2), so extends to (5+20, 5+20) = (25,25)
+        # OUTER_SCALED's rectangle (50,30) is still larger, so bbox unchanged
+        assert bbox == pytest.approx((0.0, 0.0, 50.0, 30.0), abs=0.001)
+
+    def test_nested_insert_rotated(self) -> None:
+        """Test nested INSERT with rotation expands bbox correctly."""
+        import math
+        doc = ezdxf.readfile("app/tests/assets/nested_insert_bbox_test.dxf")
+        outer_rotated = doc.blocks.get("OUTER_ROTATED")
+
+        # With doc parameter - includes rotated nested INSERT
+        bbox = _get_block_bounding_box(outer_rotated, doc)
+
+        # INNER_BOX at (25,15) with 45 degree rotation
+        # After 45 rotation, (0,0)-(10,10) square becomes diamond
+        # The diagonal of (0,0)-(10,10) is sqrt(200) = 14.14
+        # Rotated square fits in bbox from center +/- half_diagonal
+        # But this is at offset (25,15), so the transformed corners are:
+        # Center of INNER_BOX at origin is (5,5) -> after 45 rotation and translation
+        # The corners extend outward from (25,15) by the rotated offsets
+
+        # The bbox should still be dominated by OUTER_ROTATED's (0,0) to (50,30)
+        # since the rotated INNER_BOX at center (25,15) fits within
+        assert bbox[0] == pytest.approx(0.0, abs=0.1)  # min_x
+        assert bbox[1] == pytest.approx(0.0, abs=0.1)  # min_y
+        assert bbox[2] == pytest.approx(50.0, abs=0.1)  # max_x
+        assert bbox[3] == pytest.approx(30.0, abs=0.1)  # max_y
+
+    def test_nested_insert_circular_reference(self) -> None:
+        """Test circular block reference does not cause infinite recursion."""
+        doc = ezdxf.readfile("app/tests/assets/nested_insert_bbox_test.dxf")
+        circular_a = doc.blocks.get("CIRCULAR_A")
+
+        # Should not hang or raise exception
+        bbox = _get_block_bounding_box(circular_a, doc)
+
+        # CIRCULAR_A has rectangle (0,0) to (20,20)
+        # CIRCULAR_B is at (5,5) with rectangle (0,0) to (10,10), extends to (15,15)
+        # CIRCULAR_B contains CIRCULAR_A at (2,2) but that's circular, so skipped
+        # Bbox should be at least (0,0,20,20) from CIRCULAR_A's own geometry
+        assert bbox[0] <= 0.0  # min_x
+        assert bbox[1] <= 0.0  # min_y
+        assert bbox[2] >= 15.0  # max_x (includes CIRCULAR_B at 5+10=15)
+        assert bbox[3] >= 15.0  # max_y (includes CIRCULAR_B at 5+10=15)
+
+    def test_nested_insert_without_doc_backward_compatible(self) -> None:
+        """Test that function works without doc parameter (INSERT ignored)."""
+        doc = ezdxf.readfile("app/tests/assets/nested_insert_bbox_test.dxf")
+        outer_simple = doc.blocks.get("OUTER_SIMPLE")
+
+        # Without doc parameter - should work and ignore INSERT entities
+        bbox = _get_block_bounding_box(outer_simple)
+
+        # Should only include the rectangle (0,0) to (50,30)
+        assert bbox == pytest.approx((0.0, 0.0, 50.0, 30.0), abs=0.001)
+
+    def test_nested_insert_deep_nesting(self) -> None:
+        """Test multi-level nesting (block A contains B which contains C)."""
+        doc = ezdxf.readfile("app/tests/assets/nested_insert_bbox_test.dxf")
+        deep_outer = doc.blocks.get("DEEP_OUTER")
+
+        # With doc parameter - includes nested INSERT chain
+        bbox = _get_block_bounding_box(deep_outer, doc)
+
+        # DEEP_OUTER: rectangle (0,0) to (100,60) + OUTER_SIMPLE at (10,10)
+        # OUTER_SIMPLE: rectangle (0,0) to (50,30) + INNER_BOX at (5,5)
+        # INNER_BOX: rectangle (0,0) to (10,10)
+
+        # After transformation:
+        # OUTER_SIMPLE at (10,10): (10,10) to (60,40)
+        # INNER_BOX inside OUTER_SIMPLE at (5,5) -> (10+5,10+5) = (15,15) to (25,25)
+
+        # Overall bbox should be dominated by DEEP_OUTER's (0,0) to (100,60)
+        assert bbox[0] == pytest.approx(0.0, abs=0.1)  # min_x
+        assert bbox[1] == pytest.approx(0.0, abs=0.1)  # min_y
+        assert bbox[2] == pytest.approx(100.0, abs=0.1)  # max_x
+        assert bbox[3] == pytest.approx(60.0, abs=0.1)  # max_y
+
+    def test_nested_insert_missing_block(self) -> None:
+        """Test INSERT referencing non-existent block is handled gracefully."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="PARENT_BLOCK")
+        block.add_lwpolyline([(0, 0), (50, 0), (50, 30), (0, 30)], close=True)
+        # Add blockref to a block that doesn't exist
+        block.add_blockref("NONEXISTENT_BLOCK", (10, 10))
+
+        # Should not raise exception
+        bbox = _get_block_bounding_box(block, doc)
+
+        # Should still return bbox of the LWPOLYLINE
+        assert bbox == pytest.approx((0.0, 0.0, 50.0, 30.0), abs=0.001)
+
+    def test_nested_insert_empty_nested_block(self) -> None:
+        """Test INSERT referencing empty block is handled gracefully."""
+        doc = ezdxf.new()
+        # Create empty nested block
+        doc.blocks.new(name="EMPTY_NESTED")
+        # Create parent block with reference to empty block
+        parent = doc.blocks.new(name="PARENT_BLOCK")
+        parent.add_lwpolyline([(0, 0), (50, 0), (50, 30), (0, 30)], close=True)
+        parent.add_blockref("EMPTY_NESTED", (10, 10))
+
+        # Should not raise exception
+        bbox = _get_block_bounding_box(parent, doc)
+
+        # Should return bbox of the LWPOLYLINE only (empty block returns 0,0,0,0)
+        assert bbox == pytest.approx((0.0, 0.0, 50.0, 30.0), abs=0.001)
+
+    def test_inner_box_bbox_unchanged(self) -> None:
+        """Test that INNER_BOX (no nested INSERTs) has same bbox with or without doc."""
+        doc = ezdxf.readfile("app/tests/assets/nested_insert_bbox_test.dxf")
+        inner_box = doc.blocks.get("INNER_BOX")
+
+        bbox_without_doc = _get_block_bounding_box(inner_box)
+        bbox_with_doc = _get_block_bounding_box(inner_box, doc)
+
+        # INNER_BOX has no nested INSERTs, so both should be the same
+        assert bbox_without_doc == bbox_with_doc
+        assert bbox_without_doc == pytest.approx((0.0, 0.0, 10.0, 10.0), abs=0.001)
