@@ -1946,6 +1946,31 @@ class TestPreFilterSkipCurvedEntities:
         # Only the long line should remain
         assert len(edges) == 1
 
+    def test_skip_curved_with_hatch_containing_arc(self) -> None:
+        """Verify HATCH with ArcEdge is still extracted (skip_curved only affects CIRCLE/ARC).
+
+        The skip_curved_entities pre-filter only skips CIRCLE and ARC entities.
+        HATCH entities with arc edges are still processed because the hatch
+        boundary extraction uses ezdxf's from_hatch() which handles arc edges
+        internally, and we don't skip HATCH entities.
+        """
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="HATCH_ARC")
+
+        # Create a HATCH with edge path containing arc edge
+        hatch = block.add_hatch()
+        edge_path = hatch.paths.add_edge_path()
+        edge_path.add_line((0, 0), (100, 0))
+        edge_path.add_arc(center=(100, 50), radius=50, start_angle=270, end_angle=90)
+        edge_path.add_line((100, 100), (0, 100))
+        edge_path.add_line((0, 100), (0, 0))
+
+        # HATCH should still be extracted even with skip_curved_entities=True
+        edges = _extract_all_edges(block, skip_curved_entities=True)
+
+        # Should have edges from HATCH boundary (lines + arc flattened)
+        assert len(edges) > 3  # At least the 3 line edges + arc segments
+
 
 class TestPolygonHasCurvedEdges:
     """Test suite for _polygon_has_curved_edges function."""
@@ -2083,4 +2108,66 @@ class TestPolygonHasCurvedEdges:
 
         result = _polygon_has_curved_edges(large_circle)
 
+        assert result is True
+
+    def test_hexagon_not_curved(self) -> None:
+        """Test that regular hexagon should not be detected as curved.
+
+        A hexagon has 60-degree angles between edges, which are sharp corners,
+        not smooth curves. The curve detection looks for consecutive small
+        angular deviations (< 30 degrees), not sharp corners.
+        """
+        import math as m
+        # Regular hexagon with vertices at 60-degree intervals
+        hexagon: list[tuple[float, float]] = [
+            (50 + 40 * m.cos(m.radians(i * 60)), 50 + 40 * m.sin(m.radians(i * 60)))
+            for i in range(6)
+        ]
+
+        result = _polygon_has_curved_edges(hexagon)
+
+        # Hexagon has sharp corners (60 degrees), not smooth curves
+        assert result is False
+
+    def test_very_slight_curve_detected(self) -> None:
+        """Test edge case with minimal curvature (semicircle approximation)."""
+        import math as m
+        # Semicircle with 18 points (10-degree intervals over 180 degrees)
+        # + 2 straight line segments closing the shape
+        semicircle_points: list[tuple[float, float]] = [
+            (50 + 30 * m.cos(m.radians(i * 10)), 30 * m.sin(m.radians(i * 10)))
+            for i in range(19)  # 0 to 180 degrees
+        ]
+        # Close with straight lines
+        semicircle_points.append((20, -10))
+        semicircle_points.append((80, -10))
+
+        result = _polygon_has_curved_edges(semicircle_points)
+
+        # Should detect the curved semicircle portion
+        assert result is True
+
+    def test_single_curved_segment_in_rectangle(self) -> None:
+        """Test rectangle with one rounded corner (partial curve)."""
+        import math as m
+        # Rectangle 100x50 with rounded corner at top-right
+        points: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (100.0, 0.0),
+        ]
+        # Add rounded corner at top-right (quarter circle, 90 degrees, 10 points)
+        for i in range(10):
+            angle = -90 + i * 10  # From 270 to 360 degrees
+            x = 90.0 + 10.0 * m.cos(m.radians(angle))
+            y = 40.0 + 10.0 * m.sin(m.radians(angle))
+            points.append((x, y))
+        # Continue with straight edges
+        points.extend([
+            (90.0, 50.0),
+            (0.0, 50.0),
+        ])
+
+        result = _polygon_has_curved_edges(points)
+
+        # Should detect the rounded corner
         assert result is True

@@ -1590,6 +1590,190 @@ class TestUnionBoundingBox:
         assert result == (0.0, 0.0, 100.0, 100.0)
 
 
+class TestCurvedFilterIntegration:
+    """Test suite for curved_filter_enabled in _detect_content_zone.
+
+    These tests verify that the curved_filter_enabled post-filter parameter
+    correctly filters out polygons containing curved edges (detected via
+    vertex analysis of consecutive angular deviations).
+    """
+
+    def test_curved_filter_disabled_keeps_all_polygons(self) -> None:
+        """Verify default behavior preserves polygons with curved edges."""
+        import math as m
+
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CURVED_DISABLED")
+
+        # Create a circle approximation (many points on curve)
+        circle_points = [
+            (50 + 25 * m.cos(m.radians(i * 10)), 50 + 25 * m.sin(m.radians(i * 10)))
+            for i in range(36)
+        ]
+        block.add_lwpolyline(circle_points, close=True)
+
+        # Also add a rectangle (straight edges)
+        block.add_lwpolyline([(0, 0), (10, 0), (10, 10), (0, 10)], close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # With curved_filter_enabled=False (default), both should be kept
+        result = _detect_content_zone(
+            block, bbox, curved_filter_enabled=False
+        )
+
+        assert result["content_zone_detected"] is True
+        assert result["polygon_count"] == 2  # Both polygons present
+
+    def test_curved_filter_enabled_removes_curved_polygons(self) -> None:
+        """Verify curved polygons are filtered when enabled."""
+        import math as m
+
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CURVED_ENABLED")
+
+        # Create a circle approximation (many points on curve) - will be filtered
+        circle_points = [
+            (50 + 25 * m.cos(m.radians(i * 10)), 50 + 25 * m.sin(m.radians(i * 10)))
+            for i in range(36)
+        ]
+        block.add_lwpolyline(circle_points, close=True)
+
+        # Also add a rectangle (straight edges) - will be kept
+        block.add_lwpolyline([(100, 0), (200, 0), (200, 100), (100, 100)], close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # With curved_filter_enabled=True, curved polygon should be filtered
+        result = _detect_content_zone(
+            block, bbox, curved_filter_enabled=True
+        )
+
+        assert result["content_zone_detected"] is True
+        # Original count includes both, but filtered count excludes curved
+        assert result["polygon_count"] == 2  # Original count before filtering
+        assert result["filtered_polygon_count"] == 1  # Only rectangle remains
+
+    def test_curved_filter_keeps_straight_polygons(self) -> None:
+        """Verify rectangles and triangles pass through the filter."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="STRAIGHT_ONLY")
+
+        # Rectangle
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
+        # Triangle
+        block.add_lwpolyline([(110, 0), (160, 0), (135, 50)], close=True)
+        # L-shape
+        block.add_lwpolyline(
+            [(170, 0), (220, 0), (220, 30), (200, 30), (200, 50), (170, 50)],
+            close=True,
+        )
+
+        bbox = _get_block_bounding_box(block)
+
+        # With curved_filter_enabled=True, all straight polygons should be kept
+        result = _detect_content_zone(
+            block, bbox, curved_filter_enabled=True
+        )
+
+        assert result["content_zone_detected"] is True
+        # All 3 straight polygons should remain
+        assert result["polygon_count"] == 3
+        assert result["filtered_polygon_count"] == 3
+
+    def test_curved_filter_with_circle_approximation(self) -> None:
+        """Use a polygon approximating a circle (many vertices on curved path)."""
+        import math as m
+
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="CIRCLE_APPROX")
+
+        # High-resolution circle approximation (72 points)
+        circle_points = [
+            (100 + 50 * m.cos(m.radians(i * 5)), 100 + 50 * m.sin(m.radians(i * 5)))
+            for i in range(72)
+        ]
+        block.add_lwpolyline(circle_points, close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # With curved_filter_enabled=True, this should be detected as curved
+        result = _detect_content_zone(
+            block, bbox, curved_filter_enabled=True
+        )
+
+        # Circle should be filtered out, leaving no polygons
+        assert result["content_zone_detected"] is False
+        assert result["polygon_count"] == 1  # Original had 1 polygon
+        assert result["filtered_polygon_count"] == 0  # Filtered by curved filter
+
+    def test_curved_filter_combined_with_area_filter(self) -> None:
+        """Verify both filters work together."""
+        import math as m
+
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="COMBINED_FILTERS")
+
+        # Large rectangle (10000 sq units)
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 100), (0, 100)], close=True)
+
+        # Small rectangle (25 sq units) - will be filtered by area
+        block.add_lwpolyline([(110, 0), (115, 0), (115, 5), (110, 5)], close=True)
+
+        # Circle approximation - will be filtered by curved filter
+        circle_points = [
+            (200 + 30 * m.cos(m.radians(i * 10)), 50 + 30 * m.sin(m.radians(i * 10)))
+            for i in range(36)
+        ]
+        block.add_lwpolyline(circle_points, close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # Apply both filters
+        result = _detect_content_zone(
+            block,
+            bbox,
+            min_area_filter=100.0,  # Filters small rectangle
+            curved_filter_enabled=True,  # Filters circle
+        )
+
+        assert result["content_zone_detected"] is True
+        # Original count is 3, but only large rectangle passes both filters
+        assert result["polygon_count"] == 3
+        assert result["filtered_polygon_count"] == 1
+
+    def test_curved_filter_all_filtered_returns_empty(self) -> None:
+        """Verify behavior when all polygons are filtered."""
+        import math as m
+
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="ALL_CURVED")
+
+        # Only curved polygons
+        circle1_points = [
+            (50 + 25 * m.cos(m.radians(i * 10)), 50 + 25 * m.sin(m.radians(i * 10)))
+            for i in range(36)
+        ]
+        block.add_lwpolyline(circle1_points, close=True)
+
+        circle2_points = [
+            (150 + 30 * m.cos(m.radians(i * 10)), 50 + 30 * m.sin(m.radians(i * 10)))
+            for i in range(36)
+        ]
+        block.add_lwpolyline(circle2_points, close=True)
+
+        bbox = _get_block_bounding_box(block)
+
+        # All polygons should be filtered
+        result = _detect_content_zone(
+            block, bbox, curved_filter_enabled=True
+        )
+
+        assert result["content_zone_detected"] is False
+        assert result["polygon_count"] == 2  # Original count
+        assert result["filtered_polygon_count"] == 0  # All filtered
+
+
 class TestTiedShapeHandling:
     """Tests for tied shape handling in content zone detection."""
 
