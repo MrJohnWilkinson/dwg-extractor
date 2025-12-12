@@ -5,10 +5,17 @@ This module defines all constants used throughout the application including:
 - Supported file extensions for DXF files
 - Excel output configuration (column names, worksheet name)
 - User-facing messages for UI and error handling
+- GUI settings defaults and validation ranges
 
 Usage:
     from core.constants import SUPPORTED_EXTENSIONS, EXCEL_COLUMN_BLOCK_NAME
 """
+
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from .types import SettingValidation
 
 # File extensions
 SUPPORTED_EXTENSIONS: tuple[str] = (".dxf",)
@@ -302,3 +309,215 @@ MIN_SIDE_FILTER_MIN: float = 0.0
 MIN_SIDE_FILTER_MAX: float = 100000.0
 """Maximum side filter amount. Large value allows extreme cases while
 preventing overflow issues in calculations."""
+
+# =============================================================================
+# GUI Settings Defaults and Validation Ranges
+# =============================================================================
+# These constants support the Advanced Settings modal and SettingsManager.
+# See ai_output/064-combined-gui-settings-and-parallel-removal-plan.md for context.
+
+# Performance threshold defaults (early-exit thresholds only, no thread settings)
+# Note: POLYGON_COUNT_THRESHOLD, LINE_SEGMENT_THRESHOLD, ENTITY_COUNT_THRESHOLD
+# already exist above (lines 162-178). These DEFAULT_ versions are for the
+# settings system; the originals remain for backward compatibility.
+DEFAULT_POLYGON_COUNT_THRESHOLD: int = 500
+DEFAULT_LINE_SEGMENT_THRESHOLD: int = 5000
+DEFAULT_ENTITY_COUNT_THRESHOLD: int = 1000
+
+POLYGON_COUNT_THRESHOLD_MIN: int = 100
+POLYGON_COUNT_THRESHOLD_MAX: int = 10000
+LINE_SEGMENT_THRESHOLD_MIN: int = 1000
+LINE_SEGMENT_THRESHOLD_MAX: int = 50000
+ENTITY_COUNT_THRESHOLD_MIN: int = 100
+ENTITY_COUNT_THRESHOLD_MAX: int = 10000
+
+# Precision setting defaults
+# Note: ARC_FLATTENING_SAGITTA already exists above (line 181).
+# These provide explicit defaults and validation ranges for the settings system.
+DEFAULT_ARC_FLATTENING_SAGITTA: float = 0.1
+DEFAULT_COORD_DEDUP_EPSILON: float = 0.01
+DEFAULT_ROTATION_TOLERANCE: float = 1.0
+
+ARC_FLATTENING_SAGITTA_MIN: float = 0.01
+ARC_FLATTENING_SAGITTA_MAX: float = 1.0
+COORD_DEDUP_EPSILON_MIN: float = 0.001
+COORD_DEDUP_EPSILON_MAX: float = 1.0
+ROTATION_TOLERANCE_MIN: float = 0.1
+ROTATION_TOLERANCE_MAX: float = 5.0
+
+# Output setting defaults
+DEFAULT_AUTO_OPEN_EXCEL: bool = True
+DEFAULT_SHOW_SUCCESS_DIALOG: bool = True
+DEFAULT_INCLUDE_TIMESTAMP: bool = True
+DEFAULT_FILENAME_PREFIX: str = ""
+
+# Logging setting defaults
+DEFAULT_GENERATE_LOG_FILE: bool = False
+DEFAULT_FILE_LOG_LEVEL: str = "DEBUG"
+DEFAULT_LOG_VIEWER_LEVEL: str = "INFO"
+DEFAULT_LOG_VIEWER_AUTO_SCROLL: bool = True
+DEFAULT_LOG_VIEWER_MAX_LINES: int = 1000
+
+LOG_VIEWER_MAX_LINES_MIN: int = 100
+LOG_VIEWER_MAX_LINES_MAX: int = 10000
+
+# Settings Validation Registry
+# Maps setting names to their validation metadata.
+# Used by SettingsManager.validate() and Advanced Settings Window.
+SETTINGS_VALIDATION_REGISTRY: dict[str, "SettingValidation"] = {
+    # Filters
+    "unit_override": {
+        "min_value": -1,
+        "max_value": 6,
+        "default": None,
+        "unit_aware": False,
+    },
+    "precision_fix_enabled": {
+        "min_value": None,
+        "max_value": None,
+        "default": True,
+        "unit_aware": False,
+    },
+    "precision_fix_amount": {
+        "min_value": PRECISION_FIX_MIN,
+        "max_value": PRECISION_FIX_MAX,
+        "default": None,
+        "unit_aware": True,
+    },
+    "gap_bridge_enabled": {
+        "min_value": None,
+        "max_value": None,
+        "default": False,
+        "unit_aware": False,
+    },
+    "gap_bridge_amount": {
+        "min_value": GAP_BRIDGE_MIN,
+        "max_value": GAP_BRIDGE_MAX,
+        "default": None,
+        "unit_aware": True,
+    },
+    "min_area_filter_enabled": {
+        "min_value": None,
+        "max_value": None,
+        "default": False,
+        "unit_aware": False,
+    },
+    "min_area_filter_amount": {
+        "min_value": MIN_AREA_FILTER_MIN,
+        "max_value": MIN_AREA_FILTER_MAX,
+        "default": None,
+        "unit_aware": True,
+    },
+    "min_side_filter_enabled": {
+        "min_value": None,
+        "max_value": None,
+        "default": False,
+        "unit_aware": False,
+    },
+    "min_side_filter_amount": {
+        "min_value": MIN_SIDE_FILTER_MIN,
+        "max_value": MIN_SIDE_FILTER_MAX,
+        "default": None,
+        "unit_aware": True,
+    },
+    # Performance
+    "polygon_count_threshold": {
+        "min_value": POLYGON_COUNT_THRESHOLD_MIN,
+        "max_value": POLYGON_COUNT_THRESHOLD_MAX,
+        "default": DEFAULT_POLYGON_COUNT_THRESHOLD,
+        "unit_aware": False,
+    },
+    "line_segment_threshold": {
+        "min_value": LINE_SEGMENT_THRESHOLD_MIN,
+        "max_value": LINE_SEGMENT_THRESHOLD_MAX,
+        "default": DEFAULT_LINE_SEGMENT_THRESHOLD,
+        "unit_aware": False,
+    },
+    "entity_count_threshold": {
+        "min_value": ENTITY_COUNT_THRESHOLD_MIN,
+        "max_value": ENTITY_COUNT_THRESHOLD_MAX,
+        "default": DEFAULT_ENTITY_COUNT_THRESHOLD,
+        "unit_aware": False,
+    },
+    # Precision
+    "arc_flattening_sagitta": {
+        "min_value": ARC_FLATTENING_SAGITTA_MIN,
+        "max_value": ARC_FLATTENING_SAGITTA_MAX,
+        "default": DEFAULT_ARC_FLATTENING_SAGITTA,
+        "unit_aware": False,
+    },
+    "coord_dedup_epsilon": {
+        "min_value": COORD_DEDUP_EPSILON_MIN,
+        "max_value": COORD_DEDUP_EPSILON_MAX,
+        "default": DEFAULT_COORD_DEDUP_EPSILON,
+        "unit_aware": False,
+    },
+    "rotation_tolerance": {
+        "min_value": ROTATION_TOLERANCE_MIN,
+        "max_value": ROTATION_TOLERANCE_MAX,
+        "default": DEFAULT_ROTATION_TOLERANCE,
+        "unit_aware": False,
+    },
+    # Output
+    "output_directory": {
+        "min_value": None,
+        "max_value": None,
+        "default": None,
+        "unit_aware": False,
+    },
+    "auto_open_excel": {
+        "min_value": None,
+        "max_value": None,
+        "default": DEFAULT_AUTO_OPEN_EXCEL,
+        "unit_aware": False,
+    },
+    "show_success_dialog": {
+        "min_value": None,
+        "max_value": None,
+        "default": DEFAULT_SHOW_SUCCESS_DIALOG,
+        "unit_aware": False,
+    },
+    "filename_prefix": {
+        "min_value": None,
+        "max_value": None,
+        "default": DEFAULT_FILENAME_PREFIX,
+        "unit_aware": False,
+    },
+    "include_timestamp": {
+        "min_value": None,
+        "max_value": None,
+        "default": DEFAULT_INCLUDE_TIMESTAMP,
+        "unit_aware": False,
+    },
+    # Logging
+    "generate_log_file": {
+        "min_value": None,
+        "max_value": None,
+        "default": DEFAULT_GENERATE_LOG_FILE,
+        "unit_aware": False,
+    },
+    "file_log_level": {
+        "min_value": None,
+        "max_value": None,
+        "default": DEFAULT_FILE_LOG_LEVEL,
+        "unit_aware": False,
+    },
+    "log_viewer_level": {
+        "min_value": None,
+        "max_value": None,
+        "default": DEFAULT_LOG_VIEWER_LEVEL,
+        "unit_aware": False,
+    },
+    "log_viewer_auto_scroll": {
+        "min_value": None,
+        "max_value": None,
+        "default": DEFAULT_LOG_VIEWER_AUTO_SCROLL,
+        "unit_aware": False,
+    },
+    "log_viewer_max_lines": {
+        "min_value": LOG_VIEWER_MAX_LINES_MIN,
+        "max_value": LOG_VIEWER_MAX_LINES_MAX,
+        "default": DEFAULT_LOG_VIEWER_MAX_LINES,
+        "unit_aware": False,
+    },
+}

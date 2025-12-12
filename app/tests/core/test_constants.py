@@ -380,3 +380,175 @@ class TestAllBlocksSheetConstants:
             f"Column '{EXCEL_COLUMN_BLOCK_LAYER_NAMES}' should end with '_names' "
             "to indicate it contains a collection (per naming convention)"
         )
+
+
+class TestSettingsValidationRegistry:
+    """Test suite for SETTINGS_VALIDATION_REGISTRY."""
+
+    def test_registry_has_all_settings(self) -> None:
+        """Test that registry contains all 25 expected settings."""
+        from core.constants import SETTINGS_VALIDATION_REGISTRY
+
+        expected_settings = [
+            # Filters
+            "unit_override",
+            "precision_fix_enabled",
+            "precision_fix_amount",
+            "gap_bridge_enabled",
+            "gap_bridge_amount",
+            "min_area_filter_enabled",
+            "min_area_filter_amount",
+            "min_side_filter_enabled",
+            "min_side_filter_amount",
+            # Performance
+            "polygon_count_threshold",
+            "line_segment_threshold",
+            "entity_count_threshold",
+            # Precision
+            "arc_flattening_sagitta",
+            "coord_dedup_epsilon",
+            "rotation_tolerance",
+            # Output
+            "output_directory",
+            "auto_open_excel",
+            "show_success_dialog",
+            "filename_prefix",
+            "include_timestamp",
+            # Logging
+            "generate_log_file",
+            "file_log_level",
+            "log_viewer_level",
+            "log_viewer_auto_scroll",
+            "log_viewer_max_lines",
+        ]
+        assert len(SETTINGS_VALIDATION_REGISTRY) == 25
+        for setting in expected_settings:
+            assert setting in SETTINGS_VALIDATION_REGISTRY, (
+                f"Missing setting: {setting}"
+            )
+
+    def test_registry_entries_have_required_keys(self) -> None:
+        """Test that each registry entry has all required validation keys."""
+        from core.constants import SETTINGS_VALIDATION_REGISTRY
+
+        required_keys = {"min_value", "max_value", "default", "unit_aware"}
+        for setting_name, validation in SETTINGS_VALIDATION_REGISTRY.items():
+            assert set(validation.keys()) == required_keys, (
+                f"Setting '{setting_name}' has incorrect keys: {validation.keys()}"
+            )
+
+    def test_numeric_settings_have_valid_ranges(self) -> None:
+        """Test that numeric settings have min <= max when both are defined."""
+        from core.constants import SETTINGS_VALIDATION_REGISTRY
+
+        for setting_name, validation in SETTINGS_VALIDATION_REGISTRY.items():
+            min_val = validation["min_value"]
+            max_val = validation["max_value"]
+            if min_val is not None and max_val is not None:
+                assert min_val <= max_val, (
+                    f"Setting '{setting_name}' has invalid range: {min_val} > {max_val}"
+                )
+
+    def test_default_values_within_range(self) -> None:
+        """Test that default values are within their min/max range."""
+        from core.constants import SETTINGS_VALIDATION_REGISTRY
+
+        for setting_name, validation in SETTINGS_VALIDATION_REGISTRY.items():
+            default = validation["default"]
+            min_val = validation["min_value"]
+            max_val = validation["max_value"]
+
+            # Skip if default is None or not numeric
+            if default is None or not isinstance(default, (int, float)):
+                continue
+
+            if min_val is not None:
+                assert default >= min_val, (
+                    f"Setting '{setting_name}' default {default} < min {min_val}"
+                )
+            if max_val is not None:
+                assert default <= max_val, (
+                    f"Setting '{setting_name}' default {default} > max {max_val}"
+                )
+
+    def test_unit_aware_settings_identified(self) -> None:
+        """Test that unit-aware settings are correctly flagged."""
+        from core.constants import SETTINGS_VALIDATION_REGISTRY
+
+        # These settings should have unit_aware=True (defaults vary by unit)
+        unit_aware_settings = [
+            "precision_fix_amount",
+            "gap_bridge_amount",
+            "min_area_filter_amount",
+            "min_side_filter_amount",
+        ]
+
+        for setting_name in unit_aware_settings:
+            assert SETTINGS_VALIDATION_REGISTRY[setting_name]["unit_aware"] is True, (
+                f"Setting '{setting_name}' should be unit_aware"
+            )
+
+        # All other settings should have unit_aware=False
+        for setting_name, validation in SETTINGS_VALIDATION_REGISTRY.items():
+            if setting_name not in unit_aware_settings:
+                assert validation["unit_aware"] is False, (
+                    f"Setting '{setting_name}' should not be unit_aware"
+                )
+
+
+class TestSettingsDefaultConstants:
+    """Test suite for settings default value constants."""
+
+    def test_performance_threshold_defaults(self) -> None:
+        """Test performance threshold default values."""
+        from core.constants import (
+            DEFAULT_ENTITY_COUNT_THRESHOLD,
+            DEFAULT_LINE_SEGMENT_THRESHOLD,
+            DEFAULT_POLYGON_COUNT_THRESHOLD,
+        )
+
+        assert DEFAULT_POLYGON_COUNT_THRESHOLD == 500
+        assert DEFAULT_LINE_SEGMENT_THRESHOLD == 5000
+        assert DEFAULT_ENTITY_COUNT_THRESHOLD == 1000
+
+    def test_precision_setting_defaults(self) -> None:
+        """Test precision setting default values."""
+        from core.constants import (
+            DEFAULT_ARC_FLATTENING_SAGITTA,
+            DEFAULT_COORD_DEDUP_EPSILON,
+            DEFAULT_ROTATION_TOLERANCE,
+        )
+
+        assert DEFAULT_ARC_FLATTENING_SAGITTA == 0.1
+        assert DEFAULT_COORD_DEDUP_EPSILON == 0.01
+        assert DEFAULT_ROTATION_TOLERANCE == 1.0
+
+    def test_output_setting_defaults(self) -> None:
+        """Test output setting default values."""
+        from core.constants import (
+            DEFAULT_AUTO_OPEN_EXCEL,
+            DEFAULT_FILENAME_PREFIX,
+            DEFAULT_INCLUDE_TIMESTAMP,
+            DEFAULT_SHOW_SUCCESS_DIALOG,
+        )
+
+        assert DEFAULT_AUTO_OPEN_EXCEL is True
+        assert DEFAULT_SHOW_SUCCESS_DIALOG is True
+        assert DEFAULT_INCLUDE_TIMESTAMP is True
+        assert DEFAULT_FILENAME_PREFIX == ""
+
+    def test_logging_setting_defaults(self) -> None:
+        """Test logging setting default values."""
+        from core.constants import (
+            DEFAULT_FILE_LOG_LEVEL,
+            DEFAULT_GENERATE_LOG_FILE,
+            DEFAULT_LOG_VIEWER_AUTO_SCROLL,
+            DEFAULT_LOG_VIEWER_LEVEL,
+            DEFAULT_LOG_VIEWER_MAX_LINES,
+        )
+
+        assert DEFAULT_GENERATE_LOG_FILE is False
+        assert DEFAULT_FILE_LOG_LEVEL == "DEBUG"
+        assert DEFAULT_LOG_VIEWER_LEVEL == "INFO"
+        assert DEFAULT_LOG_VIEWER_AUTO_SCROLL is True
+        assert DEFAULT_LOG_VIEWER_MAX_LINES == 1000

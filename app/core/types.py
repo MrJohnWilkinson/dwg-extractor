@@ -269,3 +269,74 @@ class BlockDefinitionRecord(TypedDict):
     block_is_nested: bool
     block_nested_parent_names: list[str]
     block_entity_count: int
+
+
+class AppSettings(TypedDict, total=False):
+    """
+    Application settings for the DXF Block Extractor.
+
+    All fields are optional (total=False) to allow partial updates.
+    Used by SettingsManager for type-safe settings storage and validation.
+
+    Categories:
+    - Filters: Polygon filtering and gap bridging options
+    - Performance: Early-exit thresholds for content zone detection
+    - Precision: Numeric precision for geometry operations
+    - Output: File output and Excel behavior settings
+    - Logging: Log viewer and file logging configuration
+    """
+
+    # Filters (existing GUI options)
+    unit_override: int | None
+    precision_fix_enabled: bool
+    precision_fix_amount: float | None
+    gap_bridge_enabled: bool
+    gap_bridge_amount: float | None
+    min_area_filter_enabled: bool
+    min_area_filter_amount: float | None
+    min_side_filter_enabled: bool
+    min_side_filter_amount: float | None
+
+    # Performance (early-exit thresholds only - no thread settings)
+    polygon_count_threshold: int
+    line_segment_threshold: int
+    entity_count_threshold: int
+
+    # Precision
+    arc_flattening_sagitta: float
+    coord_dedup_epsilon: float
+    rotation_tolerance: float
+
+    # Output
+    output_directory: str | None
+    auto_open_excel: bool
+    show_success_dialog: bool
+    filename_prefix: str
+    include_timestamp: bool
+
+    # Logging
+    generate_log_file: bool
+    file_log_level: str
+    log_viewer_level: str
+    log_viewer_auto_scroll: bool
+    log_viewer_max_lines: int
+
+
+class SettingValidation(TypedDict):
+    """
+    Validation metadata for a single application setting.
+
+    Used by SETTINGS_VALIDATION_REGISTRY to define constraints and defaults
+    for each setting in AppSettings.
+
+    Attributes:
+        min_value: Minimum allowed value for numeric settings, None for non-numeric
+        max_value: Maximum allowed value for numeric settings, None for non-numeric
+        default: Default value for the setting (type matches the setting type)
+        unit_aware: True if default value varies based on drawing unit code
+    """
+
+    min_value: float | int | None
+    max_value: float | int | None
+    default: float | int | bool | str | None
+    unit_aware: bool
