@@ -269,22 +269,3 @@ class BlockDefinitionRecord(TypedDict):
     block_is_nested: bool
     block_nested_parent_names: list[str]
     block_entity_count: int
-
-
-class BlockAnalysisResult(TypedDict):
-    """
-    Result from analyzing a single block definition for parallel processing.
-
-    Contains all data extracted from a block that will be stored in result dictionaries.
-
-    Attributes:
-        entity_count: Number of entities in the block definition
-        trimming_data: Block geometry analysis data (native dimensions and segments)
-        content_zone_data: Content zone detection results
-        nested_inserts: List of block names inserted within this block
-    """
-
-    entity_count: int
-    trimming_data: BlockTrimmingData
-    content_zone_data: ContentZoneData
-    nested_inserts: list[str]
