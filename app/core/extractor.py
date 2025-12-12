@@ -13,7 +13,6 @@ Usage:
 
 import re
 import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, TypedDict
 
@@ -39,7 +38,6 @@ from .geometry import (
 from .logger import setup_logger
 from .types import (
     AnnotationKey,
-    BlockAnalysisResult,
     BlockDefinitionRecord,
     BlockLayerKey,
     BlockRotationKey,
@@ -876,112 +874,6 @@ def _resolve_dynamic_block_name(
         return (None, f"Error resolving XDATA: {e}")
 
 
-def _analyze_single_block(
-    block_def: Any,
-    doc: Drawing,
-    anonymous_to_resolved: dict[str, str],
-    abort_event: threading.Event | None,
-    precision_tolerance: float,
-    gap_bridge_tolerance: float,
-    min_area: float,
-    min_side: float,
-) -> tuple[str | None, BlockAnalysisResult | None]:
-    """
-    Analyze a single block definition for content zone and geometry.
-
-    Thread-safe function for parallel block processing. Extracts entity count,
-    nested INSERT references, trimming geometry, and content zone data.
-
-    Args:
-        block_def: ezdxf block definition object
-        doc: The ezdxf Drawing document (read-only access)
-        anonymous_to_resolved: Pre-built mapping of anonymous block names to resolved names
-        abort_event: Optional abort signal for cancellation
-        precision_tolerance: Precision snap tolerance for content zone detection
-        gap_bridge_tolerance: Gap bridge tolerance for content zone detection
-        min_area: Minimum area filter for polygon filtering
-        min_side: Minimum side filter for polygon filtering
-
-    Returns:
-        Tuple of (effective_name, result_dict) or (None, None) if block should be skipped.
-        effective_name is the resolved block name (or raw name for regular blocks).
-        result_dict contains entity_count, trimming_data, content_zone_data, nested_inserts.
-    """
-    block_name = block_def.name
-
-    # Skip modelspace/paperspace blocks
-    if block_name in ("*Model_Space", "*Paper_Space") or block_name.startswith(
-        "*Paper_Space"
-    ):
-        return (None, None)
-
-    # Handle anonymous blocks starting with *U (dynamic block instances)
-    if block_name.startswith("*U"):
-        if block_name in anonymous_to_resolved:
-            effective_name = anonymous_to_resolved[block_name]
-        else:
-            return (None, None)  # Skip unresolved *U blocks
-
-    elif block_name.startswith("A$C"):
-        if block_name in anonymous_to_resolved:
-            effective_name = anonymous_to_resolved[block_name]
-        else:
-            effective_name = block_name
-
-    elif block_name.startswith("*"):
-        return (None, None)  # Skip other system blocks
-    else:
-        effective_name = block_name
-
-    # Count entities
-    entity_count = sum(1 for _ in block_def)
-
-    # Scan for nested INSERTs
-    nested_inserts: list[str] = []
-    for entity in block_def:
-        if entity.dxftype() == "INSERT":
-            nested_name = entity.dxf.name
-            if nested_name in anonymous_to_resolved:
-                nested_name = anonymous_to_resolved[nested_name]
-            nested_inserts.append(nested_name)
-
-    # Analyze block geometry
-    bbox = _get_block_bounding_box(block_def)
-    native_width = round(bbox[2] - bbox[0], 2)
-    native_height = round(bbox[3] - bbox[1], 2)
-
-    vertical_points, horizontal_points = _get_intersection_points(block_def)
-    vertical_segments = _calculate_segments(vertical_points)
-    horizontal_segments = _calculate_segments(horizontal_points)
-
-    block_trimming: BlockTrimmingData = {
-        "native_width": native_width,
-        "native_height": native_height,
-        "vertical_segments": vertical_segments,
-        "horizontal_segments": horizontal_segments,
-    }
-
-    # Detect content zone
-    content_zone = _detect_content_zone(
-        block_def,
-        bbox,
-        abort_event,
-        precision_tolerance,
-        gap_bridge_tolerance,
-        min_area,
-        min_side,
-    )
-
-    result: BlockAnalysisResult = {
-        "entity_count": entity_count,
-        "trimming_data": block_trimming,
-        "content_zone_data": content_zone,
-        "nested_inserts": nested_inserts,
-    }
-
-    return (effective_name, result)
-
-
 class ExtractionResult(TypedDict):
     """
     Comprehensive extraction result containing all CAD analysis data.
@@ -1296,57 +1188,73 @@ def extract_blocks(
             f"Resolved {len(anonymous_to_resolved)} anonymous blocks to original names"
         )
 
-        # PHASE 2: Parallel block geometry analysis
-        block_defs_list = list(doc.blocks)
-        max_workers = min(
-            8, max(1, len(block_defs_list))
-        )  # Cap at 8 threads, minimum 1
+        # PHASE 2: Sequential block geometry analysis
+        for block_def in doc.blocks:
+            block_name = block_def.name
 
-        logger.info(
-            f"Starting parallel analysis of {len(block_defs_list)} block definitions with {max_workers} workers"
-        )
+            # Skip modelspace/paperspace blocks
+            if block_name in ("*Model_Space", "*Paper_Space") or block_name.startswith(
+                "*Paper_Space"
+            ):
+                continue
 
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {
-                executor.submit(
-                    _analyze_single_block,
-                    block_def,
-                    doc,
-                    anonymous_to_resolved,
-                    abort_event,
-                    precision_tolerance,
-                    gap_bridge_tolerance,
-                    min_area,
-                    min_side,
-                ): block_def.name
-                for block_def in block_defs_list
+            # Handle anonymous blocks starting with *U (dynamic block instances)
+            if block_name.startswith("*U"):
+                if block_name in anonymous_to_resolved:
+                    effective_name = anonymous_to_resolved[block_name]
+                else:
+                    continue  # Skip unresolved *U blocks
+            elif block_name.startswith("A$C"):
+                if block_name in anonymous_to_resolved:
+                    effective_name = anonymous_to_resolved[block_name]
+                else:
+                    effective_name = block_name
+            elif block_name.startswith("*"):
+                continue  # Skip other system blocks
+            else:
+                effective_name = block_name
+
+            # Count entities
+            entity_count = sum(1 for _ in block_def)
+            block_entities[effective_name] = entity_count
+
+            # Scan for nested INSERTs
+            for entity in block_def:
+                if entity.dxftype() == "INSERT":
+                    nested_name = entity.dxf.name
+                    if nested_name in anonymous_to_resolved:
+                        nested_name = anonymous_to_resolved[nested_name]
+                    if nested_name not in nested_block_parents:
+                        nested_block_parents[nested_name] = set()
+                    nested_block_parents[nested_name].add(effective_name)
+
+            # Analyze block geometry
+            bbox = _get_block_bounding_box(block_def)
+            native_width = round(bbox[2] - bbox[0], 2)
+            native_height = round(bbox[3] - bbox[1], 2)
+
+            vertical_points, horizontal_points = _get_intersection_points(block_def)
+            vertical_segments = _calculate_segments(vertical_points)
+            horizontal_segments = _calculate_segments(horizontal_points)
+
+            block_trimming_data[effective_name] = {
+                "native_width": native_width,
+                "native_height": native_height,
+                "vertical_segments": vertical_segments,
+                "horizontal_segments": horizontal_segments,
             }
 
-            for future in as_completed(futures):
-                block_name = futures[future]
-                try:
-                    effective_name, analysis_result = future.result()
-                    if effective_name is None or analysis_result is None:
-                        continue
-
-                    # Store results (thread-safe: each key is unique)
-                    block_entities[effective_name] = analysis_result["entity_count"]
-                    block_trimming_data[effective_name] = analysis_result[
-                        "trimming_data"
-                    ]
-                    block_content_zone_data[effective_name] = analysis_result[
-                        "content_zone_data"
-                    ]
-
-                    # Track nested relationships
-                    for nested_name in analysis_result["nested_inserts"]:
-                        if nested_name not in nested_block_parents:
-                            nested_block_parents[nested_name] = set()
-                        nested_block_parents[nested_name].add(effective_name)
-
-                except Exception as e:
-                    logger.warning(f"Error analyzing block {block_name}: {e}")
-                    continue
+            # Detect content zone
+            content_zone = _detect_content_zone(
+                block_def,
+                bbox,
+                abort_event,
+                precision_tolerance,
+                gap_bridge_tolerance,
+                min_area,
+                min_side,
+            )
+            block_content_zone_data[effective_name] = content_zone
 
         logger.info(f"Analyzed {len(block_entities)} block definitions")
         logger.info(
