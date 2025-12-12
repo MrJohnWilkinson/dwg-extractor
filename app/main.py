@@ -112,6 +112,32 @@ class DXFExtractorApp(ctk.CTk):
             value=self.settings.get("file_log_level")
         )
 
+        # Add trace callbacks for instant sync of numeric filter amounts
+        self.precision_fix_amount_var.trace_add(
+            "write",
+            lambda *_: self._sync_numeric_setting(
+                "precision_fix_amount", self.precision_fix_amount_var
+            ),
+        )
+        self.gap_bridge_amount_var.trace_add(
+            "write",
+            lambda *_: self._sync_numeric_setting(
+                "gap_bridge_amount", self.gap_bridge_amount_var
+            ),
+        )
+        self.min_area_filter_amount_var.trace_add(
+            "write",
+            lambda *_: self._sync_numeric_setting(
+                "min_area_filter_amount", self.min_area_filter_amount_var
+            ),
+        )
+        self.min_side_filter_amount_var.trace_add(
+            "write",
+            lambda *_: self._sync_numeric_setting(
+                "min_side_filter_amount", self.min_side_filter_amount_var
+            ),
+        )
+
         # Create UI
         self._create_widgets()
 
@@ -790,11 +816,34 @@ class DXFExtractorApp(ctk.CTk):
     def _open_advanced_settings(self) -> None:
         """Open the Advanced Settings window."""
         self.logger.info("Opening Advanced Settings window")
+
+        # Sync current GUI state to SettingsManager before opening
+        self._sync_settings_to_manager()
+
         window = AdvancedSettingsWindow(self, self.settings)
         self.wait_window(window)  # Block until window closes
 
-        # Refresh main window if needed (settings may have changed)
-        self.logger.debug("Advanced Settings window closed")
+        # Refresh main window from SettingsManager after closing
+        self._refresh_from_settings()
+        self.logger.debug("Advanced Settings window closed, main GUI refreshed")
+
+    def _refresh_from_settings(self) -> None:
+        """Refresh main GUI state from SettingsManager.
+
+        Called after Advanced Settings closes to reflect any changes
+        made to settings that affect the main window display.
+        """
+        # Refresh log viewer level (may have changed in Advanced Settings)
+        new_level = self.settings.get("log_viewer_level")
+        if self.log_level_var.get() != new_level:
+            self.log_level_var.set(new_level)
+            # Apply the level change to source loggers
+            level = getattr(logging, new_level)
+            logging.getLogger("core.extractor").setLevel(level)
+            logging.getLogger("core.geometry").setLevel(level)
+            logging.getLogger("__main__").setLevel(level)
+
+        self.logger.debug("Main GUI refreshed from settings")
 
     def _poll_log_queue(self) -> None:
         """Poll log queue and update text widget."""
@@ -1125,6 +1174,22 @@ class DXFExtractorApp(ctk.CTk):
         self.settings.set("min_area_filter_enabled", self.min_area_filter_var.get())
         self.settings.set("min_side_filter_enabled", self.min_side_filter_var.get())
 
+        # Sync filter numeric amounts
+        self._sync_numeric_setting(
+            "precision_fix_amount", self.precision_fix_amount_var
+        )
+        self._sync_numeric_setting("gap_bridge_amount", self.gap_bridge_amount_var)
+        self._sync_numeric_setting(
+            "min_area_filter_amount", self.min_area_filter_amount_var
+        )
+        self._sync_numeric_setting(
+            "min_side_filter_amount", self.min_side_filter_amount_var
+        )
+
+        # Sync unit override
+        unit_override = self._get_selected_unit_override()
+        self.settings.set("unit_override", unit_override)
+
         # Sync logging settings
         self.settings.set("generate_log_file", self.log_file_var.get())
         self.settings.set("file_log_level", self.file_log_level_var.get())
@@ -1133,6 +1198,19 @@ class DXFExtractorApp(ctk.CTk):
         # Save to disk
         self.settings.save()
         self.logger.debug("Settings synchronized and saved")
+
+    def _sync_numeric_setting(self, key: str, var: ctk.StringVar) -> None:
+        """Sync a numeric setting from StringVar to SettingsManager.
+
+        Args:
+            key: Setting key in SettingsManager
+            var: StringVar containing the numeric value
+        """
+        try:
+            value = float(var.get())
+            self.settings.set(key, value)
+        except ValueError:
+            pass  # Invalid input, don't sync
 
     def destroy(self) -> None:
         """Override destroy to clean up queue handler and log application close."""
