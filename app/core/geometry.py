@@ -25,7 +25,7 @@ import time
 from typing import Any
 
 from ezdxf.layouts import BlockLayout
-from ezdxf.path import from_hatch
+from ezdxf.path import from_hatch, make_path
 from shapely import Point
 from shapely import Polygon as ShapelyPolygon
 from shapely.geometry import LineString
@@ -303,14 +303,16 @@ def _get_block_bounding_box(
 
         elif entity_type in ("LWPOLYLINE", "POLYLINE"):
             try:
-                for point in entity.get_points():  # type: ignore[attr-defined]
-                    x, y = point[0], point[1]
-                    min_x = min(min_x, x)
-                    max_x = max(max_x, x)
-                    min_y = min(min_y, y)
-                    max_y = max(max_y, y)
+                # Use make_path to correctly interpret bulge values as arc segments
+                path = make_path(entity)
+                # Flatten to capture arc extents
+                for vertex in path.flattening(ARC_FLATTENING_SAGITTA):
+                    min_x = min(min_x, vertex.x)
+                    max_x = max(max_x, vertex.x)
+                    min_y = min(min_y, vertex.y)
+                    max_y = max(max_y, vertex.y)
                     has_geometry = True
-            except (AttributeError, IndexError):
+            except (AttributeError, IndexError, TypeError):
                 continue
 
         elif entity_type == "CIRCLE":
@@ -790,12 +792,15 @@ def _extract_all_edges(
 
         elif entity_type in ("LWPOLYLINE", "POLYLINE"):
             try:
-                points = [(float(p[0]), float(p[1])) for p in entity.get_points()]  # type: ignore[attr-defined]
-                for i in range(len(points) - 1):
-                    edges.append(LineString([points[i], points[i + 1]]))
-                if hasattr(entity, "closed") and entity.closed and len(points) >= 2:
-                    edges.append(LineString([points[-1], points[0]]))
-            except (AttributeError, IndexError):
+                # Use make_path to correctly interpret bulge values as arc segments
+                path = make_path(entity)
+                # Flatten path to line segments (handles arcs automatically)
+                vertices = list(path.flattening(ARC_FLATTENING_SAGITTA))
+                for i in range(len(vertices) - 1):
+                    edges.append(
+                        LineString([(vertices[i].x, vertices[i].y), (vertices[i + 1].x, vertices[i + 1].y)])
+                    )
+            except (AttributeError, IndexError, TypeError):
                 continue
 
         elif entity_type == "CIRCLE":

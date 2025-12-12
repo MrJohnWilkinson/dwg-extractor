@@ -2255,3 +2255,154 @@ class TestPolygonHasCurvedEdges:
 
         # Should detect the rounded corner
         assert result is True
+
+
+class TestLwpolylineBulge:
+    """Test suite for LWPOLYLINE bulge handling in edge extraction and bounding box calculation.
+
+    Validates that LWPOLYLINE segments with non-zero bulge values are correctly
+    flattened into arc approximations rather than being treated as straight chords.
+    """
+
+    def test_extract_edges_straight_lwpolyline(self) -> None:
+        """Test that straight LWPOLYLINE (no bulge) extracts expected edge count."""
+        doc = ezdxf.readfile("app/tests/assets/lwpolyline_bulge_test.dxf")
+        block = doc.blocks.get("LWPOLY_STRAIGHT")
+
+        edges = _extract_all_edges(block)
+
+        # Simple L-shape with 3 vertices should produce exactly 2 edges
+        # (0,0) -> (100,0) -> (100,100)
+        assert len(edges) == 2
+        assert all(isinstance(e, LineString) for e in edges)
+
+    def test_extract_edges_arc_lwpolyline(self) -> None:
+        """Test that LWPOLYLINE with 90-degree arc bulge extracts multiple edges."""
+        doc = ezdxf.readfile("app/tests/assets/lwpolyline_bulge_test.dxf")
+        block = doc.blocks.get("LWPOLY_90DEG_ARC")
+
+        edges = _extract_all_edges(block)
+
+        # With bulge handling:
+        # - First segment (0,0) to (100,0): straight line = 1 edge
+        # - Second segment (100,0) to (100,100) with 90-deg bulge: multiple edges
+        # Total should be MORE than 2 edges (proving arc is not treated as chord)
+        assert len(edges) > 2
+
+    def test_extract_edges_mixed_lwpolyline(self) -> None:
+        """Test that mixed straight/curved LWPOLYLINE segments are handled correctly."""
+        doc = ezdxf.readfile("app/tests/assets/lwpolyline_bulge_test.dxf")
+        block = doc.blocks.get("LWPOLY_MIXED")
+
+        edges = _extract_all_edges(block)
+
+        # Closed rectangle-like shape with one curved side:
+        # - 3 straight sides: 3 edges
+        # - 1 curved side (90-deg arc): multiple edges
+        # Total should be more than 4 edges
+        assert len(edges) > 4
+
+    def test_extract_edges_closed_arc_lwpolyline(self) -> None:
+        """Test that closed LWPOLYLINE with semicircular arc is handled correctly."""
+        doc = ezdxf.readfile("app/tests/assets/lwpolyline_bulge_test.dxf")
+        block = doc.blocks.get("LWPOLY_CLOSED_ARC")
+
+        edges = _extract_all_edges(block)
+
+        # Rectangle with semicircular top:
+        # - 3 straight sides: 3 edges
+        # - 1 semicircular side (180-deg arc): many edges
+        # Total should be significantly more than 4 edges
+        assert len(edges) > 8
+
+    def test_bbox_straight_lwpolyline(self) -> None:
+        """Test bounding box for straight LWPOLYLINE (no bulge)."""
+        doc = ezdxf.readfile("app/tests/assets/lwpolyline_bulge_test.dxf")
+        block = doc.blocks.get("LWPOLY_STRAIGHT")
+
+        bbox = _get_block_bounding_box(block)
+
+        # L-shape from (0,0) to (100,0) to (100,100)
+        # Bbox should be exactly (0, 0, 100, 100)
+        assert bbox[0] == pytest.approx(0.0, abs=0.01)  # min_x
+        assert bbox[1] == pytest.approx(0.0, abs=0.01)  # min_y
+        assert bbox[2] == pytest.approx(100.0, abs=0.01)  # max_x
+        assert bbox[3] == pytest.approx(100.0, abs=0.01)  # max_y
+
+    def test_bbox_arc_lwpolyline_includes_arc_extent(self) -> None:
+        """Test bounding box includes full arc extent (not just chord endpoints)."""
+        doc = ezdxf.readfile("app/tests/assets/lwpolyline_bulge_test.dxf")
+        block = doc.blocks.get("LWPOLY_90DEG_ARC")
+
+        bbox = _get_block_bounding_box(block)
+
+        # L-shape with 90-degree outward arc from (100,0) to (100,100)
+        # The arc bulges to the RIGHT (positive bulge = counter-clockwise)
+        # Arc center is at approximately (100, 50) with radius ~70.7
+        # So max_x should be > 100 (the arc extends beyond the chord endpoints)
+        assert bbox[0] == pytest.approx(0.0, abs=0.01)  # min_x = 0
+        assert bbox[1] == pytest.approx(0.0, abs=0.01)  # min_y = 0
+        assert bbox[2] > 100.0  # max_x should exceed 100 due to arc bulge
+        assert bbox[3] == pytest.approx(100.0, abs=0.01)  # max_y = 100
+
+    def test_bbox_inward_arc_lwpolyline(self) -> None:
+        """Test bounding box for LWPOLYLINE with inward (negative) bulge."""
+        doc = ezdxf.readfile("app/tests/assets/lwpolyline_bulge_test.dxf")
+        block = doc.blocks.get("LWPOLY_INWARD_ARC")
+
+        bbox = _get_block_bounding_box(block)
+
+        # L-shape with 90-degree inward arc from (100,0) to (100,100)
+        # Negative bulge means arc bulges to the LEFT (clockwise)
+        # So max_x should be exactly 100 (arc doesn't extend beyond)
+        # But arc might affect the internal space
+        assert bbox[0] == pytest.approx(0.0, abs=0.01)  # min_x = 0
+        assert bbox[1] == pytest.approx(0.0, abs=0.01)  # min_y = 0
+        assert bbox[2] == pytest.approx(100.0, abs=0.01)  # max_x = 100 (inward arc)
+        assert bbox[3] == pytest.approx(100.0, abs=0.01)  # max_y = 100
+
+    def test_closed_lwpolyline_with_bulge_forms_region(self) -> None:
+        """Test that closed LWPOLYLINE with bulge forms valid paint bucket region."""
+        doc = ezdxf.readfile("app/tests/assets/lwpolyline_bulge_test.dxf")
+        block = doc.blocks.get("LWPOLY_MIXED")
+
+        regions = _extract_paint_bucket_regions(block)
+
+        # Closed LWPOLYLINE should form exactly one closed region
+        assert len(regions) == 1
+
+    def test_bulge_flattening_produces_arc_vertices(self) -> None:
+        """Test that bulge flattening produces intermediate vertices along the arc."""
+        doc = ezdxf.readfile("app/tests/assets/lwpolyline_bulge_test.dxf")
+        block = doc.blocks.get("LWPOLY_90DEG_ARC")
+
+        edges = _extract_all_edges(block)
+
+        # Collect all unique coordinates from edges
+        all_coords = set()
+        for edge in edges:
+            for coord in edge.coords:
+                all_coords.add((round(coord[0], 2), round(coord[1], 2)))
+
+        # Should have more than just the 3 original LWPOLYLINE vertices
+        # The arc segment should add intermediate points
+        assert len(all_coords) > 3
+
+        # Verify some intermediate points exist along the arc
+        # The arc from (100,0) to (100,100) with outward bulge should have
+        # points with x > 100 (the bulge extends beyond the chord)
+        arc_points = [c for c in all_coords if c[0] > 100]
+        assert len(arc_points) > 0, "Arc should have points beyond x=100"
+
+    def test_straight_lwpolyline_unchanged_edge_count(self) -> None:
+        """Test that straight LWPOLYLINE (bulge=0) has same edge count as before."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="STRAIGHT_TEST")
+
+        # Simple closed rectangle with no bulge
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
+
+        edges = _extract_all_edges(block)
+
+        # Should produce exactly 4 edges (no arc flattening needed)
+        assert len(edges) == 4
