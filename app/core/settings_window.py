@@ -148,6 +148,7 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
         self.tabview.add("Precision")
         self.tabview.add("Output")
         self.tabview.add("Logging")
+        self.tabview.add("Summary")
 
         # Populate tabs
         self._create_filters_tab()
@@ -155,6 +156,7 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
         self._create_precision_tab()
         self._create_output_tab()
         self._create_logging_tab()
+        self._create_summary_tab()
 
         # Button frame at bottom
         button_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
@@ -489,12 +491,20 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
         # Refresh the UI for this section
         self._refresh_tab(section)
 
+        # Also refresh summary to reflect the reset
+        self._refresh_summary()
+
     def _refresh_tab(self, section: str) -> None:
         """Refresh all controls in a tab after reset.
 
         Args:
             section: Section name matching tab name (lowercase)
         """
+        # Handle Summary tab specially - just refresh content
+        if section == "summary":
+            self._refresh_summary()
+            return
+
         # Re-create the tab content
         tab_name = section.capitalize()
 
@@ -892,6 +902,89 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
             widget_type="entry",
         )
 
+    def _create_summary_tab(self) -> None:
+        """Create the Summary tab content."""
+        tab = self.tabview.tab("Summary")
+        self._populate_summary_tab(tab)
+
+    def _populate_summary_tab(self, parent: ctk.CTkFrame) -> None:
+        """Populate the Summary tab with copyable settings text."""
+        # Header
+        header = ctk.CTkLabel(
+            parent,
+            text="Current Settings Summary",
+            font=ctk.CTkFont(size=14, weight="bold"),
+        )
+        header.pack(pady=(15, 5))
+
+        # Subheader
+        subheader = ctk.CTkLabel(
+            parent,
+            text="Copy this text to share settings for debugging or support",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+        )
+        subheader.pack(pady=(0, 10))
+
+        # Copyable text box (read-only but selectable)
+        self.summary_textbox = ctk.CTkTextbox(
+            parent,
+            height=400,
+            width=580,
+            font=("Courier", 11),
+        )
+        self.summary_textbox.pack(fill="both", expand=True, padx=15, pady=5)
+
+        # Copy button
+        self.copy_btn = ctk.CTkButton(
+            parent,
+            text="Copy to Clipboard",
+            width=150,
+            command=self._copy_summary,
+        )
+        self.copy_btn.pack(pady=15)
+
+        # Populate summary
+        self._refresh_summary()
+
+    def _refresh_summary(self) -> None:
+        """Refresh the summary textbox with current settings."""
+        from .settings import SETTINGS_SECTIONS
+
+        summary_lines = [
+            "DXF Block Extractor Settings",
+            "=" * 35,
+            "",
+        ]
+
+        for section, keys in SETTINGS_SECTIONS.items():
+            summary_lines.append(f"[{section.upper()}]")
+            for key in keys:
+                value = self.settings.get(key)
+                if value is None:
+                    display_value = "(default)"
+                elif isinstance(value, bool):
+                    display_value = "Yes" if value else "No"
+                else:
+                    display_value = str(value)
+                display_key = key.replace("_", " ").title()
+                summary_lines.append(f"  {display_key}: {display_value}")
+            summary_lines.append("")
+
+        self.summary_textbox.configure(state="normal")
+        self.summary_textbox.delete("1.0", "end")
+        self.summary_textbox.insert("1.0", "\n".join(summary_lines))
+        self.summary_textbox.configure(state="disabled")
+
+    def _copy_summary(self) -> None:
+        """Copy summary text to clipboard."""
+        self.clipboard_clear()
+        self.clipboard_append(self.summary_textbox.get("1.0", "end-1c"))
+
+        # Visual feedback
+        self.copy_btn.configure(text="Copied!")
+        self.after(1500, lambda: self.copy_btn.configure(text="Copy to Clipboard"))
+
     def _validate_all_entries(self) -> bool:
         """Validate all entry widgets.
 
@@ -974,6 +1067,7 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
             return
 
         self._apply_settings()
+        self._refresh_summary()
         logger.info("Settings applied")
         self.destroy()
 
@@ -991,6 +1085,7 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
             return
 
         self._apply_settings()
+        self._refresh_summary()
 
         if self.settings.save():
             logger.info("Settings saved as default")
