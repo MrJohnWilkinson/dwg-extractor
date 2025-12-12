@@ -655,19 +655,30 @@ def _extract_hatch_boundary_edges(entity: Any) -> list[LineString]:
     return edges
 
 
-def _extract_all_edges(block_def: BlockLayout) -> list[LineString]:
+def _extract_all_edges(
+    block_def: BlockLayout,
+    skip_curved_entities: bool = False,
+    min_line_length: float = 0.0,
+) -> list[LineString]:
     """
     Extract ALL edges from block as LineStrings for unified polygonize.
+
+    Pre-filter options (reduce edge count before union):
+    - skip_curved_entities: Skip CIRCLE and ARC entities entirely
+    - min_line_length: Skip LINE entities shorter than threshold
 
     Extracts edges from:
     - LINE entities (start to end as single edge)
     - LWPOLYLINE/POLYLINE entities (all vertices as edges, closing edge if closed)
-    - CIRCLE entities (adaptive flattening to line segments)
-    - ARC entities (adaptive flattening to line segments)
+    - CIRCLE entities (adaptive flattening to line segments) - skipped if skip_curved_entities=True
+    - ARC entities (adaptive flattening to line segments) - skipped if skip_curved_entities=True
     - HATCH boundary paths (PolylinePath and EdgePath variants)
 
     Args:
         block_def: ezdxf block definition object
+        skip_curved_entities: If True, skip CIRCLE and ARC entities. Default False.
+        min_line_length: Skip LINE entities shorter than this threshold (drawing units).
+                         Default 0.0 (no filtering).
 
     Returns:
         List of LineString objects representing all edges in the block.
@@ -680,6 +691,13 @@ def _extract_all_edges(block_def: BlockLayout) -> list[LineString]:
         if entity_type == "LINE":
             start = entity.dxf.start
             end = entity.dxf.end
+            # PRE-FILTER: Skip short LINE entities
+            if min_line_length > 0:
+                length = math.sqrt(
+                    (end.x - start.x) ** 2 + (end.y - start.y) ** 2
+                )
+                if length < min_line_length:
+                    continue
             edges.append(LineString([(start.x, start.y), (end.x, end.y)]))
 
         elif entity_type in ("LWPOLYLINE", "POLYLINE"):
@@ -693,9 +711,15 @@ def _extract_all_edges(block_def: BlockLayout) -> list[LineString]:
                 continue
 
         elif entity_type == "CIRCLE":
+            # PRE-FILTER: Skip curved entities
+            if skip_curved_entities:
+                continue
             edges.extend(_extract_circle_edges(entity))
 
         elif entity_type == "ARC":
+            # PRE-FILTER: Skip curved entities
+            if skip_curved_entities:
+                continue
             edges.extend(_extract_arc_edges(entity))
 
         elif entity_type == "HATCH":
@@ -798,6 +822,80 @@ def _extract_paint_bucket_regions(
 
     logger.debug(f"Found {len(result)} paint-bucket regions")
     return result
+
+
+def _polygon_has_curved_edges(
+    polygon: Polygon,
+    tolerance: float = 0.01,
+) -> bool:
+    """
+    Detect if a polygon contains curved (non-straight) edges.
+
+    A polygon is considered to have curved edges if there is a sequence
+    of at least 3 consecutive SMALL angular deviations (indicating a
+    smooth curve approximated by line segments). Large angular deviations
+    (> 30 degrees) are considered sharp corners, not curves.
+
+    This detects arcs/circles that were flattened during edge extraction
+    while correctly ignoring sharp corners in rectangles and L-shapes.
+
+    Args:
+        polygon: List of (x, y) coordinate tuples representing polygon vertices.
+        tolerance: Maximum deviation from straight line to consider
+                   an edge as straight. Default 0.01 drawing units.
+
+    Returns:
+        True if polygon contains curved edges, False if all edges
+        are straight (within tolerance).
+    """
+    if len(polygon) < 4:  # Less than 4 vertices - need 4+ for curve detection
+        return False
+
+    n = len(polygon)
+
+    # Calculate angular deviations for all consecutive triplets
+    # A curve will have many consecutive small angular deviations
+    # A corner will have a large angular deviation (>30 degrees)
+    consecutive_small_deviations = 0
+    required_consecutive = 3  # Need at least 3 consecutive deviations for a curve
+    corner_threshold = math.radians(30)  # Angles > 30 degrees are corners
+
+    for i in range(n):
+        p1 = polygon[i]
+        p2 = polygon[(i + 1) % n]
+        p3 = polygon[(i + 2) % n]
+
+        # Calculate vectors for the two edges meeting at p2
+        v1x, v1y = p1[0] - p2[0], p1[1] - p2[1]
+        v2x, v2y = p3[0] - p2[0], p3[1] - p2[1]
+
+        len1 = math.sqrt(v1x * v1x + v1y * v1y)
+        len2 = math.sqrt(v2x * v2x + v2y * v2y)
+
+        if len1 > 1e-9 and len2 > 1e-9:
+            # Calculate angle between vectors using dot product
+            dot = v1x * v2x + v1y * v2y
+            cos_angle = max(-1.0, min(1.0, dot / (len1 * len2)))
+            angle = math.acos(cos_angle)
+
+            # The angle is the angle at the vertex (internal angle)
+            # deviation from straight is pi - angle
+            deviation_from_straight = abs(math.pi - angle)
+
+            # Check if this is a small deviation (indicating curve) vs large (corner)
+            if deviation_from_straight > tolerance and deviation_from_straight < corner_threshold:
+                # Small deviation - could be part of a curve
+                consecutive_small_deviations += 1
+                if consecutive_small_deviations >= required_consecutive:
+                    return True
+            else:
+                # Either straight (< tolerance) or a corner (> threshold)
+                consecutive_small_deviations = 0
+        else:
+            # Degenerate edge
+            consecutive_small_deviations = 0
+
+    return False
 
 
 def _extract_closed_lwpolylines(block_def: BlockLayout) -> list[Polygon]:

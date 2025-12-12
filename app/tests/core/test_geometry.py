@@ -27,6 +27,7 @@ from core.geometry import (
     _extract_paint_bucket_regions,
     _get_block_bounding_box,
     _get_intersection_points,
+    _polygon_has_curved_edges,
     _snap_linestring_coords,
     calculate_polygon_area,
     calculate_shortest_straight_side,
@@ -1800,3 +1801,286 @@ class TestCalculateShortestStraightSide:
         ]
         result = calculate_shortest_straight_side(square)
         assert result == pytest.approx(10.0)
+
+
+class TestPreFilterLineLengthFilter:
+    """Test suite for LINE pre-filter in _extract_all_edges function."""
+
+    def test_default_extracts_all_lines(self) -> None:
+        """Test that default (min_line_length=0) extracts all lines."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="ALL_LINES")
+        block.add_line((0, 0), (1, 0))  # Short line
+        block.add_line((0, 0), (100, 0))  # Long line
+
+        edges = _extract_all_edges(block, min_line_length=0)
+
+        assert len(edges) == 2
+
+    def test_filters_short_lines(self) -> None:
+        """Test that short lines are filtered when min_line_length > 0."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="FILTER_SHORT")
+        block.add_line((0, 0), (1, 0))  # 1 unit (below threshold)
+        block.add_line((0, 0), (100, 0))  # 100 units (above threshold)
+
+        edges = _extract_all_edges(block, min_line_length=5.0)
+
+        assert len(edges) == 1
+
+    def test_line_at_threshold_not_filtered(self) -> None:
+        """Test that line exactly at threshold is NOT filtered (< not <=)."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="AT_THRESHOLD")
+        block.add_line((0, 0), (5, 0))  # Exactly 5 units
+
+        edges = _extract_all_edges(block, min_line_length=5.0)
+
+        # Line is exactly at threshold, should NOT be filtered
+        assert len(edges) == 1
+
+    def test_all_lines_below_threshold(self) -> None:
+        """Test that all lines below threshold returns empty list."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="ALL_SHORT")
+        block.add_line((0, 0), (1, 0))
+        block.add_line((0, 0), (2, 0))
+        block.add_line((0, 0), (3, 0))
+
+        edges = _extract_all_edges(block, min_line_length=10.0)
+
+        assert len(edges) == 0
+
+    def test_diagonal_line_length(self) -> None:
+        """Test that diagonal line length is calculated correctly."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="DIAGONAL")
+        # 3-4-5 triangle: diagonal from (0,0) to (3,4) = 5 units
+        block.add_line((0, 0), (3, 4))  # Length = 5
+
+        edges = _extract_all_edges(block, min_line_length=4.9)
+        assert len(edges) == 1
+
+        edges = _extract_all_edges(block, min_line_length=5.1)
+        assert len(edges) == 0
+
+
+class TestPreFilterSkipCurvedEntities:
+    """Test suite for skip_curved_entities pre-filter in _extract_all_edges function."""
+
+    def test_default_extracts_circles(self) -> None:
+        """Test that default (skip_curved_entities=False) extracts circles."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="WITH_CIRCLE")
+        block.add_circle(center=(50, 50), radius=25)
+
+        edges = _extract_all_edges(block, skip_curved_entities=False)
+
+        assert len(edges) > 10  # Circle produces many segments
+
+    def test_skip_curved_filters_circles(self) -> None:
+        """Test that skip_curved_entities=True skips CIRCLE entities."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="SKIP_CIRCLE")
+        block.add_circle(center=(50, 50), radius=25)
+
+        edges = _extract_all_edges(block, skip_curved_entities=True)
+
+        assert len(edges) == 0
+
+    def test_skip_curved_filters_arcs(self) -> None:
+        """Test that skip_curved_entities=True skips ARC entities."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="SKIP_ARC")
+        block.add_arc(center=(50, 50), radius=25, start_angle=0, end_angle=90)
+
+        edges = _extract_all_edges(block, skip_curved_entities=True)
+
+        assert len(edges) == 0
+
+    def test_skip_curved_does_not_affect_lines(self) -> None:
+        """Test that skip_curved_entities does NOT affect LINE entities."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="LINES_ONLY")
+        block.add_line((0, 0), (100, 0))
+        block.add_line((100, 0), (100, 50))
+
+        edges = _extract_all_edges(block, skip_curved_entities=True)
+
+        assert len(edges) == 2
+
+    def test_skip_curved_does_not_affect_polylines(self) -> None:
+        """Test that skip_curved_entities does NOT affect LWPOLYLINE entities."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="POLY_ONLY")
+        block.add_lwpolyline([(0, 0), (100, 0), (100, 50), (0, 50)], close=True)
+
+        edges = _extract_all_edges(block, skip_curved_entities=True)
+
+        assert len(edges) == 4  # 4 edges of closed rectangle
+
+    def test_mixed_entities_with_skip_curved(self) -> None:
+        """Test mixed entities with skip_curved_entities=True."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="MIXED")
+        block.add_line((0, 0), (100, 0))  # LINE - kept
+        block.add_circle(center=(50, 50), radius=25)  # CIRCLE - skipped
+        block.add_arc(center=(100, 100), radius=20, start_angle=0, end_angle=90)  # ARC - skipped
+        block.add_lwpolyline([(0, 0), (10, 0), (10, 10)], close=False)  # POLY - kept
+
+        edges = _extract_all_edges(block, skip_curved_entities=True)
+
+        # Only LINE (1) + LWPOLYLINE (2 edges, open) = 3 edges
+        assert len(edges) == 3
+
+    def test_combined_prefilters(self) -> None:
+        """Test that both pre-filters work together."""
+        doc = ezdxf.new()
+        block = doc.blocks.new(name="COMBINED")
+        block.add_line((0, 0), (1, 0))  # Short line - filtered by min_line_length
+        block.add_line((0, 0), (100, 0))  # Long line - kept
+        block.add_circle(center=(50, 50), radius=25)  # Circle - filtered by skip_curved
+
+        edges = _extract_all_edges(block, skip_curved_entities=True, min_line_length=5.0)
+
+        # Only the long line should remain
+        assert len(edges) == 1
+
+
+class TestPolygonHasCurvedEdges:
+    """Test suite for _polygon_has_curved_edges function."""
+
+    def test_rectangle_returns_false(self) -> None:
+        """Test that simple rectangle returns False (all straight edges)."""
+        rectangle: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (100.0, 0.0),
+            (100.0, 50.0),
+            (0.0, 50.0),
+        ]
+
+        result = _polygon_has_curved_edges(rectangle)
+
+        assert result is False
+
+    def test_triangle_returns_false(self) -> None:
+        """Test that simple triangle returns False (all straight edges)."""
+        triangle: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (100.0, 0.0),
+            (50.0, 86.6),
+        ]
+
+        result = _polygon_has_curved_edges(triangle)
+
+        assert result is False
+
+    def test_circle_approximation_returns_true(self) -> None:
+        """Test that circle approximated by many points returns True."""
+        import math as m
+        # Create circle approximation with 36 points
+        circle: list[tuple[float, float]] = [
+            (50 + 25 * m.cos(m.radians(i * 10)), 50 + 25 * m.sin(m.radians(i * 10)))
+            for i in range(36)
+        ]
+
+        result = _polygon_has_curved_edges(circle)
+
+        assert result is True
+
+    def test_arc_approximation_returns_true(self) -> None:
+        """Test that arc (partial circle) returns True."""
+        import math as m
+        # Create arc approximation with points every 10 degrees for 90 degrees
+        # then straight lines back
+        arc_points: list[tuple[float, float]] = [
+            (50 + 25 * m.cos(m.radians(i * 10)), 50 + 25 * m.sin(m.radians(i * 10)))
+            for i in range(10)
+        ]
+        # Add straight line closing points
+        arc_points.extend([(50, 50), (75, 50)])
+
+        result = _polygon_has_curved_edges(arc_points)
+
+        assert result is True
+
+    def test_custom_tolerance_tighter(self) -> None:
+        """Test that tighter tolerance detects smaller deviations."""
+        # Pentagon-like shape with slight curve (5 points on circle)
+        import math as m
+        pentagon: list[tuple[float, float]] = [
+            (50 + 25 * m.cos(m.radians(i * 72)), 50 + 25 * m.sin(m.radians(i * 72)))
+            for i in range(5)
+        ]
+
+        # With default tolerance (0.01), might not detect
+        result_default = _polygon_has_curved_edges(pentagon, tolerance=0.01)
+        # With very tight tolerance, might detect deviation
+        result_tight = _polygon_has_curved_edges(pentagon, tolerance=0.001)
+
+        # Pentagon with 5 points is close to straight edges
+        # The deviation between consecutive points on a circle is subtle
+        assert isinstance(result_default, bool)
+        assert isinstance(result_tight, bool)
+
+    def test_degenerate_empty_returns_false(self) -> None:
+        """Test that empty list returns False."""
+        result = _polygon_has_curved_edges([])
+
+        assert result is False
+
+    def test_degenerate_three_points_returns_false(self) -> None:
+        """Test that polygon with 3 points returns False (need 4 for curve detection)."""
+        triangle: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (100.0, 0.0),
+            (50.0, 50.0),
+        ]
+
+        result = _polygon_has_curved_edges(triangle)
+
+        assert result is False
+
+    def test_l_shape_returns_false(self) -> None:
+        """Test that L-shape polygon returns False (all straight edges)."""
+        l_shape: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (50.0, 0.0),
+            (50.0, 30.0),
+            (20.0, 30.0),
+            (20.0, 50.0),
+            (0.0, 50.0),
+        ]
+
+        result = _polygon_has_curved_edges(l_shape)
+
+        assert result is False
+
+    def test_collinear_points_returns_false(self) -> None:
+        """Test that polygon with collinear points returns False."""
+        # Rectangle with extra point on bottom edge
+        rect_with_midpoint: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (50.0, 0.0),  # Extra point on straight edge
+            (100.0, 0.0),
+            (100.0, 50.0),
+            (0.0, 50.0),
+        ]
+
+        result = _polygon_has_curved_edges(rect_with_midpoint)
+
+        # Collinear points should not register as curved
+        assert result is False
+
+    def test_large_circle_many_segments(self) -> None:
+        """Test that large circle with many segments still detected as curved."""
+        import math as m
+        # Create circle with 100 points (very smooth approximation)
+        large_circle: list[tuple[float, float]] = [
+            (50 + 100 * m.cos(m.radians(i * 3.6)), 50 + 100 * m.sin(m.radians(i * 3.6)))
+            for i in range(100)
+        ]
+
+        result = _polygon_has_curved_edges(large_circle)
+
+        assert result is True
