@@ -1720,3 +1720,54 @@ class TestAllBlocksSheetIntegration:
 
         # Verify column widths are set (first column should have a width > 0)
         assert ws.column_dimensions["A"].width > 0
+
+
+class TestTruncateSegmentString:
+    """Tests for _truncate_segment_string helper function."""
+
+    def test_short_string_unchanged(self) -> None:
+        """Test that strings under max length are returned unchanged."""
+        from core.excel_writer import _truncate_segment_string
+
+        result = _truncate_segment_string("10, 20, 30")
+        assert result == "10, 20, 30"
+
+    def test_exact_length_unchanged(self) -> None:
+        """Test that strings exactly at max length are returned unchanged."""
+        from core.excel_writer import SEGMENT_MAX_DISPLAY_LENGTH, _truncate_segment_string
+
+        exact_string = "a" * SEGMENT_MAX_DISPLAY_LENGTH
+        result = _truncate_segment_string(exact_string)
+        assert result == exact_string
+        assert len(result) == SEGMENT_MAX_DISPLAY_LENGTH
+
+    def test_long_string_truncated(self) -> None:
+        """Test that strings over max length are truncated with ellipsis."""
+        from core.excel_writer import SEGMENT_MAX_DISPLAY_LENGTH, _truncate_segment_string
+
+        long_string = "a" * 250
+        result = _truncate_segment_string(long_string)
+        assert len(result) == SEGMENT_MAX_DISPLAY_LENGTH
+        assert result.endswith("...")
+        assert result == "a" * 197 + "..."
+
+    def test_empty_string(self) -> None:
+        """Test that empty string is returned unchanged."""
+        from core.excel_writer import _truncate_segment_string
+
+        result = _truncate_segment_string("")
+        assert result == ""
+
+    def test_custom_max_length(self) -> None:
+        """Test truncation with custom max length."""
+        from core.excel_writer import _truncate_segment_string
+
+        result = _truncate_segment_string("0123456789", max_length=8)
+        assert result == "01234..."
+        assert len(result) == 8
+
+    def test_default_max_length_constant(self) -> None:
+        """Test that default max length constant is set correctly."""
+        from core.excel_writer import SEGMENT_MAX_DISPLAY_LENGTH
+
+        assert SEGMENT_MAX_DISPLAY_LENGTH == 200

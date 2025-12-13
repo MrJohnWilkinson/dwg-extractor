@@ -6,7 +6,7 @@ This test suite validates All Blocks sheet formatting including:
 - Column width settings
 - Frozen panes
 - Three-tier scale highlighting (red, orange, yellow)
-- Segment column right-alignment
+- Text wrapping for name and segment columns
 """
 
 from typing import cast
@@ -118,14 +118,14 @@ class TestAllBlocksFormatting:
 
         _format_all_blocks_sheet(wb)
 
-        # Check key column widths (updated for new column positions)
-        assert ws.column_dimensions["A"].width == 30  # block_raw_name (unchanged)
-        assert ws.column_dimensions["B"].width == 30  # block_resolved_name (unchanged)
-        assert ws.column_dimensions["AB"].width == 15  # block_scale_x (was O)
-        assert ws.column_dimensions["AC"].width == 15  # block_scale_y (was P)
-        assert ws.column_dimensions["G"].width == 40  # block_vertical_segments (was S)
-        assert ws.column_dimensions["H"].width == 40  # block_horizontal_segments (was T)
-        assert ws.column_dimensions["O"].width == 20  # block_filtered_polygon_count (was AC)
+        # Check key column widths (updated for new widths)
+        assert ws.column_dimensions["A"].width == 35  # block_raw_name (was 30)
+        assert ws.column_dimensions["B"].width == 35  # block_resolved_name (was 30)
+        assert ws.column_dimensions["AB"].width == 12  # block_scale_x (was 15)
+        assert ws.column_dimensions["AC"].width == 12  # block_scale_y (was 15)
+        assert ws.column_dimensions["G"].width == 50  # block_vertical_segments (was 40)
+        assert ws.column_dimensions["H"].width == 50  # block_horizontal_segments (was 40)
+        assert ws.column_dimensions["O"].width == 18  # block_filtered_polygon_count (was 20)
 
     def test_format_all_blocks_frozen_panes(self) -> None:
         """Test that frozen panes are applied at B2 (header row and first column)."""
@@ -370,8 +370,8 @@ class TestAllBlocksFormatting:
             assert cell_fill.start_color.rgb == EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE
             assert cell_fill.fill_type == "solid"
 
-    def test_format_all_blocks_segment_columns_right_aligned(self) -> None:
-        """Test that segment columns (G and H) are right-aligned."""
+    def test_format_all_blocks_segment_columns_text_wrap(self) -> None:
+        """Test that segment columns (G and H) have text wrapping with top alignment."""
         wb, ws = self._create_test_workbook_with_headers()
 
         ws.append(
@@ -410,10 +410,15 @@ class TestAllBlocksFormatting:
 
         _format_all_blocks_sheet(wb)
 
-        # Column G (7 = vertical_segments) should be right-aligned
-        assert ws.cell(row=2, column=7).alignment.horizontal == "right"
-        # Column H (8 = horizontal_segments) should be right-aligned
-        assert ws.cell(row=2, column=8).alignment.horizontal == "right"
+        # Column G (7 = vertical_segments) should have wrap_text with top vertical alignment
+        g_cell = ws.cell(row=2, column=7)
+        assert g_cell.alignment.wrap_text is True
+        assert g_cell.alignment.vertical == "top"
+
+        # Column H (8 = horizontal_segments) should have wrap_text with top vertical alignment
+        h_cell = ws.cell(row=2, column=8)
+        assert h_cell.alignment.wrap_text is True
+        assert h_cell.alignment.vertical == "top"
 
     def test_format_all_blocks_header_text_wrap(self) -> None:
         """Test that header row has text wrap enabled."""

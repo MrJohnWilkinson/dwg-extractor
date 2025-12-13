@@ -111,6 +111,38 @@ from .types import BlockRotationKey
 logger = setup_logger(__name__)
 
 
+# Maximum display length for segment strings in Excel cells
+SEGMENT_MAX_DISPLAY_LENGTH = 200
+
+
+def _truncate_segment_string(
+    segment_str: str, max_length: int = SEGMENT_MAX_DISPLAY_LENGTH
+) -> str:
+    """
+    Truncate a segment string to a maximum length for Excel display.
+
+    When segment lists are very long, they can cause Excel cells to become
+    unwieldy. This function truncates the string and adds an ellipsis to
+    indicate truncation occurred.
+
+    Args:
+        segment_str: The comma-separated segment string to truncate
+        max_length: Maximum allowed length (default: SEGMENT_MAX_DISPLAY_LENGTH)
+
+    Returns:
+        Original string if within max_length, otherwise truncated with "..."
+
+    Examples:
+        >>> _truncate_segment_string("10, 20, 30", 200)
+        '10, 20, 30'
+        >>> _truncate_segment_string("a" * 250, 200)
+        'aaaa...aaa...'  # 197 chars + "..."
+    """
+    if len(segment_str) <= max_length:
+        return segment_str
+    return segment_str[: max_length - 3] + "..."
+
+
 # ACI (AutoCAD Color Index) named colors (1-7)
 _ACI_NAMED_COLORS: dict[int, str] = {
     1: "Red",
@@ -677,11 +709,14 @@ def _create_block_geometry_analysis_sheet(
                 if vertical_segments
                 else ""
             )
+            vertical_segments_str = _truncate_segment_string(vertical_segments_str)
+
             horizontal_segments_str = (
                 ", ".join(map(format_number, horizontal_segments))
                 if horizontal_segments
                 else ""
             )
+            horizontal_segments_str = _truncate_segment_string(horizontal_segments_str)
 
             # Get content zone data for this block
             content_zone = block_content_zone_data.get(key.block_name)
@@ -1150,11 +1185,14 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
                 if vertical_segments
                 else ""
             )
+            vertical_segments_str = _truncate_segment_string(vertical_segments_str)
+
             horizontal_segments_str = (
                 ", ".join(map(format_number, horizontal_segments))
                 if horizontal_segments
                 else ""
             )
+            horizontal_segments_str = _truncate_segment_string(horizontal_segments_str)
         else:
             native_width = ""
             native_height = ""
