@@ -36,6 +36,19 @@ class TestAllBlocksFormatting:
         headers = [
             "block_raw_name",
             "block_resolved_name",
+            "block_suggested_trim_left",
+            "block_suggested_trim_right",
+            "block_suggested_trim_top",
+            "block_suggested_trim_bottom",
+            "block_vertical_segments",
+            "block_horizontal_segments",
+            "block_native_width",
+            "block_native_height",
+            "block_content_zone_detected",
+            "block_content_zone_width",
+            "block_content_zone_height",
+            "block_polygon_count",
+            "block_filtered_polygon_count",
             "block_insertion_status",
             "block_is_nested",
             "block_nested_parent_names",
@@ -50,19 +63,6 @@ class TestAllBlocksFormatting:
             "block_rotation_other",
             "block_scale_x",
             "block_scale_y",
-            "block_native_width",
-            "block_native_height",
-            "block_vertical_segments",
-            "block_horizontal_segments",
-            "block_suggested_trim_left",
-            "block_suggested_trim_right",
-            "block_suggested_trim_top",
-            "block_suggested_trim_bottom",
-            "block_content_zone_detected",
-            "block_content_zone_width",
-            "block_content_zone_height",
-            "block_polygon_count",
-            "block_filtered_polygon_count",
         ]
         ws.append(headers)
         return wb, ws
@@ -71,38 +71,39 @@ class TestAllBlocksFormatting:
         """Test that auto-filter is applied to All Blocks sheet."""
         wb, ws = self._create_test_workbook_with_headers()
 
-        # Add a data row
+        # Add a data row (new column order: identity, trim, segments, dimensions,
+        # content zone, polygon counts, metadata, counts, layers, rotations, scales)
         ws.append(
             [
-                "VALVE",
-                "VALVE",
-                "Inserted",
-                False,
-                "",
-                8,
-                10,
-                2,
-                "Layer1, Layer2",
-                5,
-                2,
-                0,
-                0,
-                0,
-                1.0,
-                1.0,
-                100.0,
-                50.0,
-                "10, 80, 10",
-                "5, 40, 5",
-                10.0,
-                10.0,
-                5.0,
-                5.0,
-                "TRUE",
-                80.0,
-                40.0,
-                2,
-                2,
+                "VALVE",  # A: raw_name
+                "VALVE",  # B: resolved_name
+                10.0,  # C: trim_left
+                10.0,  # D: trim_right
+                5.0,  # E: trim_top
+                5.0,  # F: trim_bottom
+                "10, 80, 10",  # G: vertical_segments
+                "5, 40, 5",  # H: horizontal_segments
+                100.0,  # I: native_width
+                50.0,  # J: native_height
+                "TRUE",  # K: content_zone_detected
+                80.0,  # L: content_zone_width
+                40.0,  # M: content_zone_height
+                2,  # N: polygon_count
+                2,  # O: filtered_polygon_count
+                "Inserted",  # P: insertion_status
+                False,  # Q: is_nested
+                "",  # R: parent_names
+                8,  # S: entity_count
+                10,  # T: insertion_count
+                2,  # U: layer_count
+                "Layer1, Layer2",  # V: layer_names
+                5,  # W: rotation_0
+                2,  # X: rotation_90
+                0,  # Y: rotation_180
+                0,  # Z: rotation_270
+                0,  # AA: rotation_other
+                1.0,  # AB: scale_x
+                1.0,  # AC: scale_y
             ]
         )
 
@@ -117,14 +118,14 @@ class TestAllBlocksFormatting:
 
         _format_all_blocks_sheet(wb)
 
-        # Check key column widths
-        assert ws.column_dimensions["A"].width == 30  # block_raw_name
-        assert ws.column_dimensions["B"].width == 30  # block_resolved_name
-        assert ws.column_dimensions["O"].width == 15  # block_scale_x
-        assert ws.column_dimensions["P"].width == 15  # block_scale_y
-        assert ws.column_dimensions["S"].width == 40  # block_vertical_segments
-        assert ws.column_dimensions["T"].width == 40  # block_horizontal_segments
-        assert ws.column_dimensions["AC"].width == 20  # block_filtered_polygon_count
+        # Check key column widths (updated for new column positions)
+        assert ws.column_dimensions["A"].width == 30  # block_raw_name (unchanged)
+        assert ws.column_dimensions["B"].width == 30  # block_resolved_name (unchanged)
+        assert ws.column_dimensions["AB"].width == 15  # block_scale_x (was O)
+        assert ws.column_dimensions["AC"].width == 15  # block_scale_y (was P)
+        assert ws.column_dimensions["G"].width == 40  # block_vertical_segments (was S)
+        assert ws.column_dimensions["H"].width == 40  # block_horizontal_segments (was T)
+        assert ws.column_dimensions["O"].width == 20  # block_filtered_polygon_count (was AC)
 
     def test_format_all_blocks_frozen_panes(self) -> None:
         """Test that frozen panes are applied at B2 (header row and first column)."""
@@ -138,38 +139,38 @@ class TestAllBlocksFormatting:
         """Test that rows with VARIES (-) get red highlighting."""
         wb, ws = self._create_test_workbook_with_headers()
 
-        # Add a row with VARIES (-) in x_scale (column O = 15)
+        # Add a row with VARIES (-) in x_scale (column AB = 28)
         ws.append(
             [
-                "VALVE",
-                "VALVE",
-                "Inserted",
-                False,
-                "",
-                8,
-                10,
-                2,
-                "Layer1, Layer2",
-                5,
-                2,
-                0,
-                0,
-                0,
-                "VARIES (-)",  # x_scale
-                1.0,  # y_scale
-                100.0,
-                50.0,
-                "10, 80, 10",
-                "5, 40, 5",
-                10.0,
-                10.0,
-                5.0,
-                5.0,
-                "TRUE",
-                80.0,
-                40.0,
-                2,
-                2,
+                "VALVE",  # A: raw_name
+                "VALVE",  # B: resolved_name
+                10.0,  # C: trim_left
+                10.0,  # D: trim_right
+                5.0,  # E: trim_top
+                5.0,  # F: trim_bottom
+                "10, 80, 10",  # G: vertical_segments
+                "5, 40, 5",  # H: horizontal_segments
+                100.0,  # I: native_width
+                50.0,  # J: native_height
+                "TRUE",  # K: content_zone_detected
+                80.0,  # L: content_zone_width
+                40.0,  # M: content_zone_height
+                2,  # N: polygon_count
+                2,  # O: filtered_polygon_count
+                "Inserted",  # P: insertion_status
+                False,  # Q: is_nested
+                "",  # R: parent_names
+                8,  # S: entity_count
+                10,  # T: insertion_count
+                2,  # U: layer_count
+                "Layer1, Layer2",  # V: layer_names
+                5,  # W: rotation_0
+                2,  # X: rotation_90
+                0,  # Y: rotation_180
+                0,  # Z: rotation_270
+                0,  # AA: rotation_other
+                "VARIES (-)",  # AB: scale_x
+                1.0,  # AC: scale_y
             ]
         )
 
@@ -184,38 +185,38 @@ class TestAllBlocksFormatting:
         """Test that rows with single negative scale get orange highlighting."""
         wb, ws = self._create_test_workbook_with_headers()
 
-        # Add a row with negative y_scale (column P = 16)
+        # Add a row with negative y_scale (column AC = 29)
         ws.append(
             [
-                "PIPE",
-                "PIPE",
-                "Inserted",
-                False,
-                "",
-                12,
-                5,
-                1,
-                "Layer1",
-                3,
-                0,
-                2,
-                0,
-                0,
-                1.0,  # x_scale
-                -1.0,  # y_scale (negative)
-                200.0,
-                100.0,
-                "20, 160, 20",
-                "10, 80, 10",
-                20.0,
-                20.0,
-                10.0,
-                10.0,
-                "TRUE",
-                160.0,
-                80.0,
-                2,
-                2,
+                "PIPE",  # A: raw_name
+                "PIPE",  # B: resolved_name
+                20.0,  # C: trim_left
+                20.0,  # D: trim_right
+                10.0,  # E: trim_top
+                10.0,  # F: trim_bottom
+                "20, 160, 20",  # G: vertical_segments
+                "10, 80, 10",  # H: horizontal_segments
+                200.0,  # I: native_width
+                100.0,  # J: native_height
+                "TRUE",  # K: content_zone_detected
+                160.0,  # L: content_zone_width
+                80.0,  # M: content_zone_height
+                2,  # N: polygon_count
+                2,  # O: filtered_polygon_count
+                "Inserted",  # P: insertion_status
+                False,  # Q: is_nested
+                "",  # R: parent_names
+                12,  # S: entity_count
+                5,  # T: insertion_count
+                1,  # U: layer_count
+                "Layer1",  # V: layer_names
+                3,  # W: rotation_0
+                0,  # X: rotation_90
+                2,  # Y: rotation_180
+                0,  # Z: rotation_270
+                0,  # AA: rotation_other
+                1.0,  # AB: scale_x
+                -1.0,  # AC: scale_y (negative)
             ]
         )
 
@@ -230,38 +231,38 @@ class TestAllBlocksFormatting:
         """Test that rows with VARIES (positive only) get yellow highlighting."""
         wb, ws = self._create_test_workbook_with_headers()
 
-        # Add a row with VARIES in x_scale (column O = 15)
+        # Add a row with VARIES in x_scale (column AB = 28)
         ws.append(
             [
-                "BLOCK1",
-                "BLOCK1",
-                "Inserted",
-                False,
-                "",
-                8,
-                10,
-                2,
-                "Layer1, Layer2",
-                5,
-                2,
-                0,
-                0,
-                0,
-                "VARIES",  # x_scale (positive variance)
-                1.0,  # y_scale
-                100.0,
-                50.0,
-                "10, 80, 10",
-                "5, 40, 5",
-                10.0,
-                10.0,
-                5.0,
-                5.0,
-                "TRUE",
-                80.0,
-                40.0,
-                2,
-                2,
+                "BLOCK1",  # A: raw_name
+                "BLOCK1",  # B: resolved_name
+                10.0,  # C: trim_left
+                10.0,  # D: trim_right
+                5.0,  # E: trim_top
+                5.0,  # F: trim_bottom
+                "10, 80, 10",  # G: vertical_segments
+                "5, 40, 5",  # H: horizontal_segments
+                100.0,  # I: native_width
+                50.0,  # J: native_height
+                "TRUE",  # K: content_zone_detected
+                80.0,  # L: content_zone_width
+                40.0,  # M: content_zone_height
+                2,  # N: polygon_count
+                2,  # O: filtered_polygon_count
+                "Inserted",  # P: insertion_status
+                False,  # Q: is_nested
+                "",  # R: parent_names
+                8,  # S: entity_count
+                10,  # T: insertion_count
+                2,  # U: layer_count
+                "Layer1, Layer2",  # V: layer_names
+                5,  # W: rotation_0
+                2,  # X: rotation_90
+                0,  # Y: rotation_180
+                0,  # Z: rotation_270
+                0,  # AA: rotation_other
+                "VARIES",  # AB: scale_x (positive variance)
+                1.0,  # AC: scale_y
             ]
         )
 
@@ -279,35 +280,35 @@ class TestAllBlocksFormatting:
         # Add a row with positive uniform scales
         ws.append(
             [
-                "BLOCK2",
-                "BLOCK2",
-                "Inserted",
-                False,
-                "",
-                8,
-                10,
-                1,
-                "Layer1",
-                10,
-                0,
-                0,
-                0,
-                0,
-                1.0,  # x_scale (positive)
-                1.5,  # y_scale (positive)
-                100.0,
-                50.0,
-                "10, 80, 10",
-                "5, 40, 5",
-                10.0,
-                10.0,
-                5.0,
-                5.0,
-                "TRUE",
-                80.0,
-                40.0,
-                2,
-                2,
+                "BLOCK2",  # A: raw_name
+                "BLOCK2",  # B: resolved_name
+                10.0,  # C: trim_left
+                10.0,  # D: trim_right
+                5.0,  # E: trim_top
+                5.0,  # F: trim_bottom
+                "10, 80, 10",  # G: vertical_segments
+                "5, 40, 5",  # H: horizontal_segments
+                100.0,  # I: native_width
+                50.0,  # J: native_height
+                "TRUE",  # K: content_zone_detected
+                80.0,  # L: content_zone_width
+                40.0,  # M: content_zone_height
+                2,  # N: polygon_count
+                2,  # O: filtered_polygon_count
+                "Inserted",  # P: insertion_status
+                False,  # Q: is_nested
+                "",  # R: parent_names
+                8,  # S: entity_count
+                10,  # T: insertion_count
+                1,  # U: layer_count
+                "Layer1",  # V: layer_names
+                10,  # W: rotation_0
+                0,  # X: rotation_90
+                0,  # Y: rotation_180
+                0,  # Z: rotation_270
+                0,  # AA: rotation_other
+                1.0,  # AB: scale_x (positive)
+                1.5,  # AC: scale_y (positive)
             ]
         )
 
@@ -329,35 +330,35 @@ class TestAllBlocksFormatting:
         # Add a row with VARIES (-) to trigger red highlighting
         ws.append(
             [
-                "VALVE",
-                "VALVE",
-                "Inserted",
-                False,
-                "",
-                8,
-                10,
-                2,
-                "Layer1, Layer2",
-                5,
-                2,
-                0,
-                0,
-                0,
-                "VARIES (-)",
-                1.0,
-                100.0,
-                50.0,
-                "10, 80, 10",
-                "5, 40, 5",
-                10.0,
-                10.0,
-                5.0,
-                5.0,
-                "TRUE",
-                80.0,
-                40.0,
-                2,
-                2,
+                "VALVE",  # A: raw_name
+                "VALVE",  # B: resolved_name
+                10.0,  # C: trim_left
+                10.0,  # D: trim_right
+                5.0,  # E: trim_top
+                5.0,  # F: trim_bottom
+                "10, 80, 10",  # G: vertical_segments
+                "5, 40, 5",  # H: horizontal_segments
+                100.0,  # I: native_width
+                50.0,  # J: native_height
+                "TRUE",  # K: content_zone_detected
+                80.0,  # L: content_zone_width
+                40.0,  # M: content_zone_height
+                2,  # N: polygon_count
+                2,  # O: filtered_polygon_count
+                "Inserted",  # P: insertion_status
+                False,  # Q: is_nested
+                "",  # R: parent_names
+                8,  # S: entity_count
+                10,  # T: insertion_count
+                2,  # U: layer_count
+                "Layer1, Layer2",  # V: layer_names
+                5,  # W: rotation_0
+                2,  # X: rotation_90
+                0,  # Y: rotation_180
+                0,  # Z: rotation_270
+                0,  # AA: rotation_other
+                "VARIES (-)",  # AB: scale_x
+                1.0,  # AC: scale_y
             ]
         )
 
@@ -370,49 +371,49 @@ class TestAllBlocksFormatting:
             assert cell_fill.fill_type == "solid"
 
     def test_format_all_blocks_segment_columns_right_aligned(self) -> None:
-        """Test that segment columns (S and T) are right-aligned."""
+        """Test that segment columns (G and H) are right-aligned."""
         wb, ws = self._create_test_workbook_with_headers()
 
         ws.append(
             [
-                "VALVE",
-                "VALVE",
-                "Inserted",
-                False,
-                "",
-                8,
-                10,
-                2,
-                "Layer1, Layer2",
-                5,
-                2,
-                0,
-                0,
-                0,
-                1.0,
-                1.0,
-                100.0,
-                50.0,
-                "10, 80, 10",
-                "5, 40, 5",
-                10.0,
-                10.0,
-                5.0,
-                5.0,
-                "TRUE",
-                80.0,
-                40.0,
-                2,
-                2,
+                "VALVE",  # A: raw_name
+                "VALVE",  # B: resolved_name
+                10.0,  # C: trim_left
+                10.0,  # D: trim_right
+                5.0,  # E: trim_top
+                5.0,  # F: trim_bottom
+                "10, 80, 10",  # G: vertical_segments
+                "5, 40, 5",  # H: horizontal_segments
+                100.0,  # I: native_width
+                50.0,  # J: native_height
+                "TRUE",  # K: content_zone_detected
+                80.0,  # L: content_zone_width
+                40.0,  # M: content_zone_height
+                2,  # N: polygon_count
+                2,  # O: filtered_polygon_count
+                "Inserted",  # P: insertion_status
+                False,  # Q: is_nested
+                "",  # R: parent_names
+                8,  # S: entity_count
+                10,  # T: insertion_count
+                2,  # U: layer_count
+                "Layer1, Layer2",  # V: layer_names
+                5,  # W: rotation_0
+                2,  # X: rotation_90
+                0,  # Y: rotation_180
+                0,  # Z: rotation_270
+                0,  # AA: rotation_other
+                1.0,  # AB: scale_x
+                1.0,  # AC: scale_y
             ]
         )
 
         _format_all_blocks_sheet(wb)
 
-        # Column S (19 = vertical_segments) should be right-aligned
-        assert ws.cell(row=2, column=19).alignment.horizontal == "right"
-        # Column T (20 = horizontal_segments) should be right-aligned
-        assert ws.cell(row=2, column=20).alignment.horizontal == "right"
+        # Column G (7 = vertical_segments) should be right-aligned
+        assert ws.cell(row=2, column=7).alignment.horizontal == "right"
+        # Column H (8 = horizontal_segments) should be right-aligned
+        assert ws.cell(row=2, column=8).alignment.horizontal == "right"
 
     def test_format_all_blocks_header_text_wrap(self) -> None:
         """Test that header row has text wrap enabled."""
@@ -441,35 +442,35 @@ class TestAllBlocksFormatting:
         # Add a row with VARIES (-) in x and VARIES in y
         ws.append(
             [
-                "MIXED",
-                "MIXED",
-                "Inserted",
-                False,
-                "",
-                8,
-                10,
-                2,
-                "Layer1, Layer2",
-                5,
-                2,
-                0,
-                0,
-                0,
-                "VARIES (-)",  # x_scale - should trigger red
-                "VARIES",  # y_scale - would trigger yellow but red wins
-                100.0,
-                50.0,
-                "10, 80, 10",
-                "5, 40, 5",
-                10.0,
-                10.0,
-                5.0,
-                5.0,
-                "TRUE",
-                80.0,
-                40.0,
-                2,
-                2,
+                "MIXED",  # A: raw_name
+                "MIXED",  # B: resolved_name
+                10.0,  # C: trim_left
+                10.0,  # D: trim_right
+                5.0,  # E: trim_top
+                5.0,  # F: trim_bottom
+                "10, 80, 10",  # G: vertical_segments
+                "5, 40, 5",  # H: horizontal_segments
+                100.0,  # I: native_width
+                50.0,  # J: native_height
+                "TRUE",  # K: content_zone_detected
+                80.0,  # L: content_zone_width
+                40.0,  # M: content_zone_height
+                2,  # N: polygon_count
+                2,  # O: filtered_polygon_count
+                "Inserted",  # P: insertion_status
+                False,  # Q: is_nested
+                "",  # R: parent_names
+                8,  # S: entity_count
+                10,  # T: insertion_count
+                2,  # U: layer_count
+                "Layer1, Layer2",  # V: layer_names
+                5,  # W: rotation_0
+                2,  # X: rotation_90
+                0,  # Y: rotation_180
+                0,  # Z: rotation_270
+                0,  # AA: rotation_other
+                "VARIES (-)",  # AB: scale_x - should trigger red
+                "VARIES",  # AC: scale_y - would trigger yellow but red wins
             ]
         )
 
@@ -486,35 +487,35 @@ class TestAllBlocksFormatting:
         # Add a row with VARIES (-) in y_scale
         ws.append(
             [
-                "BLOCK_Y",
-                "BLOCK_Y",
-                "Inserted",
-                False,
-                "",
-                8,
-                10,
-                2,
-                "Layer1, Layer2",
-                5,
-                2,
-                0,
-                0,
-                0,
-                1.0,  # x_scale
-                "VARIES (-)",  # y_scale
-                100.0,
-                50.0,
-                "10, 80, 10",
-                "5, 40, 5",
-                10.0,
-                10.0,
-                5.0,
-                5.0,
-                "TRUE",
-                80.0,
-                40.0,
-                2,
-                2,
+                "BLOCK_Y",  # A: raw_name
+                "BLOCK_Y",  # B: resolved_name
+                10.0,  # C: trim_left
+                10.0,  # D: trim_right
+                5.0,  # E: trim_top
+                5.0,  # F: trim_bottom
+                "10, 80, 10",  # G: vertical_segments
+                "5, 40, 5",  # H: horizontal_segments
+                100.0,  # I: native_width
+                50.0,  # J: native_height
+                "TRUE",  # K: content_zone_detected
+                80.0,  # L: content_zone_width
+                40.0,  # M: content_zone_height
+                2,  # N: polygon_count
+                2,  # O: filtered_polygon_count
+                "Inserted",  # P: insertion_status
+                False,  # Q: is_nested
+                "",  # R: parent_names
+                8,  # S: entity_count
+                10,  # T: insertion_count
+                2,  # U: layer_count
+                "Layer1, Layer2",  # V: layer_names
+                5,  # W: rotation_0
+                2,  # X: rotation_90
+                0,  # Y: rotation_180
+                0,  # Z: rotation_270
+                0,  # AA: rotation_other
+                1.0,  # AB: scale_x
+                "VARIES (-)",  # AC: scale_y
             ]
         )
 
@@ -531,35 +532,35 @@ class TestAllBlocksFormatting:
         # Add a row with negative x_scale
         ws.append(
             [
-                "BLOCK_NEG_X",
-                "BLOCK_NEG_X",
-                "Inserted",
-                False,
-                "",
-                8,
-                10,
-                2,
-                "Layer1, Layer2",
-                5,
-                2,
-                0,
-                0,
-                0,
-                -1.0,  # x_scale (negative)
-                1.0,  # y_scale (positive)
-                100.0,
-                50.0,
-                "10, 80, 10",
-                "5, 40, 5",
-                10.0,
-                10.0,
-                5.0,
-                5.0,
-                "TRUE",
-                80.0,
-                40.0,
-                2,
-                2,
+                "BLOCK_NEG_X",  # A: raw_name
+                "BLOCK_NEG_X",  # B: resolved_name
+                10.0,  # C: trim_left
+                10.0,  # D: trim_right
+                5.0,  # E: trim_top
+                5.0,  # F: trim_bottom
+                "10, 80, 10",  # G: vertical_segments
+                "5, 40, 5",  # H: horizontal_segments
+                100.0,  # I: native_width
+                50.0,  # J: native_height
+                "TRUE",  # K: content_zone_detected
+                80.0,  # L: content_zone_width
+                40.0,  # M: content_zone_height
+                2,  # N: polygon_count
+                2,  # O: filtered_polygon_count
+                "Inserted",  # P: insertion_status
+                False,  # Q: is_nested
+                "",  # R: parent_names
+                8,  # S: entity_count
+                10,  # T: insertion_count
+                2,  # U: layer_count
+                "Layer1, Layer2",  # V: layer_names
+                5,  # W: rotation_0
+                2,  # X: rotation_90
+                0,  # Y: rotation_180
+                0,  # Z: rotation_270
+                0,  # AA: rotation_other
+                -1.0,  # AB: scale_x (negative)
+                1.0,  # AC: scale_y (positive)
             ]
         )
 
