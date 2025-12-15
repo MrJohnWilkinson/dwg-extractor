@@ -47,11 +47,9 @@ REPORT_TOPIC: $ARGUMENTS (required)
 ## <Section Heading 2>
 <additional sections as needed>
 
-## Recommendations
-<optional: actionable recommendations based on findings>
+## Simple list summary
+<simple markdown bullet list summary with very simple formatting, that shows the top basic information\steps without complexity.  The list must be 1-7 bullet points max.>
 
-## Next Steps
-<optional: suggested next steps or action items>
 ```
 
 ## Report
