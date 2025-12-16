@@ -1,6 +1,7 @@
 ---
-model: opus
+description: Archive ai_output and specs directories to tar files
 argument-hint: [files to exclude]
+model: opus
 ---
 
 # Archive Directories

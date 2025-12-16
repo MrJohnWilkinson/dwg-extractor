@@ -1,8 +1,8 @@
 ---
-allowed-tools: Bash(echo:*), Bash(date:*), Bash(find:*), Bash(jq:*), Glob, Read, SlashCommand, AskUserQuestion
-argument-hint: <path-to-command.md>
 description: Analyze command execution timing using automatic hook-captured timestamps
+argument-hint: <path-to-command.md>
 model: opus
+allowed-tools: Bash(echo:*), Bash(date:*), Bash(find:*), Bash(jq:*), Glob, Read, SlashCommand, AskUserQuestion
 ---
 
 # Track Command Timing

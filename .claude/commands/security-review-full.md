@@ -1,6 +1,7 @@
 ---
-allowed-tools: Bash(git ls-files:*), Bash(git status:*), Bash(wc:*), Read, Glob, Grep, LS, Task
 description: Complete a security review of the entire codebase
+model: opus
+allowed-tools: Bash(git ls-files:*), Bash(git status:*), Bash(wc:*), Read, Glob, Grep, LS, Task
 ---
 
 You are a senior security engineer conducting a comprehensive security review of this entire codebase.

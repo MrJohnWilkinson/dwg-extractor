@@ -1,4 +1,6 @@
 ---
+description: Create a new bash alias or function-based alias
+argument-hint: [alias_name] [command/path]
 model: opus
 hints: Simple bash alias creation - $1=alias_name $2=command_path
 ---
