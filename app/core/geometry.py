@@ -87,9 +87,9 @@ def calculate_polygon_area(polygon: Polygon) -> float:
 def calculate_shortest_straight_side(
     polygon: Polygon,
     angle_tolerance: float = 1.0,
-) -> float:
+) -> tuple[float, int]:
     """
-    Calculate the shortest straight side of a polygon.
+    Calculate the shortest straight side and total side count of a polygon.
 
     Merges consecutive collinear edges into single sides before
     finding the minimum. This correctly handles cases where a single
@@ -102,18 +102,23 @@ def calculate_shortest_straight_side(
                         Default 1.0 degree handles minor coordinate variations.
 
     Returns:
-        Length of shortest straight side in DXF drawing units.
-        Returns 0.0 for degenerate polygons (fewer than 3 vertices).
+        Tuple of (shortest_side_length, side_count) where:
+        - shortest_side_length: Length of shortest merged side in DXF units
+        - side_count: Total number of straight sides after collinear merging
+
+        For rectangles, side_count will be 4.
+        For complex shapes, side_count will be > 4.
+        Returns (0.0, 0) for degenerate polygons (fewer than 3 vertices).
 
     Examples:
         >>> calculate_shortest_straight_side([(0, 0), (100, 0), (100, 50), (0, 50)])
-        50.0
-        >>> # Rectangle with split bottom edge - still finds 50 as shortest
+        (50.0, 4)
+        >>> # Rectangle with split bottom edge - still finds 50 as shortest, 4 sides
         >>> calculate_shortest_straight_side([(0, 0), (50, 0), (100, 0), (100, 50), (0, 50)])
-        50.0
+        (50.0, 4)
     """
     if len(polygon) < 3:
-        return 0.0
+        return (0.0, 0)
 
     # Close the polygon by appending first vertex
     vertices = polygon + [polygon[0]]
@@ -161,7 +166,9 @@ def calculate_shortest_straight_side(
 
         i = j
 
-    return min(straight_sides) if straight_sides else 0.0
+    if not straight_sides:
+        return (0.0, 0)
+    return (min(straight_sides), len(straight_sides))
 
 
 class GeometryAbortedError(Exception):
@@ -830,7 +837,9 @@ def _estimate_edge_count(block_def: BlockLayout) -> int:
             # Dynamic estimation based on radius and sagitta
             try:
                 radius = entity.dxf.radius
-                count += _estimate_arc_segments(radius, 2 * math.pi, ARC_FLATTENING_SAGITTA)
+                count += _estimate_arc_segments(
+                    radius, 2 * math.pi, ARC_FLATTENING_SAGITTA
+                )
             except (AttributeError, TypeError, ValueError):
                 count += 36  # Fallback to default if properties unavailable
 
@@ -858,12 +867,17 @@ def _estimate_edge_count(block_def: BlockLayout) -> int:
 
                 # Ramanujan approximation for ellipse perimeter
                 h = ((a - b) ** 2) / ((a + b) ** 2) if (a + b) > 0 else 0
-                perimeter = math.pi * (a + b) * (1 + (3 * h) / (10 + math.sqrt(4 - 3 * h)))
+                perimeter = (
+                    math.pi * (a + b) * (1 + (3 * h) / (10 + math.sqrt(4 - 3 * h)))
+                )
 
                 # Estimate segments based on sagitta (use max radius for conservative estimate)
                 max_radius = max(a, b)
                 if max_radius > 0 and ARC_FLATTENING_SAGITTA > 0:
-                    estimated = int(perimeter / (2 * math.sqrt(2 * max_radius * ARC_FLATTENING_SAGITTA)))
+                    estimated = int(
+                        perimeter
+                        / (2 * math.sqrt(2 * max_radius * ARC_FLATTENING_SAGITTA))
+                    )
                     count += max(8, estimated)
                 else:
                     count += 36  # Default fallback
@@ -1105,9 +1119,7 @@ def _extract_all_edges(
             end = entity.dxf.end
             # PRE-FILTER: Skip short LINE entities
             if min_line_length > 0:
-                length = math.sqrt(
-                    (end.x - start.x) ** 2 + (end.y - start.y) ** 2
-                )
+                length = math.sqrt((end.x - start.x) ** 2 + (end.y - start.y) ** 2)
                 if length < min_line_length:
                     continue
             edges.append(LineString([(start.x, start.y), (end.x, end.y)]))
@@ -1120,7 +1132,12 @@ def _extract_all_edges(
                 vertices = list(path.flattening(ARC_FLATTENING_SAGITTA))
                 for i in range(len(vertices) - 1):
                     edges.append(
-                        LineString([(vertices[i].x, vertices[i].y), (vertices[i + 1].x, vertices[i + 1].y)])
+                        LineString(
+                            [
+                                (vertices[i].x, vertices[i].y),
+                                (vertices[i + 1].x, vertices[i + 1].y),
+                            ]
+                        )
                     )
             except (AttributeError, IndexError, TypeError):
                 continue
@@ -1320,7 +1337,10 @@ def _polygon_has_curved_edges(
             deviation_from_straight = abs(math.pi - angle)
 
             # Check if this is a small deviation (indicating curve) vs large (corner)
-            if deviation_from_straight > tolerance and deviation_from_straight < corner_threshold:
+            if (
+                deviation_from_straight > tolerance
+                and deviation_from_straight < corner_threshold
+            ):
                 # Small deviation - could be part of a curve
                 consecutive_small_deviations += 1
                 if consecutive_small_deviations >= required_consecutive:
@@ -1735,24 +1755,27 @@ def _detect_content_zone(
     # Post-filter: Curved lines filter (before side filter for efficiency)
     if curved_filter_enabled:
         pre_curved_count = len(all_shapes)
-        all_shapes = [
-            s for s in all_shapes
-            if not _polygon_has_curved_edges(s)
-        ]
+        all_shapes = [s for s in all_shapes if not _polygon_has_curved_edges(s)]
         logger.debug(
             f"[{block_name}] Curved filter: {pre_curved_count} -> {len(all_shapes)} polygons"
         )
 
     # Step 1: Early side filter (uses gross geometry)
     # Applied BEFORE net area calculation for efficiency
+    # Only filters 4-sided rectangles; complex polygons pass through
     t2 = time.perf_counter()
     if min_side_filter > 0:
         pre_side_count = len(all_shapes)
-        all_shapes = [
-            s
-            for s in all_shapes
-            if calculate_shortest_straight_side(s) >= min_side_filter
-        ]
+
+        def passes_min_side_filter(polygon: Polygon) -> bool:
+            """Check if polygon passes min side filter (only applies to 4-sided rectangles)."""
+            shortest_side, side_count = calculate_shortest_straight_side(polygon)
+            # Only filter 4-sided rectangles; pass all complex polygons
+            if side_count != 4:
+                return True
+            return shortest_side >= min_side_filter
+
+        all_shapes = [s for s in all_shapes if passes_min_side_filter(s)]
         logger.debug(
             f"[{block_name}] Side filter: {pre_side_count} -> {len(all_shapes)} polygons "
             f"(min_side={min_side_filter})"

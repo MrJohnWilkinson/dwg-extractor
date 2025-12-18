@@ -9,15 +9,14 @@ This test suite validates geometric calculation utilities including:
 - Edge cases and tolerance boundaries
 """
 
+import math
+
 import ezdxf
 import pytest
 from shapely.geometry import LineString
 from shapely.ops import polygonize, snap, unary_union
 
-import math
-
 from core.constants import (
-    ARC_FLATTENING_SAGITTA,
     DEFAULT_GAP_CLOSURE_TOLERANCE,
     PRECISION_SNAP_TOLERANCE,
 )
@@ -1763,24 +1762,28 @@ class TestCalculateShortestStraightSide:
     """Test suite for calculate_shortest_straight_side function."""
 
     def test_square_shortest_side(self) -> None:
-        """Test that 10x10 square returns 10.0 for all equal sides."""
+        """Test that 10x10 square returns (10.0, 4) for all equal sides."""
         square: list[tuple[float, float]] = [
             (0.0, 0.0),
             (10.0, 0.0),
             (10.0, 10.0),
             (0.0, 10.0),
         ]
-        assert calculate_shortest_straight_side(square) == pytest.approx(10.0)
+        shortest_side, side_count = calculate_shortest_straight_side(square)
+        assert shortest_side == pytest.approx(10.0)
+        assert side_count == 4
 
     def test_rectangle_shortest_side(self) -> None:
-        """Test that 100x50 rectangle returns 50.0 for shorter sides."""
+        """Test that 100x50 rectangle returns (50.0, 4) for shorter sides."""
         rectangle: list[tuple[float, float]] = [
             (0.0, 0.0),
             (100.0, 0.0),
             (100.0, 50.0),
             (0.0, 50.0),
         ]
-        assert calculate_shortest_straight_side(rectangle) == pytest.approx(50.0)
+        shortest_side, side_count = calculate_shortest_straight_side(rectangle)
+        assert shortest_side == pytest.approx(50.0)
+        assert side_count == 4
 
     def test_collinear_edge_merging(self) -> None:
         """Test that rectangle with split bottom edge still finds correct shortest side."""
@@ -1795,7 +1798,9 @@ class TestCalculateShortestStraightSide:
             (0.0, 50.0),
         ]
         # Bottom edge is 100 (merged), right edge is 50, top is 100, left is 50
-        assert calculate_shortest_straight_side(split_rect) == pytest.approx(50.0)
+        shortest_side, side_count = calculate_shortest_straight_side(split_rect)
+        assert shortest_side == pytest.approx(50.0)
+        assert side_count == 4
 
     def test_collinear_edge_merging_three_segments(self) -> None:
         """Test that bottom edge split into 3 parts still merges correctly."""
@@ -1809,22 +1814,32 @@ class TestCalculateShortestStraightSide:
             (0.0, 50.0),
         ]
         # Bottom: 100 (merged), Right: 50, Top: 100, Left: 50
-        assert calculate_shortest_straight_side(split_rect) == pytest.approx(50.0)
+        shortest_side, side_count = calculate_shortest_straight_side(split_rect)
+        assert shortest_side == pytest.approx(50.0)
+        assert side_count == 4
 
     def test_triangle_shortest_side(self) -> None:
-        """Test 3-4-5 right triangle returns 3.0 for shortest side."""
+        """Test 3-4-5 right triangle returns (3.0, 3) for shortest side."""
         # 3-4-5 right triangle
         triangle: list[tuple[float, float]] = [(0.0, 0.0), (3.0, 0.0), (0.0, 4.0)]
         # Sides: bottom=3, left=4, hypotenuse=5
-        assert calculate_shortest_straight_side(triangle) == pytest.approx(3.0)
+        shortest_side, side_count = calculate_shortest_straight_side(triangle)
+        assert shortest_side == pytest.approx(3.0)
+        assert side_count == 3
 
     def test_degenerate_polygon_empty(self) -> None:
-        """Test that empty list returns 0.0."""
-        assert calculate_shortest_straight_side([]) == 0.0
+        """Test that empty list returns (0.0, 0)."""
+        shortest_side, side_count = calculate_shortest_straight_side([])
+        assert shortest_side == 0.0
+        assert side_count == 0
 
     def test_degenerate_polygon_two_points(self) -> None:
-        """Test that two points returns 0.0."""
-        assert calculate_shortest_straight_side([(0.0, 0.0), (10.0, 10.0)]) == 0.0
+        """Test that two points returns (0.0, 0)."""
+        shortest_side, side_count = calculate_shortest_straight_side(
+            [(0.0, 0.0), (10.0, 10.0)]
+        )
+        assert shortest_side == 0.0
+        assert side_count == 0
 
     def test_custom_angle_tolerance(self) -> None:
         """Test that custom tolerance parameter works correctly."""
@@ -1841,17 +1856,23 @@ class TestCalculateShortestStraightSide:
 
         # With large tolerance (5 degrees), edges should merge
         # atan(2/50) = 2.29 degrees, so 5 degree tolerance merges them
-        result_large = calculate_shortest_straight_side(deviation, angle_tolerance=5.0)
+        shortest_large, count_large = calculate_shortest_straight_side(
+            deviation, angle_tolerance=5.0
+        )
 
         # With tight tolerance (1 degree), edges should NOT merge
         # since 2.29 degrees > 1 degree
-        result_tight = calculate_shortest_straight_side(deviation, angle_tolerance=1.0)
+        shortest_tight, count_tight = calculate_shortest_straight_side(
+            deviation, angle_tolerance=1.0
+        )
 
         # Large tolerance merges bottom edges, so shortest is 50 (vertical sides)
-        assert result_large == pytest.approx(50.0)
+        assert shortest_large == pytest.approx(50.0)
+        assert count_large == 4  # Merged to 4 sides
         # Tight tolerance doesn't merge, so we get smaller segments (~50)
         # The split segments are about 50 units each
-        assert result_tight < 51.0  # Should find the ~50 unit split segment
+        assert shortest_tight < 51.0  # Should find the ~50 unit split segment
+        assert count_tight == 5  # 5 sides when not merged
 
     def test_very_small_edges_ignored(self) -> None:
         """Test that edges < 1e-9 are ignored."""
@@ -1864,7 +1885,9 @@ class TestCalculateShortestStraightSide:
             (0.0, 50.0),
         ]
         # The degenerate edge from (0,0) to (0,0) should be ignored
-        assert calculate_shortest_straight_side(rect_with_tiny) == pytest.approx(50.0)
+        shortest_side, side_count = calculate_shortest_straight_side(rect_with_tiny)
+        assert shortest_side == pytest.approx(50.0)
+        assert side_count == 4
 
     def test_angle_wraparound(self) -> None:
         """Test that collinearity detection handles 180-degree wraparound."""
@@ -1880,7 +1903,9 @@ class TestCalculateShortestStraightSide:
             (0.0, 10.0),
         ]
         # All horizontal and vertical edges, no wraparound issue
-        assert calculate_shortest_straight_side(horizontal_rect) == pytest.approx(10.0)
+        shortest_side, side_count = calculate_shortest_straight_side(horizontal_rect)
+        assert shortest_side == pytest.approx(10.0)
+        assert side_count == 4
 
     def test_all_edges_equal(self) -> None:
         """Test polygon where all edges have equal length."""
@@ -1891,8 +1916,39 @@ class TestCalculateShortestStraightSide:
             (10.0, 10.0),
             (0.0, 10.0),
         ]
-        result = calculate_shortest_straight_side(square)
-        assert result == pytest.approx(10.0)
+        shortest_side, side_count = calculate_shortest_straight_side(square)
+        assert shortest_side == pytest.approx(10.0)
+        assert side_count == 4
+
+    def test_hexagon_side_count(self) -> None:
+        """Test that hexagon returns correct side count of 6."""
+        # Regular hexagon-like shape
+        hexagon: list[tuple[float, float]] = [
+            (10.0, 0.0),
+            (20.0, 0.0),
+            (25.0, 8.66),
+            (20.0, 17.32),
+            (10.0, 17.32),
+            (5.0, 8.66),
+        ]
+        shortest_side, side_count = calculate_shortest_straight_side(hexagon)
+        assert side_count == 6
+        assert shortest_side > 0.0
+
+    def test_l_shaped_polygon_side_count(self) -> None:
+        """Test that L-shaped polygon returns 6 sides."""
+        # L-shape: 6 vertices, 6 sides
+        l_shape: list[tuple[float, float]] = [
+            (0.0, 0.0),
+            (20.0, 0.0),
+            (20.0, 10.0),
+            (10.0, 10.0),
+            (10.0, 30.0),
+            (0.0, 30.0),
+        ]
+        shortest_side, side_count = calculate_shortest_straight_side(l_shape)
+        assert side_count == 6
+        assert shortest_side == pytest.approx(10.0)  # Shortest is the 10-unit sides
 
 
 class TestPreFilterLineLengthFilter:
@@ -2017,7 +2073,9 @@ class TestPreFilterSkipCurvedEntities:
         block = doc.blocks.new(name="MIXED")
         block.add_line((0, 0), (100, 0))  # LINE - kept
         block.add_circle(center=(50, 50), radius=25)  # CIRCLE - skipped
-        block.add_arc(center=(100, 100), radius=20, start_angle=0, end_angle=90)  # ARC - skipped
+        block.add_arc(
+            center=(100, 100), radius=20, start_angle=0, end_angle=90
+        )  # ARC - skipped
         block.add_lwpolyline([(0, 0), (10, 0), (10, 10)], close=False)  # POLY - kept
 
         edges = _extract_all_edges(block, skip_curved_entities=True)
@@ -2033,7 +2091,9 @@ class TestPreFilterSkipCurvedEntities:
         block.add_line((0, 0), (100, 0))  # Long line - kept
         block.add_circle(center=(50, 50), radius=25)  # Circle - filtered by skip_curved
 
-        edges = _extract_all_edges(block, skip_curved_entities=True, min_line_length=5.0)
+        edges = _extract_all_edges(
+            block, skip_curved_entities=True, min_line_length=5.0
+        )
 
         # Only the long line should remain
         assert len(edges) == 1
@@ -2095,6 +2155,7 @@ class TestPolygonHasCurvedEdges:
     def test_circle_approximation_returns_true(self) -> None:
         """Test that circle approximated by many points returns True."""
         import math as m
+
         # Create circle approximation with 36 points
         circle: list[tuple[float, float]] = [
             (50 + 25 * m.cos(m.radians(i * 10)), 50 + 25 * m.sin(m.radians(i * 10)))
@@ -2108,6 +2169,7 @@ class TestPolygonHasCurvedEdges:
     def test_arc_approximation_returns_true(self) -> None:
         """Test that arc (partial circle) returns True."""
         import math as m
+
         # Create arc approximation with points every 10 degrees for 90 degrees
         # then straight lines back
         arc_points: list[tuple[float, float]] = [
@@ -2125,6 +2187,7 @@ class TestPolygonHasCurvedEdges:
         """Test that tighter tolerance detects smaller deviations."""
         # Pentagon-like shape with slight curve (5 points on circle)
         import math as m
+
         pentagon: list[tuple[float, float]] = [
             (50 + 25 * m.cos(m.radians(i * 72)), 50 + 25 * m.sin(m.radians(i * 72)))
             for i in range(5)
@@ -2192,6 +2255,7 @@ class TestPolygonHasCurvedEdges:
     def test_large_circle_many_segments(self) -> None:
         """Test that large circle with many segments still detected as curved."""
         import math as m
+
         # Create circle with 100 points (very smooth approximation)
         large_circle: list[tuple[float, float]] = [
             (50 + 100 * m.cos(m.radians(i * 3.6)), 50 + 100 * m.sin(m.radians(i * 3.6)))
@@ -2210,6 +2274,7 @@ class TestPolygonHasCurvedEdges:
         angular deviations (< 30 degrees), not sharp corners.
         """
         import math as m
+
         # Regular hexagon with vertices at 60-degree intervals
         hexagon: list[tuple[float, float]] = [
             (50 + 40 * m.cos(m.radians(i * 60)), 50 + 40 * m.sin(m.radians(i * 60)))
@@ -2224,6 +2289,7 @@ class TestPolygonHasCurvedEdges:
     def test_very_slight_curve_detected(self) -> None:
         """Test edge case with minimal curvature (semicircle approximation)."""
         import math as m
+
         # Semicircle with 18 points (10-degree intervals over 180 degrees)
         # + 2 straight line segments closing the shape
         semicircle_points: list[tuple[float, float]] = [
@@ -2242,6 +2308,7 @@ class TestPolygonHasCurvedEdges:
     def test_single_curved_segment_in_rectangle(self) -> None:
         """Test rectangle with one rounded corner (partial curve)."""
         import math as m
+
         # Rectangle 100x50 with rounded corner at top-right
         points: list[tuple[float, float]] = [
             (0.0, 0.0),
@@ -2254,10 +2321,12 @@ class TestPolygonHasCurvedEdges:
             y = 40.0 + 10.0 * m.sin(m.radians(angle))
             points.append((x, y))
         # Continue with straight edges
-        points.extend([
-            (90.0, 50.0),
-            (0.0, 50.0),
-        ])
+        points.extend(
+            [
+                (90.0, 50.0),
+                (0.0, 50.0),
+            ]
+        )
 
         result = _polygon_has_curved_edges(points)
 
@@ -2466,10 +2535,9 @@ class TestTransformBboxPoints:
 
         # Create INSERT with 2x scale
         msp = doc.modelspace()
-        insert = msp.add_blockref("TEST_BLOCK", (0, 0), dxfattribs={
-            "xscale": 2.0,
-            "yscale": 2.0
-        })
+        insert = msp.add_blockref(
+            "TEST_BLOCK", (0, 0), dxfattribs={"xscale": 2.0, "yscale": 2.0}
+        )
 
         bbox = (0, 0, 10, 10)
         result = _transform_bbox_points(bbox, insert)
@@ -2508,10 +2576,9 @@ class TestTransformBboxPoints:
 
         # Create INSERT with 2x scale at position (5, 5)
         msp = doc.modelspace()
-        insert = msp.add_blockref("TEST_BLOCK", (5, 5), dxfattribs={
-            "xscale": 2.0,
-            "yscale": 2.0
-        })
+        insert = msp.add_blockref(
+            "TEST_BLOCK", (5, 5), dxfattribs={"xscale": 2.0, "yscale": 2.0}
+        )
 
         bbox = (0, 0, 10, 10)
         result = _transform_bbox_points(bbox, insert)
@@ -2729,7 +2796,9 @@ class TestEllipseSupport:
         # Upper half (0 to pi): y ranges from 100 to 130, x from 40 to 160
         # Bottom should be at center y (100), not 100-30=70
         assert bbox[0] == pytest.approx(40.0, abs=0.5)  # min_x
-        assert bbox[1] == pytest.approx(100.0, abs=0.5)  # min_y (arc starts/ends at y=100)
+        assert bbox[1] == pytest.approx(
+            100.0, abs=0.5
+        )  # min_y (arc starts/ends at y=100)
         assert bbox[2] == pytest.approx(160.0, abs=0.5)  # max_x
         assert bbox[3] == pytest.approx(130.0, abs=0.5)  # max_y (top of arc)
 
@@ -2965,8 +3034,8 @@ class TestEstimateArcSegments:
 
     def test_larger_sagitta_fewer_segments(self) -> None:
         """Larger sagitta tolerance should produce fewer segments."""
-        fine = _estimate_arc_segments(50, 2 * math.pi, 0.01)    # Fine tolerance
-        coarse = _estimate_arc_segments(50, 2 * math.pi, 1.0)   # Coarse tolerance
+        fine = _estimate_arc_segments(50, 2 * math.pi, 0.01)  # Fine tolerance
+        coarse = _estimate_arc_segments(50, 2 * math.pi, 1.0)  # Coarse tolerance
 
         assert fine > coarse
 
