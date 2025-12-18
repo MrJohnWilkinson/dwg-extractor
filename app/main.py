@@ -833,6 +833,13 @@ class DXFExtractorApp(ctk.CTk):
                 line_segment_threshold=line_threshold,
                 entity_count_threshold=entity_threshold,
             )
+            self.logger.debug("DIAG: extract_blocks returned successfully")
+            self.logger.debug(
+                f"DIAG: block_counts has {len(extraction_result['block_counts'])} entries"
+            )
+            self.logger.debug(
+                f"DIAG: all_block_definitions has {len(extraction_result['all_block_definitions'])} entries"
+            )
 
             # Check for empty results
             if not extraction_result["block_counts"]:
@@ -841,11 +848,16 @@ class DXFExtractorApp(ctk.CTk):
                 return
 
             # Step 3: Generate Excel
+            self.logger.debug("DIAG: About to call _update_progress(0.7)")
             self._update_progress(0.7, "Generating Excel...")
+            self.logger.debug("DIAG: _update_progress(0.7) scheduled")
 
             # Get custom output path based on settings
+            self.logger.debug("DIAG: About to call _get_output_path")
             custom_output_path = self._get_output_path(input_path)
+            self.logger.debug(f"DIAG: output_path = {custom_output_path}")
 
+            self.logger.debug("DIAG: About to call write_excel")
             excel_path = write_excel(
                 extraction_result, self.selected_file_path, custom_output_path
             )

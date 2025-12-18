@@ -1705,6 +1705,7 @@ def extract_blocks(
             )
 
         # Return comprehensive result
+        logger.debug("DIAG: Building result dictionary...")
         result: ExtractionResult = {
             "block_counts": block_counts,
             "block_entities": block_entities,
@@ -1727,7 +1728,11 @@ def extract_blocks(
                 k: sorted(list(v)) for k, v in nested_block_parents.items()
             },
         }
-
+        logger.debug("DIAG: Result dictionary built successfully")
+        logger.debug(
+            f"DIAG: nested_block_parents has {len(result['nested_block_parents'])} entries"
+        )
+        logger.debug("DIAG: About to return from extract_blocks")
         return result
 
     except (DXFError, IOError, OSError) as e:
