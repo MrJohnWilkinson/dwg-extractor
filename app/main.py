@@ -1072,19 +1072,30 @@ class DXFExtractorApp(ctk.CTk):
         self.logger.debug("Main GUI refreshed from settings")
 
     def _poll_log_queue(self) -> None:
-        """Poll log queue and update text widget."""
+        """Poll log queue and update text widget.
+
+        Processes up to max_per_cycle messages per poll to prevent UI freezing
+        when large numbers of log messages are queued. Scrolls once at end
+        instead of per-message to avoid O(n²) complexity.
+        """
         level_filter = getattr(logging, self.log_level_var.get())
 
-        while True:
+        messages_processed = 0
+        max_per_cycle = 100  # Limit per poll cycle to keep UI responsive
+
+        self.log_text.configure(state="normal")
+        while messages_processed < max_per_cycle:
             try:
                 level, msg = self.log_queue.get_nowait()
                 if level >= level_filter:
-                    self.log_text.configure(state="normal")
                     self.log_text.insert("end", msg + "\n")
-                    self.log_text.see("end")  # Auto-scroll
-                    self.log_text.configure(state="disabled")
+                    messages_processed += 1
             except queue.Empty:
                 break
+
+        if messages_processed > 0:
+            self.log_text.see("end")  # Scroll once at end, not per message
+        self.log_text.configure(state="disabled")
 
         self.after(100, self._poll_log_queue)
 
