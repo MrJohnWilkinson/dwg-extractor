@@ -698,9 +698,9 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
         self._create_setting_row(
             scroll_frame,
             "min_side_filter_enabled",
-            "Min Side Filter",
-            "Filters out polygons with shortest side below threshold. "
-            "Helps remove thin artifacts.",
+            "Min Side Filter (Rectangles Only)",
+            "Filters out 4-sided rectangles with shortest side below threshold. "
+            "Complex polygons (5+ sides) are not affected by this filter.",
             readonly=True,
         )
 
@@ -708,8 +708,8 @@ class AdvancedSettingsWindow(ctk.CTkToplevel):
             scroll_frame,
             "min_side_filter_amount",
             "Min Side Filter Amount",
-            "Minimum side length in drawing units. "
-            "Polygons with shorter sides are excluded.",
+            "Minimum side length for rectangles in drawing units. "
+            "Only applies to 4-sided polygons (rectangles).",
             readonly=True,
         )
 

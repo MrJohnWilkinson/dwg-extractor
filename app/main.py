@@ -482,7 +482,7 @@ class DXFExtractorApp(ctk.CTk):
 
         self.min_side_filter_checkbox = ctk.CTkCheckBox(
             min_side_frame,
-            text="Min Side Filter",
+            text="Min Side (Rectangles Only)",
             variable=self.min_side_filter_var,
             command=self._on_min_side_filter_toggle,
             font=ctk.CTkFont(size=12),
