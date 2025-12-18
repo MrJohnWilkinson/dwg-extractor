@@ -124,8 +124,12 @@ class TestAllBlocksFormatting:
         assert ws.column_dimensions["AB"].width == 12  # block_scale_x (was 15)
         assert ws.column_dimensions["AC"].width == 12  # block_scale_y (was 15)
         assert ws.column_dimensions["G"].width == 50  # block_vertical_segments (was 40)
-        assert ws.column_dimensions["H"].width == 50  # block_horizontal_segments (was 40)
-        assert ws.column_dimensions["O"].width == 18  # block_filtered_polygon_count (was 20)
+        assert (
+            ws.column_dimensions["H"].width == 50
+        )  # block_horizontal_segments (was 40)
+        assert (
+            ws.column_dimensions["O"].width == 18
+        )  # block_filtered_polygon_count (was 20)
 
     def test_format_all_blocks_frozen_panes(self) -> None:
         """Test that frozen panes are applied at B2 (header row and first column)."""

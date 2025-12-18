@@ -1734,7 +1734,10 @@ class TestTruncateSegmentString:
 
     def test_exact_length_unchanged(self) -> None:
         """Test that strings exactly at max length are returned unchanged."""
-        from core.excel_writer import SEGMENT_MAX_DISPLAY_LENGTH, _truncate_segment_string
+        from core.excel_writer import (
+            SEGMENT_MAX_DISPLAY_LENGTH,
+            _truncate_segment_string,
+        )
 
         exact_string = "a" * SEGMENT_MAX_DISPLAY_LENGTH
         result = _truncate_segment_string(exact_string)
@@ -1743,7 +1746,10 @@ class TestTruncateSegmentString:
 
     def test_long_string_truncated(self) -> None:
         """Test that strings over max length are truncated with ellipsis."""
-        from core.excel_writer import SEGMENT_MAX_DISPLAY_LENGTH, _truncate_segment_string
+        from core.excel_writer import (
+            SEGMENT_MAX_DISPLAY_LENGTH,
+            _truncate_segment_string,
+        )
 
         long_string = "a" * 250
         result = _truncate_segment_string(long_string)

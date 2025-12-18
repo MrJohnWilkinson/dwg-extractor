@@ -35,7 +35,9 @@ outer_simple.add_blockref("INNER_BOX", (5, 5))
 # Create OUTER_SCALED - contains INNER_BOX at position (5,5) with scale (2,2)
 outer_scaled = doc.blocks.new(name="OUTER_SCALED")
 outer_scaled.add_lwpolyline([(0, 0), (50, 0), (50, 30), (0, 30)], close=True)
-outer_scaled.add_blockref("INNER_BOX", (5, 5), dxfattribs={"xscale": 2.0, "yscale": 2.0})
+outer_scaled.add_blockref(
+    "INNER_BOX", (5, 5), dxfattribs={"xscale": 2.0, "yscale": 2.0}
+)
 
 # Create OUTER_ROTATED - contains INNER_BOX at position (25,15) with 45 degree rotation
 outer_rotated = doc.blocks.new(name="OUTER_ROTATED")
@@ -59,11 +61,9 @@ circular_a.add_blockref("CIRCULAR_B", (5, 5))
 # Create OUTER_COMBO - contains INNER_BOX with both scale and rotation
 outer_combo = doc.blocks.new(name="OUTER_COMBO")
 outer_combo.add_lwpolyline([(0, 0), (60, 0), (60, 40), (0, 40)], close=True)
-outer_combo.add_blockref("INNER_BOX", (30, 20), dxfattribs={
-    "xscale": 1.5,
-    "yscale": 1.5,
-    "rotation": 30.0
-})
+outer_combo.add_blockref(
+    "INNER_BOX", (30, 20), dxfattribs={"xscale": 1.5, "yscale": 1.5, "rotation": 30.0}
+)
 
 # Create DEEP_OUTER - contains OUTER_SIMPLE to test multi-level nesting
 deep_outer = doc.blocks.new(name="DEEP_OUTER")
@@ -80,19 +80,35 @@ msp.add_blockref("DEEP_OUTER", (0, 150))
 
 # Save DXF file
 doc.saveas("app/tests/assets/nested_insert_bbox_test.dxf")
-print("Created app/tests/assets/nested_insert_bbox_test.dxf with nested INSERT scenarios")
+print(
+    "Created app/tests/assets/nested_insert_bbox_test.dxf with nested INSERT scenarios"
+)
 print("\n" + "=" * 70)
 print("BLOCK DEFINITIONS SUMMARY")
 print("=" * 70)
 print("\nUser-defined blocks created:")
 print("  1. INNER_BOX        - Rectangle (0,0) to (10,10)")
-print("  2. OUTER_SIMPLE     - Rectangle (0,0) to (50,30) + INSERT of INNER_BOX at (5,5)")
-print("  3. OUTER_SCALED     - Rectangle (0,0) to (50,30) + INSERT of INNER_BOX at (5,5) scale=(2,2)")
-print("  4. OUTER_ROTATED    - Rectangle (0,0) to (50,30) + INSERT of INNER_BOX at (25,15) rotation=45")
-print("  5. CIRCULAR_A       - Rectangle (0,0) to (20,20) + INSERT of CIRCULAR_B at (5,5)")
-print("  6. CIRCULAR_B       - Rectangle (0,0) to (10,10) + INSERT of CIRCULAR_A at (2,2)")
-print("  7. OUTER_COMBO      - Rectangle (0,0) to (60,40) + INSERT of INNER_BOX scale=(1.5,1.5) rotation=30")
-print("  8. DEEP_OUTER       - Rectangle (0,0) to (100,60) + INSERT of OUTER_SIMPLE at (10,10)")
+print(
+    "  2. OUTER_SIMPLE     - Rectangle (0,0) to (50,30) + INSERT of INNER_BOX at (5,5)"
+)
+print(
+    "  3. OUTER_SCALED     - Rectangle (0,0) to (50,30) + INSERT of INNER_BOX at (5,5) scale=(2,2)"
+)
+print(
+    "  4. OUTER_ROTATED    - Rectangle (0,0) to (50,30) + INSERT of INNER_BOX at (25,15) rotation=45"
+)
+print(
+    "  5. CIRCULAR_A       - Rectangle (0,0) to (20,20) + INSERT of CIRCULAR_B at (5,5)"
+)
+print(
+    "  6. CIRCULAR_B       - Rectangle (0,0) to (10,10) + INSERT of CIRCULAR_A at (2,2)"
+)
+print(
+    "  7. OUTER_COMBO      - Rectangle (0,0) to (60,40) + INSERT of INNER_BOX scale=(1.5,1.5) rotation=30"
+)
+print(
+    "  8. DEEP_OUTER       - Rectangle (0,0) to (100,60) + INSERT of OUTER_SIMPLE at (10,10)"
+)
 print("\n" + "=" * 70)
 print("EXPECTED BOUNDING BOX RESULTS")
 print("=" * 70)
@@ -103,9 +119,15 @@ print("  - OUTER_SCALED:  (0, 0, 50, 30)")
 print("  - OUTER_ROTATED: (0, 0, 50, 30)")
 print("\nWith nested expansion (new behavior):")
 print("  - INNER_BOX:     (0, 0, 10, 10) - no change")
-print("  - OUTER_SIMPLE:  (0, 0, 50, 30) - INNER_BOX at (5,5)+(10,10) = (15,15) within bbox")
-print("  - OUTER_SCALED:  (0, 0, 50, 30) - INNER_BOX scaled 2x at (5,5)+(20,20) = (25,25) within bbox")
-print("  - OUTER_ROTATED: varies - INNER_BOX rotated 45 may extend outside original bbox")
+print(
+    "  - OUTER_SIMPLE:  (0, 0, 50, 30) - INNER_BOX at (5,5)+(10,10) = (15,15) within bbox"
+)
+print(
+    "  - OUTER_SCALED:  (0, 0, 50, 30) - INNER_BOX scaled 2x at (5,5)+(20,20) = (25,25) within bbox"
+)
+print(
+    "  - OUTER_ROTATED: varies - INNER_BOX rotated 45 may extend outside original bbox"
+)
 print("\nCircular reference test:")
 print("  - CIRCULAR_A should compute bbox without infinite loop")
 print("  - CIRCULAR_B should compute bbox without infinite loop")

@@ -49,10 +49,10 @@ block_mixed = doc.blocks.new(name="LWPOLY_MIXED")
 # Bottom: straight, Right: arc (90-deg), Top: straight, Left: straight
 lwpoly3 = block_mixed.add_lwpolyline(
     [
-        (0, 0, 0, 0, 0),        # Bottom-left, straight to next
+        (0, 0, 0, 0, 0),  # Bottom-left, straight to next
         (100, 0, 0, 0, BULGE_90_DEG),  # Bottom-right, 90-deg arc to next
-        (100, 100, 0, 0, 0),    # Top-right, straight to next
-        (0, 100, 0, 0, 0),      # Top-left, straight to close
+        (100, 100, 0, 0, 0),  # Top-right, straight to next
+        (0, 100, 0, 0, 0),  # Top-left, straight to close
     ],
     close=True,
 )
@@ -63,10 +63,10 @@ block_closed_arc = doc.blocks.new(name="LWPOLY_CLOSED_ARC")
 # The semicircle bulges outward from (0,50) to (100,50)
 lwpoly4 = block_closed_arc.add_lwpolyline(
     [
-        (0, 0, 0, 0, 0),        # Bottom-left, straight to next
-        (100, 0, 0, 0, 0),      # Bottom-right, straight to next
+        (0, 0, 0, 0, 0),  # Bottom-left, straight to next
+        (100, 0, 0, 0, 0),  # Bottom-right, straight to next
         (100, 50, 0, 0, BULGE_180_DEG),  # Right side top, semicircle to next
-        (0, 50, 0, 0, 0),       # Left side top, straight to close
+        (0, 50, 0, 0, 0),  # Left side top, straight to close
     ],
     close=True,
 )

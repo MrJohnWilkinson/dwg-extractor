@@ -337,7 +337,9 @@ class TestEdgeCases:
 class TestPreFilterSettingsSync:
     """Tests for pre-filter and curved filter settings synchronization."""
 
-    def test_syncs_skip_curved_entities(self, settings_manager: SettingsManager) -> None:
+    def test_syncs_skip_curved_entities(
+        self, settings_manager: SettingsManager
+    ) -> None:
         """Verify skip_curved_entities boolean is synced."""
         settings_manager.set("skip_curved_entities", True)
         assert settings_manager.get("skip_curved_entities") is True

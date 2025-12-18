@@ -395,7 +395,7 @@ class TestEdgeEstimation:
         doc = ezdxf.new()
         block = doc.blocks.new(name="CIRCLES")
         # Add 2 circles with different radii
-        block.add_circle((10, 10), 5)   # Small circle
+        block.add_circle((10, 10), 5)  # Small circle
         block.add_circle((30, 30), 10)  # Larger circle
 
         estimated = _estimate_edge_count(block)
@@ -412,9 +412,9 @@ class TestEdgeEstimation:
         doc = ezdxf.new()
         block = doc.blocks.new(name="ARCS")
         # Add 3 arcs with different radii and angles
-        block.add_arc((10, 10), 5, 0, 90)      # 90-degree arc
-        block.add_arc((30, 30), 10, 45, 180)   # 135-degree arc
-        block.add_arc((50, 50), 7, 0, 270)     # 270-degree arc
+        block.add_arc((10, 10), 5, 0, 90)  # 90-degree arc
+        block.add_arc((30, 30), 10, 45, 180)  # 135-degree arc
+        block.add_arc((50, 50), 7, 0, 270)  # 270-degree arc
 
         estimated = _estimate_edge_count(block)
 
@@ -1629,9 +1629,7 @@ class TestCurvedFilterIntegration:
         bbox = _get_block_bounding_box(block)
 
         # With curved_filter_enabled=False (default), both should be kept
-        result = _detect_content_zone(
-            block, bbox, curved_filter_enabled=False
-        )
+        result = _detect_content_zone(block, bbox, curved_filter_enabled=False)
 
         assert result["content_zone_detected"] is True
         assert result["polygon_count"] == 2  # Both polygons present
@@ -1657,9 +1655,7 @@ class TestCurvedFilterIntegration:
         bbox = _get_block_bounding_box(block)
 
         # With curved_filter_enabled=True, curved polygon should be filtered
-        result = _detect_content_zone(
-            block, bbox, curved_filter_enabled=True
-        )
+        result = _detect_content_zone(block, bbox, curved_filter_enabled=True)
 
         assert result["content_zone_detected"] is True
         # Original count includes both, but filtered count excludes curved
@@ -1684,9 +1680,7 @@ class TestCurvedFilterIntegration:
         bbox = _get_block_bounding_box(block)
 
         # With curved_filter_enabled=True, all straight polygons should be kept
-        result = _detect_content_zone(
-            block, bbox, curved_filter_enabled=True
-        )
+        result = _detect_content_zone(block, bbox, curved_filter_enabled=True)
 
         assert result["content_zone_detected"] is True
         # All 3 straight polygons should remain
@@ -1702,7 +1696,10 @@ class TestCurvedFilterIntegration:
 
         # Circle approximation with 16 points (under edge threshold of 30)
         circle_points = [
-            (100 + 50 * m.cos(m.radians(i * 22.5)), 100 + 50 * m.sin(m.radians(i * 22.5)))
+            (
+                100 + 50 * m.cos(m.radians(i * 22.5)),
+                100 + 50 * m.sin(m.radians(i * 22.5)),
+            )
             for i in range(16)
         ]
         block.add_lwpolyline(circle_points, close=True)
@@ -1710,9 +1707,7 @@ class TestCurvedFilterIntegration:
         bbox = _get_block_bounding_box(block)
 
         # With curved_filter_enabled=True, this should be detected as curved
-        result = _detect_content_zone(
-            block, bbox, curved_filter_enabled=True
-        )
+        result = _detect_content_zone(block, bbox, curved_filter_enabled=True)
 
         # Circle should be filtered out, leaving no polygons
         assert result["content_zone_detected"] is False
@@ -1772,9 +1767,7 @@ class TestCurvedFilterIntegration:
         bbox = _get_block_bounding_box(block)
 
         # With curved_filter_enabled, the single curved polygon should be filtered
-        result = _detect_content_zone(
-            block, bbox, curved_filter_enabled=True
-        )
+        result = _detect_content_zone(block, bbox, curved_filter_enabled=True)
 
         # The curved polygon is filtered, leaving nothing
         assert result["content_zone_detected"] is False
