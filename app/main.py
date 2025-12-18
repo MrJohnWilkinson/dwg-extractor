@@ -16,6 +16,7 @@ import platform
 import queue
 import subprocess
 import threading
+import tracemalloc
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox
@@ -813,6 +814,9 @@ class DXFExtractorApp(ctk.CTk):
             # Step 2: Extract comprehensive data
             self._update_progress(0.5, "Analyzing CAD file...")
 
+            self.logger.debug("DIAG: Starting memory trace")
+            tracemalloc.start()
+
             extraction_result = extract_blocks(
                 self.selected_file_path,
                 self.abort_event,
@@ -833,6 +837,11 @@ class DXFExtractorApp(ctk.CTk):
                 line_segment_threshold=line_threshold,
                 entity_count_threshold=entity_threshold,
             )
+            current, peak = tracemalloc.get_traced_memory()
+            self.logger.info(
+                f"DIAG: Memory current={current/1024/1024:.1f}MB, peak={peak/1024/1024:.1f}MB"
+            )
+            tracemalloc.stop()
             self.logger.debug("DIAG: extract_blocks returned successfully")
             self.logger.debug(
                 f"DIAG: block_counts has {len(extraction_result['block_counts'])} entries"
