@@ -316,7 +316,9 @@ class DXFExtractorApp(ctk.CTk):
         skip_curved_hint.pack(side="left")
 
         # Separator
-        separator_prefilter1 = ctk.CTkFrame(self.main_frame, height=1, fg_color="gray50")
+        separator_prefilter1 = ctk.CTkFrame(
+            self.main_frame, height=1, fg_color="gray50"
+        )
         separator_prefilter1.pack(fill="x", pady=5)
 
         # Min Line Length Filter row
@@ -702,6 +704,33 @@ class DXFExtractorApp(ctk.CTk):
         self.status_label.configure(text=MSG_ABORTING)
         self.logger.info("User requested extraction abort")
 
+    def _watchdog_timer(
+        self, operation_name: str, timeout_seconds: int = 30
+    ) -> threading.Timer:
+        """Create a watchdog timer that logs if operation takes too long.
+
+        This is a diagnostic tool to help identify hang locations. The timer
+        runs in a background thread and logs a warning if the operation
+        exceeds the timeout. It does NOT kill the operation - this allows
+        gathering more diagnostic information.
+
+        Args:
+            operation_name: Name of operation being monitored (for logging)
+            timeout_seconds: Seconds before timeout warning (default 30)
+
+        Returns:
+            threading.Timer that must be cancelled when operation completes
+        """
+
+        def timeout_handler() -> None:
+            self.logger.warning(
+                f"DIAG: WATCHDOG - {operation_name} exceeded {timeout_seconds}s"
+            )
+
+        timer = threading.Timer(timeout_seconds, timeout_handler)
+        timer.start()
+        return timer
+
     def _restore_ui(self) -> None:
         """Restore UI to normal state after extraction completes or aborts."""
         self.abort_button.pack_forget()
@@ -839,7 +868,7 @@ class DXFExtractorApp(ctk.CTk):
             )
             current, peak = tracemalloc.get_traced_memory()
             self.logger.info(
-                f"DIAG: Memory current={current/1024/1024:.1f}MB, peak={peak/1024/1024:.1f}MB"
+                f"DIAG: Memory current={current / 1024 / 1024:.1f}MB, peak={peak / 1024 / 1024:.1f}MB"
             )
             tracemalloc.stop()
             self.logger.debug("DIAG: extract_blocks returned successfully")
@@ -867,9 +896,13 @@ class DXFExtractorApp(ctk.CTk):
             self.logger.debug(f"DIAG: output_path = {custom_output_path}")
 
             self.logger.debug("DIAG: About to call write_excel")
-            excel_path = write_excel(
-                extraction_result, self.selected_file_path, custom_output_path
-            )
+            watchdog = self._watchdog_timer("write_excel", timeout_seconds=30)
+            try:
+                excel_path = write_excel(
+                    extraction_result, self.selected_file_path, custom_output_path
+                )
+            finally:
+                watchdog.cancel()
             self.output_excel_path = excel_path
 
             # Step 4: Complete
