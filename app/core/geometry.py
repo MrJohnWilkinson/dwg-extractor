@@ -139,8 +139,8 @@ def calculate_shortest_straight_side(
         diff = abs(a1 - a2)
         return diff <= tolerance or abs(diff - 180) <= tolerance
 
-    # Build list of merged straight sides
-    straight_sides: list[float] = []
+    # Build list of merged straight sides as (length, angle) tuples
+    straight_sides: list[tuple[float, float]] = []
 
     i = 0
     while i < len(vertices) - 1:
@@ -162,13 +162,23 @@ def calculate_shortest_straight_side(
         side_length = edge_length(side_start, side_end)
 
         if side_length > 1e-9:  # Ignore degenerate edges
-            straight_sides.append(side_length)
+            straight_sides.append((side_length, current_angle))
 
         i = j
 
+    # Wraparound check: merge first and last sides if collinear
+    if len(straight_sides) >= 2:
+        first_angle = straight_sides[0][1]
+        last_angle = straight_sides[-1][1]
+        if angles_collinear(first_angle, last_angle, angle_tolerance):
+            merged_length = straight_sides[0][0] + straight_sides[-1][0]
+            straight_sides[0] = (merged_length, first_angle)
+            straight_sides.pop()
+
     if not straight_sides:
         return (0.0, 0)
-    return (min(straight_sides), len(straight_sides))
+    lengths = [side[0] for side in straight_sides]
+    return (min(lengths), len(lengths))
 
 
 class GeometryAbortedError(Exception):

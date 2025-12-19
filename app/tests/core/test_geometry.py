@@ -1951,6 +1951,44 @@ class TestCalculateShortestStraightSide:
         assert side_count == 6
         assert shortest_side == pytest.approx(10.0)  # Shortest is the 10-unit sides
 
+    def test_collinear_edge_merging_wraparound(self) -> None:
+        """Test that first and last sides merge when V0 is mid-edge."""
+        # Rectangle with V0 in middle of bottom edge
+        # Bottom edge: V5->V0->V1->V2 (all collinear, should merge to one side)
+        # Left edge: V2->V3
+        # Top edge: V3->V4
+        # Right edge: V4->V5
+        wraparound_rect: list[tuple[float, float]] = [
+            (50.0, 0.0),  # V0 - middle of bottom edge
+            (25.0, 0.0),  # V1 - collinear with V0
+            (0.0, 0.0),  # V2 - left corner
+            (0.0, 30.0),  # V3 - top-left
+            (100.0, 30.0),  # V4 - top-right
+            (100.0, 0.0),  # V5 - right corner, edge to V0 is collinear with V0->V1
+        ]
+        # Expected: 4 sides (rectangle), shortest side is 30 (left/right edges)
+        shortest_side, side_count = calculate_shortest_straight_side(wraparound_rect)
+        assert side_count == 4, f"Expected 4 sides, got {side_count}"
+        assert shortest_side == pytest.approx(30.0)
+
+    def test_collinear_merging_real_world_case(self) -> None:
+        """Test the exact failing polygon from the bug report."""
+        # Real polygon that was incorrectly detected as 5-sided
+        real_polygon: list[tuple[float, float]] = [
+            (24953.75, 13351.94),  # V0 - middle of bottom edge
+            (24172.75, 13351.94),  # V1
+            (23391.75, 13351.94),  # V2 - left corner
+            (23391.75, 13424.94),  # V3 - top-left
+            (25734.75, 13424.94),  # V4 - top-right
+            (25734.75, 13351.94),  # V5 - right corner
+        ]
+        # This is a rectangle:
+        # - Bottom: 2343.0 units (25734.75 - 23391.75)
+        # - Height: 73.0 units (13424.94 - 13351.94)
+        shortest_side, side_count = calculate_shortest_straight_side(real_polygon)
+        assert side_count == 4, f"Expected 4 sides (rectangle), got {side_count}"
+        assert shortest_side == pytest.approx(73.0, abs=0.1)
+
 
 class TestPreFilterLineLengthFilter:
     """Test suite for LINE pre-filter in _extract_all_edges function."""
