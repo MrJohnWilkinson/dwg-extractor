@@ -146,6 +146,7 @@ class TestBlockDefinitionsSheet:
             "block_content_zone_data": {},
             "all_block_definitions": {},
             "nested_block_parents": {},
+            "block_attribute_data": {},
         }
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(empty_data, output_path)

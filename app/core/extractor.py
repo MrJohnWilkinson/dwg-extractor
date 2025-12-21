@@ -970,6 +970,7 @@ class ExtractionResult(TypedDict):
     block_content_zone_data: dict[str, ContentZoneData]
     all_block_definitions: dict[str, BlockDefinitionRecord]
     nested_block_parents: dict[str, list[str]]
+    block_attribute_data: dict[str, list[tuple[str, str]]]
 
 
 def extract_blocks(
@@ -1184,6 +1185,9 @@ def extract_blocks(
         block_trimming_data: dict[str, BlockTrimmingData] = {}
         block_content_zone_data: dict[str, ContentZoneData] = {}
         extraction_issues: list[ExtractionIssue] = []
+
+        # Track block attribute data from ATTRIB entities on INSERT
+        block_attribute_data: dict[str, set[tuple[str, str]]] = {}
 
         # Mapping from anonymous block names (*U1, *U2, etc.) to resolved original names
         anonymous_to_resolved: dict[str, str] = {}
@@ -1557,6 +1561,23 @@ def extract_blocks(
                     # Entity doesn't support XDATA
                     pass
 
+                # Extract ATTRIB entities (block attributes)
+                try:
+                    if hasattr(entity, "attribs"):
+                        for attrib in entity.attribs:
+                            tag = attrib.dxf.tag
+                            value = attrib.dxf.text
+                            if value:  # Skip empty values
+                                effective_name = (
+                                    block_name  # Use the resolved block name
+                                )
+                                if effective_name not in block_attribute_data:
+                                    block_attribute_data[effective_name] = set()
+                                block_attribute_data[effective_name].add((tag, value))
+                except (AttributeError, TypeError):
+                    # Entity doesn't support ATTRIB or has malformed attributes
+                    pass
+
         # Convert color sets to counts
         layer_unique_color_counts: dict[str, int] = {
             layer: len(colors) for layer, colors in layer_unique_colors.items()
@@ -1726,6 +1747,9 @@ def extract_blocks(
             "all_block_definitions": all_block_definitions,
             "nested_block_parents": {
                 k: sorted(list(v)) for k, v in nested_block_parents.items()
+            },
+            "block_attribute_data": {
+                k: sorted(list(v)) for k, v in block_attribute_data.items()
             },
         }
         logger.debug("DIAG: Result dictionary built successfully")

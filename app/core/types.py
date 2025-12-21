@@ -271,6 +271,22 @@ class BlockDefinitionRecord(TypedDict):
     block_entity_count: int
 
 
+class BlockAttributeRecord(TypedDict):
+    """
+    Single attribute tag-value pair from a block insertion.
+
+    Used to store ATTRIB entity data extracted from INSERT entities.
+    Attributes are stored as a list of these records per block name.
+
+    Attributes:
+        tag: The attribute tag name (e.g., "PROD1", "BAY#", "DEPT")
+        value: The attribute value text (e.g., "Garage", "27-004")
+    """
+
+    tag: str
+    value: str
+
+
 class AppSettings(TypedDict, total=False):
     """
     Application settings for the DXF Block Extractor.

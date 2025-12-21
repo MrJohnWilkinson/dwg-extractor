@@ -489,7 +489,7 @@ $SKPOLY
   9
 $TDCREATE
  40
-2461031.608773148
+2461031.6054629628
   9
 $TDUCREATE
  40
@@ -497,7 +497,7 @@ $TDUCREATE
   9
 $TDUPDATE
  40
-2461031.608773148
+2461031.6054629628
   9
 $TDUUPDATE
  40
@@ -549,7 +549,7 @@ $SPLINESEGS
   9
 $HANDSEED
   5
-46
+6B
   9
 $SURFTAB1
  70
@@ -929,11 +929,11 @@ $PSTYLEMODE
   9
 $FINGERPRINTGUID
   2
-{216C4E98-D597-4E5B-AC09-9D637ECF91BC}
+{D7C95D0A-9326-4E55-AD35-E4F7A9082C39}
   9
 $VERSIONGUID
   2
-{ED81DE02-B2EA-4A4E-8C96-1D494570C047}
+{5C8874CA-033D-4B46-84A5-70A507C86E23}
   9
 $EXTNAMES
 290
@@ -1549,7 +1549,7 @@ LAYER
 100
 AcDbSymbolTable
  70
-6
+3
   0
 LAYER
   5
@@ -1611,79 +1611,7 @@ AcDbSymbolTableRecord
 100
 AcDbLayerTableRecord
   2
-LAYER_RED
- 70
-0
- 62
-1
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-30
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-LAYER_GREEN
- 70
-0
- 62
-3
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-31
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-LAYER_BLUE
- 70
-0
- 62
-5
-  6
-Continuous
-370
--3
-390
-13
-347
-21
-  0
-LAYER
-  5
-32
-330
-1
-100
-AcDbSymbolTableRecord
-100
-AcDbLayerTableRecord
-  2
-LAYER_WHITE
+TEST_LAYER
  70
 0
  62
@@ -1797,7 +1725,7 @@ ACAD
   0
 APPID
   5
-43
+68
 330
 3
 100
@@ -1811,7 +1739,7 @@ HATCHBACKGROUNDCOLOR
   0
 APPID
   5
-44
+69
 330
 3
 100
@@ -1987,7 +1915,7 @@ BLOCK_RECORD
 100
 AcDbSymbolTable
  70
-2
+6
   0
 BLOCK_RECORD
   5
@@ -2022,6 +1950,86 @@ AcDbBlockTableRecord
 *Paper_Space
 340
 1E
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+30
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+PRODUCT_BLOCK
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+3B
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+SIMPLE_BLOCK
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+40
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+NO_ATTRIB_BLOCK
+340
+0
+ 70
+0
+280
+1
+281
+0
+  0
+BLOCK_RECORD
+  5
+44
+330
+9
+100
+AcDbSymbolTableRecord
+100
+AcDbBlockTableRecord
+  2
+EMPTY_VALUE_BLOCK
+340
+0
  70
 0
 280
@@ -2113,51 +2121,141 @@ AcDbEntity
 100
 AcDbBlockEnd
   0
-ENDSEC
-  0
-SECTION
-  2
-ENTITIES
-  0
-TEXT
+BLOCK
   5
-33
+31
 330
-17
+30
 100
 AcDbEntity
   8
-LAYER_RED
-420
-16711680
+0
 100
-AcDbText
+AcDbBlockBegin
+  2
+PRODUCT_BLOCK
+ 70
+2
  10
 0.0
  20
 0.0
  30
 0.0
- 40
-2.5
+  3
+PRODUCT_BLOCK
   1
-Sample Text 1
-100
-AcDbText
+
   0
-TEXT
+LINE
   5
-34
+33
 330
-17
+30
 100
 AcDbEntity
   8
-LAYER_GREEN
+0
+100
+AcDbLine
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 11
+100.0
+ 21
+0.0
+ 31
+0.0
+  0
+LINE
+  5
+34
+330
+30
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+100.0
+ 20
+0.0
+ 30
+0.0
+ 11
+100.0
+ 21
+50.0
+ 31
+0.0
+  0
+LINE
+  5
+35
+330
+30
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+100.0
+ 20
+50.0
+ 30
+0.0
+ 11
+0.0
+ 21
+50.0
+ 31
+0.0
+  0
+LINE
+  5
+36
+330
+30
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+0.0
+ 20
+50.0
+ 30
+0.0
+ 11
+0.0
+ 21
+0.0
+ 31
+0.0
+  0
+ATTDEF
+  5
+37
+330
+30
+100
+AcDbEntity
+  8
+0
 100
 AcDbText
  10
-0.0
+10.0
  20
 10.0
  30
@@ -2165,25 +2263,29 @@ AcDbText
  40
 2.5
   1
-Sample Text 2
+
 100
-AcDbText
+AcDbAttributeDefinition
+  3
+Product 1
+  2
+PROD1
+ 70
+0
   0
-TEXT
+ATTDEF
   5
-35
+38
 330
-17
+30
 100
 AcDbEntity
   8
-LAYER_BLUE
- 62
-5
+0
 100
 AcDbText
  10
-0.0
+10.0
  20
 20.0
  30
@@ -2191,75 +2293,29 @@ AcDbText
  40
 2.5
   1
-Sample Text 3
+
+100
+AcDbAttributeDefinition
+  3
+Product 2
+  2
+PROD2
+ 70
+0
+  0
+ATTDEF
+  5
+39
+330
+30
+100
+AcDbEntity
+  8
+0
 100
 AcDbText
-  0
-MTEXT
-  5
-36
-330
-17
-100
-AcDbEntity
-  8
-LAYER_RED
-420
-65280
-100
-AcDbMText
  10
-50.0
- 20
-0.0
- 30
-0.0
- 40
-2.5
- 71
-1
-  1
-This is a multiline\Ptext annotation
-  0
-MTEXT
-  5
-37
-330
-17
-100
-AcDbEntity
-  8
-LAYER_BLUE
-100
-AcDbMText
- 10
-50.0
- 20
 10.0
- 30
-0.0
- 40
-2.5
- 71
-1
-  1
-Another MTEXT
-  0
-TEXT
-  5
-38
-330
-17
-100
-AcDbEntity
-  8
-LAYER_RED
- 62
-1
-100
-AcDbText
- 10
-0.0
  20
 30.0
  30
@@ -2267,25 +2323,29 @@ AcDbText
  40
 2.5
   1
-Duplicate Text
+
 100
-AcDbText
+AcDbAttributeDefinition
+  3
+Department
+  2
+DEPT
+ 70
+0
   0
-TEXT
+ATTDEF
   5
-39
+3A
 330
-17
+30
 100
 AcDbEntity
   8
-LAYER_RED
- 62
-1
+0
 100
 AcDbText
  10
-0.0
+10.0
  20
 40.0
  30
@@ -2293,243 +2353,1017 @@ AcDbText
  40
 2.5
   1
-Duplicate Text
+
 100
-AcDbText
+AcDbAttributeDefinition
+  3
+Bay Number
+  2
+BAY#
+ 70
+0
   0
-TEXT
+ENDBLK
   5
-3A
+32
 330
-17
+30
 100
 AcDbEntity
   8
-LAYER_RED
- 62
-1
+0
 100
-AcDbText
- 10
-0.0
- 20
-50.0
- 30
-0.0
- 40
-2.5
-  1
-Cross Layer Text
-100
-AcDbText
+AcDbBlockEnd
   0
-TEXT
-  5
-3B
-330
-17
-100
-AcDbEntity
-  8
-LAYER_GREEN
- 62
-3
-100
-AcDbText
- 10
-0.0
- 20
-60.0
- 30
-0.0
- 40
-2.5
-  1
-Cross Layer Text
-100
-AcDbText
-  0
-TEXT
+BLOCK
   5
 3C
 330
-17
+3B
 100
 AcDbEntity
   8
-LAYER_RED
- 62
-1
+0
 100
-AcDbText
+AcDbBlockBegin
+  2
+SIMPLE_BLOCK
+ 70
+2
  10
 0.0
  20
-70.0
+0.0
  30
 0.0
- 40
-2.5
+  3
+SIMPLE_BLOCK
   1
-Multi Color Text
-100
-AcDbText
+
   0
-TEXT
-  5
-3D
-330
-17
-100
-AcDbEntity
-  8
-LAYER_RED
- 62
-3
-100
-AcDbText
- 10
-0.0
- 20
-80.0
- 30
-0.0
- 40
-2.5
-  1
-Multi Color Text
-100
-AcDbText
-  0
-TEXT
+CIRCLE
   5
 3E
 330
-17
+3B
 100
 AcDbEntity
   8
-LAYER_RED
- 62
-1
+0
 100
-AcDbText
+AcDbCircle
  10
-0.0
+25.0
  20
-90.0
+25.0
  30
 0.0
  40
-2.5
-  1
-Same Content Different Type
-100
-AcDbText
+20.0
   0
-MTEXT
+ATTDEF
   5
 3F
 330
-17
+3B
 100
 AcDbEntity
   8
-LAYER_RED
- 62
-1
-100
-AcDbMText
- 10
-50.0
- 20
-90.0
- 30
-0.0
- 40
-2.5
- 71
-1
-  1
-Same Content Different Type
-  0
-TEXT
-  5
-40
-330
-17
-100
-AcDbEntity
-  8
-LAYER_WHITE
- 62
-7
-100
-AcDbText
- 10
-0.0
- 20
-100.0
- 30
-0.0
- 40
-2.5
-  1
-Special: @#$%^&*()_+{}[]|\:;"'<>?,./
-100
-AcDbText
-  0
-MTEXT
-  5
-41
-330
-17
-100
-AcDbEntity
-  8
-LAYER_WHITE
- 62
-7
-100
-AcDbMText
- 10
-50.0
- 20
-100.0
- 30
-0.0
- 40
-2.5
- 71
-1
-  1
-Unicode: °±²³ αβγ
-  0
-TEXT
-  5
-42
-330
-17
-100
-AcDbEntity
-  8
-LAYER_RED
- 62
 0
 100
 AcDbText
  10
-0.0
+25.0
  20
-110.0
+25.0
  30
 0.0
  40
 2.5
   1
-ByBlock Color Text
+
+100
+AcDbAttributeDefinition
+  3
+Identifier
+  2
+ID
+ 70
+0
+  0
+ENDBLK
+  5
+3D
+330
+3B
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+41
+330
+40
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+NO_ATTRIB_BLOCK
+ 70
+0
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+NO_ATTRIB_BLOCK
+  1
+
+  0
+LINE
+  5
+43
+330
+40
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 11
+50.0
+ 21
+50.0
+ 31
+0.0
+  0
+ENDBLK
+  5
+42
+330
+40
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+BLOCK
+  5
+45
+330
+44
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockBegin
+  2
+EMPTY_VALUE_BLOCK
+ 70
+2
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  3
+EMPTY_VALUE_BLOCK
+  1
+
+  0
+LINE
+  5
+47
+330
+44
+100
+AcDbEntity
+  8
+0
+100
+AcDbLine
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 11
+30.0
+ 21
+30.0
+ 31
+0.0
+  0
+ATTDEF
+  5
+48
+330
+44
+100
+AcDbEntity
+  8
+0
 100
 AcDbText
+ 10
+15.0
+ 20
+15.0
+ 30
+0.0
+ 40
+2.5
+  1
+
+100
+AcDbAttributeDefinition
+  3
+Empty Attribute
+  2
+EMPTY_ATTR
+ 70
+0
+  0
+ENDBLK
+  5
+46
+330
+44
+100
+AcDbEntity
+  8
+0
+100
+AcDbBlockEnd
+  0
+ENDSEC
+  0
+SECTION
+  2
+ENTITIES
+  0
+INSERT
+  5
+49
+330
+17
+100
+AcDbEntity
+  8
+TEST_LAYER
+100
+AcDbBlockReference
+ 66
+1
+  2
+PRODUCT_BLOCK
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+  0
+ATTRIB
+  5
+4B
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+10.0
+ 20
+10.0
+ 30
+0.0
+ 40
+2.5
+  1
+Garage
+ 11
+10.0
+ 21
+10.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+PROD1
+ 70
+0
+  0
+ATTRIB
+  5
+4C
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+10.0
+ 20
+20.0
+ 30
+0.0
+ 40
+2.5
+  1
+Door Openers
+ 11
+10.0
+ 21
+20.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+PROD2
+ 70
+0
+  0
+ATTRIB
+  5
+4D
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+10.0
+ 20
+30.0
+ 30
+0.0
+ 40
+2.5
+  1
+30
+ 11
+10.0
+ 21
+30.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+DEPT
+ 70
+0
+  0
+ATTRIB
+  5
+4E
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+10.0
+ 20
+40.0
+ 30
+0.0
+ 40
+2.5
+  1
+27-004
+ 11
+10.0
+ 21
+40.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+BAY#
+ 70
+0
+  0
+SEQEND
+  5
+4A
+330
+49
+100
+AcDbEntity
+  8
+TEST_LAYER
+  0
+INSERT
+  5
+4F
+330
+17
+100
+AcDbEntity
+  8
+TEST_LAYER
+100
+AcDbBlockReference
+ 66
+1
+  2
+PRODUCT_BLOCK
+ 10
+200.0
+ 20
+0.0
+ 30
+0.0
+  0
+ATTRIB
+  5
+51
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+210.0
+ 20
+10.0
+ 30
+0.0
+ 40
+2.5
+  1
+Kitchen
+ 11
+210.0
+ 21
+10.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+PROD1
+ 70
+0
+  0
+ATTRIB
+  5
+52
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+210.0
+ 20
+20.0
+ 30
+0.0
+ 40
+2.5
+  1
+Appliances
+ 11
+210.0
+ 21
+20.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+PROD2
+ 70
+0
+  0
+ATTRIB
+  5
+53
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+210.0
+ 20
+30.0
+ 30
+0.0
+ 40
+2.5
+  1
+45
+ 11
+210.0
+ 21
+30.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+DEPT
+ 70
+0
+  0
+ATTRIB
+  5
+54
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+210.0
+ 20
+40.0
+ 30
+0.0
+ 40
+2.5
+  1
+12-001
+ 11
+210.0
+ 21
+40.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+BAY#
+ 70
+0
+  0
+SEQEND
+  5
+50
+330
+4F
+100
+AcDbEntity
+  8
+TEST_LAYER
+  0
+INSERT
+  5
+55
+330
+17
+100
+AcDbEntity
+  8
+TEST_LAYER
+100
+AcDbBlockReference
+ 66
+1
+  2
+PRODUCT_BLOCK
+ 10
+400.0
+ 20
+0.0
+ 30
+0.0
+  0
+ATTRIB
+  5
+57
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+410.0
+ 20
+10.0
+ 30
+0.0
+ 40
+2.5
+  1
+Garage
+ 11
+410.0
+ 21
+10.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+PROD1
+ 70
+0
+  0
+ATTRIB
+  5
+58
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+410.0
+ 20
+20.0
+ 30
+0.0
+ 40
+2.5
+  1
+
+ 11
+410.0
+ 21
+20.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+PROD2
+ 70
+0
+  0
+ATTRIB
+  5
+59
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+410.0
+ 20
+30.0
+ 30
+0.0
+ 40
+2.5
+  1
+30
+ 11
+410.0
+ 21
+30.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+DEPT
+ 70
+0
+  0
+ATTRIB
+  5
+5A
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+410.0
+ 20
+40.0
+ 30
+0.0
+ 40
+2.5
+  1
+27-005
+ 11
+410.0
+ 21
+40.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+BAY#
+ 70
+0
+  0
+SEQEND
+  5
+56
+330
+55
+100
+AcDbEntity
+  8
+TEST_LAYER
+  0
+INSERT
+  5
+5B
+330
+17
+100
+AcDbEntity
+  8
+TEST_LAYER
+100
+AcDbBlockReference
+ 66
+1
+  2
+SIMPLE_BLOCK
+ 10
+0.0
+ 20
+100.0
+ 30
+0.0
+  0
+ATTRIB
+  5
+5D
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+25.0
+ 20
+125.0
+ 30
+0.0
+ 40
+2.5
+  1
+ITEM-001
+ 11
+25.0
+ 21
+125.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+ID
+ 70
+0
+  0
+SEQEND
+  5
+5C
+330
+5B
+100
+AcDbEntity
+  8
+TEST_LAYER
+  0
+INSERT
+  5
+5E
+330
+17
+100
+AcDbEntity
+  8
+TEST_LAYER
+100
+AcDbBlockReference
+ 66
+1
+  2
+SIMPLE_BLOCK
+ 10
+100.0
+ 20
+100.0
+ 30
+0.0
+  0
+ATTRIB
+  5
+60
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+125.0
+ 20
+125.0
+ 30
+0.0
+ 40
+2.5
+  1
+ITEM-002
+ 11
+125.0
+ 21
+125.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+ID
+ 70
+0
+  0
+SEQEND
+  5
+5F
+330
+5E
+100
+AcDbEntity
+  8
+TEST_LAYER
+  0
+INSERT
+  5
+61
+330
+17
+100
+AcDbEntity
+  8
+TEST_LAYER
+100
+AcDbBlockReference
+  2
+NO_ATTRIB_BLOCK
+ 10
+0.0
+ 20
+200.0
+ 30
+0.0
+  0
+INSERT
+  5
+63
+330
+17
+100
+AcDbEntity
+  8
+TEST_LAYER
+100
+AcDbBlockReference
+  2
+NO_ATTRIB_BLOCK
+ 10
+100.0
+ 20
+200.0
+ 30
+0.0
+  0
+INSERT
+  5
+65
+330
+17
+100
+AcDbEntity
+  8
+TEST_LAYER
+100
+AcDbBlockReference
+ 66
+1
+  2
+EMPTY_VALUE_BLOCK
+ 10
+0.0
+ 20
+300.0
+ 30
+0.0
+  0
+ATTRIB
+  5
+67
+330
+17
+100
+AcDbEntity
+  8
+0
+100
+AcDbText
+ 10
+15.0
+ 20
+315.0
+ 30
+0.0
+ 40
+2.5
+  1
+
+ 11
+15.0
+ 21
+315.0
+ 31
+0.0
+100
+AcDbAttribute
+  2
+EMPTY_ATTR
+ 70
+0
+  0
+SEQEND
+  5
+66
+330
+65
+100
+AcDbEntity
+  8
+TEST_LAYER
   0
 ENDSEC
   0
@@ -3521,7 +4355,7 @@ CREATED_BY_EZDXF
   3
 WRITTEN_BY_EZDXF
 350
-45
+6A
   0
 DICTIONARYVAR
   5
@@ -3533,11 +4367,11 @@ DictionaryVariables
 280
 0
   1
-1.4.3 @ 2025-12-21T22:36:38.484165+00:00
+1.4.3 @ 2025-12-21T22:31:52.326055+00:00
   0
 DICTIONARYVAR
   5
-45
+6A
 330
 2D
 100
@@ -3545,7 +4379,7 @@ DictionaryVariables
 280
 0
   1
-1.4.3 @ 2025-12-21T22:36:38.486596+00:00
+1.4.3 @ 2025-12-21T22:31:52.330987+00:00
   0
 ENDSEC
   0

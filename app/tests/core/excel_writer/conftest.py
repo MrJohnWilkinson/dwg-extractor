@@ -155,6 +155,7 @@ def sample_extraction_data() -> ExtractionResult:
             "PIPE": ["VALVE"],
             "TAG": ["PIPE", "VALVE"],
         },
+        "block_attribute_data": {},
     }
 
 
@@ -239,6 +240,7 @@ def annotation_extraction_data() -> ExtractionResult:
             },
         },
         "nested_block_parents": {},
+        "block_attribute_data": {},
     }
 
 
@@ -314,6 +316,7 @@ def color_analysis_data() -> ExtractionResult:
             },
         },
         "nested_block_parents": {},
+        "block_attribute_data": {},
     }
 
 
@@ -396,6 +399,7 @@ def extraction_issues_data() -> ExtractionResult:
             },
         },
         "nested_block_parents": {},
+        "block_attribute_data": {},
     }
 
 
@@ -455,4 +459,5 @@ def no_issues_data() -> ExtractionResult:
             },
         },
         "nested_block_parents": {},
+        "block_attribute_data": {},
     }
