@@ -676,3 +676,92 @@ class TestAllBlocksSheet:
 
         # Column at index 1 should be block_layer_names
         assert df.columns[1] == format_header(EXCEL_COLUMN_BLOCK_LAYER_NAMES)
+
+    def test_all_blocks_attribute_data_truncation(self, temp_dir: str) -> None:
+        """Test that long attribute data strings are truncated to 200 chars."""
+        # Create data with very long attribute values
+        long_data: ExtractionResult = {
+            "block_counts": {"LONG_ATTRS": 1},
+            "block_entities": {"LONG_ATTRS": 5},
+            "block_layer_pairs": {
+                BlockLayerKey(block_name="LONG_ATTRS", layer_name="Layer1"): 1
+            },
+            "block_rotation_counts": {},
+            "block_scale_data": {"LONG_ATTRS": {(1.0, 1.0)}},
+            "block_xdata_apps": {},
+            "layer_block_insertion_counts": {"Layer1": 1},
+            "layer_entity_counts": {"Layer1": 5},
+            "layer_unique_color_counts": {"Layer1": 1},
+            "layer_annotation_counts": {"Layer1": 0},
+            "annotation_data": {},
+            "entity_type_counts": {"INSERT": 1},
+            "color_analysis_data": [],
+            "extraction_issues": [],
+            "block_trimming_data": {},
+            "block_content_zone_data": {},
+            "all_block_definitions": {
+                "LONG_ATTRS": {
+                    "block_raw_name": "LONG_ATTRS",
+                    "block_resolved_name": "LONG_ATTRS",
+                    "block_insertion_status": "Inserted",
+                    "block_is_nested": False,
+                    "block_nested_parent_names": [],
+                    "block_entity_count": 5,
+                },
+            },
+            "nested_block_parents": {},
+            "block_attribute_data": {
+                # Create many attributes to exceed 200 char limit
+                "LONG_ATTRS": [
+                    ("ATTR01", "Value " + "A" * 20),
+                    ("ATTR02", "Value " + "B" * 20),
+                    ("ATTR03", "Value " + "C" * 20),
+                    ("ATTR04", "Value " + "D" * 20),
+                    ("ATTR05", "Value " + "E" * 20),
+                    ("ATTR06", "Value " + "F" * 20),
+                    ("ATTR07", "Value " + "G" * 20),
+                    ("ATTR08", "Value " + "H" * 20),
+                ],
+            },
+        }
+        output_path = os.path.join(temp_dir, "test_output.xlsx")
+        with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            _create_all_blocks_sheet(long_data, writer)
+
+        df = pd.read_excel(output_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
+        row = df.iloc[0]
+        attr_data = row[format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA)]
+
+        # Truncated string should end with "..."
+        assert attr_data.endswith("...")
+        # Truncated string should be at most 203 chars (200 + "...")
+        assert len(attr_data) <= 203
+
+    def test_all_blocks_attribute_extraction_integration(self, temp_dir: str) -> None:
+        """Integration test: extract from DXF file and verify attributes in Excel."""
+        from core.extractor import extract_blocks as extract
+
+        # Extract from test DXF with attributes
+        data = extract("app/tests/assets/block_attributes_test.dxf")
+
+        output_path = os.path.join(temp_dir, "test_integration.xlsx")
+        with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            _create_all_blocks_sheet(data, writer)
+
+        df = pd.read_excel(output_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
+
+        # Verify PRODUCT_BLOCK has attributes in output
+        product_rows = df[
+            df[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "PRODUCT_BLOCK"
+        ]
+        if len(product_rows) > 0:
+            attr_count = product_rows.iloc[0][
+                format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT)
+            ]
+            attr_data = product_rows.iloc[0][
+                format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA)
+            ]
+            # PRODUCT_BLOCK should have attributes
+            assert attr_count > 0
+            assert pd.notna(attr_data)
+            assert ":" in attr_data  # TAG:VALUE format

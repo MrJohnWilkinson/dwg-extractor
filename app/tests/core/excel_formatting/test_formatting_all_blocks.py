@@ -370,3 +370,14 @@ class TestAllBlocksFormatting:
         b_cell = ws.cell(row=2, column=2)
         assert b_cell.alignment.wrap_text is True
         assert b_cell.alignment.vertical == "top"
+
+    def test_format_all_blocks_attribute_column_widths(self) -> None:
+        """Test that attribute columns have correct widths."""
+        wb, ws = self._create_test_workbook_with_headers()
+
+        _format_all_blocks_sheet(wb)
+
+        # block_attribute_count (AD) should be 12
+        assert ws.column_dimensions["AD"].width == 12
+        # block_attribute_data (AE) should be 60
+        assert ws.column_dimensions["AE"].width == 60

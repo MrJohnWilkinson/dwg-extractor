@@ -134,6 +134,30 @@ class TestBlockAttributeExtraction:
                 assert isinstance(value, str)
 
 
+class TestBlockAttributeEdgeCases:
+    """Test suite for block attribute edge cases."""
+
+    def test_attribute_special_characters_preserved(self) -> None:
+        """Test that special characters in attribute values are preserved."""
+        result = extract_blocks("app/tests/assets/block_attributes_test.dxf")
+
+        # Verify BAY# tag contains special character in tag name
+        if "PRODUCT_BLOCK" in result["block_attribute_data"]:
+            attrs = result["block_attribute_data"]["PRODUCT_BLOCK"]
+            tags = [tag for tag, value in attrs]
+            assert "BAY#" in tags  # Tag with special character
+
+    def test_attribute_whitespace_in_values(self) -> None:
+        """Test that attribute values with spaces are preserved correctly."""
+        result = extract_blocks("app/tests/assets/block_attributes_test.dxf")
+
+        if "PRODUCT_BLOCK" in result["block_attribute_data"]:
+            attrs = result["block_attribute_data"]["PRODUCT_BLOCK"]
+            values = [value for tag, value in attrs if tag == "PROD2"]
+            # "Door Openers" contains a space
+            assert any(" " in v for v in values)
+
+
 class TestBlockAttributeDataStructure:
     """Test suite for block_attribute_data structure verification."""
 
