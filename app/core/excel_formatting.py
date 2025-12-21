@@ -588,29 +588,29 @@ def _format_all_blocks_sheet(wb: Workbook) -> None:
     ws.freeze_panes = "B2"
     logger.info("Frozen panes applied to All Blocks sheet")
 
-    # Set column widths (29 columns: A-AC)
+    # Set column widths (31 columns: A-AE)
     ws.column_dimensions["A"].width = 35  # block_raw_name
-    ws.column_dimensions["B"].width = 35  # block_resolved_name
-    ws.column_dimensions["C"].width = 12  # block_suggested_trim_left
-    ws.column_dimensions["D"].width = 12  # block_suggested_trim_right
-    ws.column_dimensions["E"].width = 12  # block_suggested_trim_top
-    ws.column_dimensions["F"].width = 12  # block_suggested_trim_bottom
-    ws.column_dimensions["G"].width = 50  # block_vertical_segments
-    ws.column_dimensions["H"].width = 50  # block_horizontal_segments
-    ws.column_dimensions["I"].width = 15  # block_native_width
-    ws.column_dimensions["J"].width = 15  # block_native_height
-    ws.column_dimensions["K"].width = 18  # block_content_zone_detected
-    ws.column_dimensions["L"].width = 18  # block_content_zone_width
-    ws.column_dimensions["M"].width = 18  # block_content_zone_height
-    ws.column_dimensions["N"].width = 15  # block_polygon_count
-    ws.column_dimensions["O"].width = 18  # block_filtered_polygon_count
-    ws.column_dimensions["P"].width = 18  # block_insertion_status
-    ws.column_dimensions["Q"].width = 12  # block_is_nested
-    ws.column_dimensions["R"].width = 35  # block_nested_parent_names
-    ws.column_dimensions["S"].width = 15  # block_entity_count
-    ws.column_dimensions["T"].width = 18  # block_insertion_count
-    ws.column_dimensions["U"].width = 12  # block_layer_count
-    ws.column_dimensions["V"].width = 35  # block_layer_names
+    ws.column_dimensions["B"].width = 35  # block_layer_names (MOVED here)
+    ws.column_dimensions["C"].width = 35  # block_resolved_name
+    ws.column_dimensions["D"].width = 12  # block_suggested_trim_left
+    ws.column_dimensions["E"].width = 12  # block_suggested_trim_right
+    ws.column_dimensions["F"].width = 12  # block_suggested_trim_top
+    ws.column_dimensions["G"].width = 12  # block_suggested_trim_bottom
+    ws.column_dimensions["H"].width = 50  # block_vertical_segments
+    ws.column_dimensions["I"].width = 50  # block_horizontal_segments
+    ws.column_dimensions["J"].width = 15  # block_native_width
+    ws.column_dimensions["K"].width = 15  # block_native_height
+    ws.column_dimensions["L"].width = 18  # block_content_zone_detected
+    ws.column_dimensions["M"].width = 18  # block_content_zone_width
+    ws.column_dimensions["N"].width = 18  # block_content_zone_height
+    ws.column_dimensions["O"].width = 15  # block_polygon_count
+    ws.column_dimensions["P"].width = 18  # block_filtered_polygon_count
+    ws.column_dimensions["Q"].width = 18  # block_insertion_status
+    ws.column_dimensions["R"].width = 12  # block_is_nested
+    ws.column_dimensions["S"].width = 35  # block_nested_parent_names
+    ws.column_dimensions["T"].width = 15  # block_entity_count
+    ws.column_dimensions["U"].width = 18  # block_insertion_count
+    ws.column_dimensions["V"].width = 12  # block_layer_count
     ws.column_dimensions["W"].width = 10  # block_rotation_0
     ws.column_dimensions["X"].width = 10  # block_rotation_90
     ws.column_dimensions["Y"].width = 10  # block_rotation_180
@@ -618,6 +618,8 @@ def _format_all_blocks_sheet(wb: Workbook) -> None:
     ws.column_dimensions["AA"].width = 12  # block_rotation_other
     ws.column_dimensions["AB"].width = 12  # block_scale_x
     ws.column_dimensions["AC"].width = 12  # block_scale_y
+    ws.column_dimensions["AD"].width = 12  # block_attribute_count (NEW)
+    ws.column_dimensions["AE"].width = 60  # block_attribute_data (NEW)
 
     # Enable text wrapping on header row
     header_alignment = Alignment(wrap_text=True, vertical="top")
@@ -625,9 +627,9 @@ def _format_all_blocks_sheet(wb: Workbook) -> None:
         cell.alignment = header_alignment
 
     # Apply text wrapping for data rows in columns with potentially long text
-    # Columns: A (raw_name), B (resolved_name), G (vert_segments), H (horiz_segments),
-    #          R (parent_names), V (layer_names)
-    wrap_columns = [1, 2, 7, 8, 18, 22]  # Column indices (1-based)
+    # Columns: A (raw_name), B (layer_names), C (resolved_name), H (vert_segments),
+    #          I (horiz_segments), S (parent_names), AE (attribute_data)
+    wrap_columns = [1, 2, 3, 8, 9, 19, 31]  # Column indices (1-based)
     wrap_alignment = Alignment(wrap_text=True, vertical="top")
     for row_idx in range(2, ws.max_row + 1):
         for col_idx in wrap_columns:
@@ -674,6 +676,7 @@ def _format_all_blocks_sheet(wb: Workbook) -> None:
 
     # Iterate through data rows (skip header at row 1)
     # Scale columns are AB (28 = x_scale) and AC (29 = y_scale)
+    # Note: Column indices unchanged from pre-Unit-2; new columns AD/AE added after
     for row_idx in range(2, ws.max_row + 1):
         x_scale_cell = ws.cell(row=row_idx, column=28)  # Column AB
         y_scale_cell = ws.cell(row=row_idx, column=29)  # Column AC
@@ -702,9 +705,9 @@ def _format_all_blocks_sheet(wb: Workbook) -> None:
             fill_to_apply = yellow_fill
             yellow_highlighted += 1
 
-        # Apply fill to entire row (all 29 columns A-AC) if highlighting is needed
+        # Apply fill to entire row (all 31 columns A-AE) if highlighting is needed
         if fill_to_apply is not None:
-            for col_idx in range(1, 30):  # Columns A through AC (1-29)
+            for col_idx in range(1, 32):  # Columns A through AE (1-31)
                 ws.cell(row=row_idx, column=col_idx).fill = fill_to_apply
 
     total_highlighted = red_highlighted + orange_highlighted + yellow_highlighted
