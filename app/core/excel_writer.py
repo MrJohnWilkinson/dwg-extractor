@@ -28,6 +28,8 @@ from .constants import (
     EXCEL_COLUMN_ANNOTATION_COUNT,
     EXCEL_COLUMN_ANNOTATION_LAYER_NAME,
     EXCEL_COLUMN_ANNOTATION_TYPE,
+    EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT,
+    EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
@@ -1055,13 +1057,15 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
     block_scale_data = data.get("block_scale_data", {})
     block_trimming_data = data.get("block_trimming_data", {})
     block_content_zone_data = data.get("block_content_zone_data", {})
+    block_attribute_data = data.get("block_attribute_data", {})
 
     if not all_block_definitions:
         logger.info("No block definitions found, creating empty All Blocks sheet")
-        # Create empty DataFrame with all 29 column headers
+        # Create empty DataFrame with all 31 column headers
         df = pd.DataFrame(
             columns=[
                 EXCEL_COLUMN_BLOCK_RAW_NAME,
+                EXCEL_COLUMN_BLOCK_LAYER_NAMES,  # Moved to position B
                 EXCEL_COLUMN_BLOCK_RESOLVED_NAME,
                 EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT,
                 EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT,
@@ -1082,7 +1086,6 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
                 EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
                 EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
                 EXCEL_COLUMN_BLOCK_LAYER_COUNT,
-                EXCEL_COLUMN_BLOCK_LAYER_NAMES,
                 EXCEL_COLUMN_BLOCK_ROTATION_0,
                 EXCEL_COLUMN_BLOCK_ROTATION_90,
                 EXCEL_COLUMN_BLOCK_ROTATION_180,
@@ -1090,6 +1093,8 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
                 EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
                 EXCEL_COLUMN_BLOCK_SCALE_X,
                 EXCEL_COLUMN_BLOCK_SCALE_Y,
+                EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT,
+                EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA,
             ]
         )
         df.columns = [format_header(col) for col in df.columns]
@@ -1224,9 +1229,18 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
                 content_zone["filtered_polygon_count"] if content_zone else ""
             )
 
+        # Get attributes for this block
+        attrs = block_attribute_data.get(resolved_name, [])
+        attr_count = len(attrs)
+
+        # Format as newline-separated TAG:VALUE pairs (already sorted from extraction)
+        attr_str = "\n".join(f"{tag}:{value}" for tag, value in attrs)
+        attr_str = _truncate_segment_string(attr_str)
+
         rows.append(
             {
                 EXCEL_COLUMN_BLOCK_RAW_NAME: record["block_raw_name"],
+                EXCEL_COLUMN_BLOCK_LAYER_NAMES: block_layer_names,  # Moved to position B
                 EXCEL_COLUMN_BLOCK_RESOLVED_NAME: resolved_name,
                 EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT: trim_left,
                 EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT: trim_right,
@@ -1247,7 +1261,6 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
                 EXCEL_COLUMN_BLOCK_ENTITY_COUNT: record["block_entity_count"],
                 EXCEL_COLUMN_BLOCK_INSERTION_COUNT: block_insertion_count,
                 EXCEL_COLUMN_BLOCK_LAYER_COUNT: block_layer_count,
-                EXCEL_COLUMN_BLOCK_LAYER_NAMES: block_layer_names,
                 EXCEL_COLUMN_BLOCK_ROTATION_0: rot_0,
                 EXCEL_COLUMN_BLOCK_ROTATION_90: rot_90,
                 EXCEL_COLUMN_BLOCK_ROTATION_180: rot_180,
@@ -1255,6 +1268,8 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
                 EXCEL_COLUMN_BLOCK_ROTATION_OTHER: rot_other,
                 EXCEL_COLUMN_BLOCK_SCALE_X: x_scale,
                 EXCEL_COLUMN_BLOCK_SCALE_Y: y_scale,
+                EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT: attr_count,
+                EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA: attr_str,
             }
         )
 
@@ -1264,6 +1279,7 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
         df = pd.DataFrame(
             columns=[
                 EXCEL_COLUMN_BLOCK_RAW_NAME,
+                EXCEL_COLUMN_BLOCK_LAYER_NAMES,  # Moved to position B
                 EXCEL_COLUMN_BLOCK_RESOLVED_NAME,
                 EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT,
                 EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT,
@@ -1284,7 +1300,6 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
                 EXCEL_COLUMN_BLOCK_ENTITY_COUNT,
                 EXCEL_COLUMN_BLOCK_INSERTION_COUNT,
                 EXCEL_COLUMN_BLOCK_LAYER_COUNT,
-                EXCEL_COLUMN_BLOCK_LAYER_NAMES,
                 EXCEL_COLUMN_BLOCK_ROTATION_0,
                 EXCEL_COLUMN_BLOCK_ROTATION_90,
                 EXCEL_COLUMN_BLOCK_ROTATION_180,
@@ -1292,6 +1307,8 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
                 EXCEL_COLUMN_BLOCK_ROTATION_OTHER,
                 EXCEL_COLUMN_BLOCK_SCALE_X,
                 EXCEL_COLUMN_BLOCK_SCALE_Y,
+                EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT,
+                EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA,
             ]
         )
         df.columns = [format_header(col) for col in df.columns]

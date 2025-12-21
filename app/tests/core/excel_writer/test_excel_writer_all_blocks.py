@@ -2,7 +2,7 @@
 Unit tests for the excel_writer module - All Blocks sheet.
 
 This test suite validates the All Blocks sheet generation including:
-- Sheet creation with correct 29 columns
+- Sheet creation with correct 31 columns
 - Row count excluding system blocks
 - Sorting by insertion status and resolved name
 - Layer count and layer names aggregation
@@ -19,6 +19,8 @@ import pandas as pd
 from openpyxl import load_workbook
 
 from core.constants import (
+    EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT,
+    EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
@@ -72,16 +74,16 @@ class TestAllBlocksSheet:
         wb = load_workbook(output_path)
         assert EXCEL_SHEET_ALL_BLOCKS in wb.sheetnames
 
-    def test_all_blocks_sheet_has_29_columns(
+    def test_all_blocks_sheet_has_31_columns(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that All Blocks sheet has exactly 29 columns."""
+        """Test that All Blocks sheet has exactly 31 columns."""
         output_path = os.path.join(temp_dir, "test_output.xlsx")
         with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
             _create_all_blocks_sheet(sample_extraction_data, writer)
 
         df = pd.read_excel(output_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
-        assert len(df.columns) == 29
+        assert len(df.columns) == 31
 
     def test_all_blocks_sheet_column_names(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -95,6 +97,7 @@ class TestAllBlocksSheet:
 
         expected_columns = [
             format_header(EXCEL_COLUMN_BLOCK_RAW_NAME),
+            format_header(EXCEL_COLUMN_BLOCK_LAYER_NAMES),  # Moved to position B
             format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME),
             format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_LEFT),
             format_header(EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT),
@@ -115,7 +118,6 @@ class TestAllBlocksSheet:
             format_header(EXCEL_COLUMN_BLOCK_ENTITY_COUNT),
             format_header(EXCEL_COLUMN_BLOCK_INSERTION_COUNT),
             format_header(EXCEL_COLUMN_BLOCK_LAYER_COUNT),
-            format_header(EXCEL_COLUMN_BLOCK_LAYER_NAMES),
             format_header(EXCEL_COLUMN_BLOCK_ROTATION_0),
             format_header(EXCEL_COLUMN_BLOCK_ROTATION_90),
             format_header(EXCEL_COLUMN_BLOCK_ROTATION_180),
@@ -123,6 +125,8 @@ class TestAllBlocksSheet:
             format_header(EXCEL_COLUMN_BLOCK_ROTATION_OTHER),
             format_header(EXCEL_COLUMN_BLOCK_SCALE_X),
             format_header(EXCEL_COLUMN_BLOCK_SCALE_Y),
+            format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT),
+            format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA),
         ]
         assert list(df.columns) == expected_columns
 
@@ -412,8 +416,8 @@ class TestAllBlocksSheet:
 
         df = pd.read_excel(output_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
 
-        # Should have 29 columns but 0 data rows
-        assert len(df.columns) == 29
+        # Should have 31 columns but 0 data rows
+        assert len(df.columns) == 31
         assert len(df) == 0
 
     def test_all_blocks_only_system_blocks_creates_empty_sheet(
@@ -464,8 +468,8 @@ class TestAllBlocksSheet:
 
         df = pd.read_excel(output_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
 
-        # Should have 29 columns but 0 data rows (all system blocks excluded)
-        assert len(df.columns) == 29
+        # Should have 31 columns but 0 data rows (all system blocks excluded)
+        assert len(df.columns) == 31
         assert len(df) == 0
 
     def test_all_blocks_block_with_no_insertions(self, temp_dir: str) -> None:
@@ -598,3 +602,77 @@ class TestAllBlocksSheet:
 
         tag_row = df[df[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "TAG"]
         assert tag_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_IS_NESTED)] == True  # noqa: E712
+
+    def test_all_blocks_attribute_count(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that attribute count is correctly populated."""
+        output_path = os.path.join(temp_dir, "test_output.xlsx")
+        with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            _create_all_blocks_sheet(sample_extraction_data, writer)
+
+        df = pd.read_excel(output_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
+
+        # VALVE has 3 attributes in fixture
+        valve_row = df[df[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "VALVE"]
+        assert valve_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT)] == 3
+
+        # PIPE has 1 attribute
+        pipe_row = df[df[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "PIPE"]
+        assert pipe_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT)] == 1
+
+        # TAG has 0 attributes
+        tag_row = df[df[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "TAG"]
+        assert tag_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT)] == 0
+
+    def test_all_blocks_attribute_data_format(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that attribute data is formatted as newline-separated TAG:VALUE pairs."""
+        output_path = os.path.join(temp_dir, "test_output.xlsx")
+        with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            _create_all_blocks_sheet(sample_extraction_data, writer)
+
+        df = pd.read_excel(output_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
+
+        # VALVE should have formatted attribute data
+        valve_row = df[df[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "VALVE"]
+        attr_data = valve_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA)]
+
+        # Should contain TAG:VALUE format
+        assert "DEPT:30" in attr_data
+        assert "PROD1:Garage" in attr_data
+        assert "PROD2:Door Openers" in attr_data
+
+        # Should be newline-separated
+        assert "\n" in attr_data
+
+    def test_all_blocks_attribute_data_empty_block(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that blocks without attributes have empty attribute data."""
+        output_path = os.path.join(temp_dir, "test_output.xlsx")
+        with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            _create_all_blocks_sheet(sample_extraction_data, writer)
+
+        df = pd.read_excel(output_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
+
+        # TAG has no attributes
+        tag_row = df[df[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "TAG"]
+        attr_data = tag_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA)]
+
+        # Should be empty string or NaN
+        assert pd.isna(attr_data) or attr_data == ""
+
+    def test_all_blocks_layer_names_column_position(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that block_layer_names column is at position B (index 1)."""
+        output_path = os.path.join(temp_dir, "test_output.xlsx")
+        with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            _create_all_blocks_sheet(sample_extraction_data, writer)
+
+        df = pd.read_excel(output_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
+
+        # Column at index 1 should be block_layer_names
+        assert df.columns[1] == format_header(EXCEL_COLUMN_BLOCK_LAYER_NAMES)

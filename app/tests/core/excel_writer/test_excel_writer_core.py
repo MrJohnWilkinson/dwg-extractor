@@ -1606,7 +1606,7 @@ class TestAllBlocksSheetIntegration:
         # Verify sheet is not empty (has headers at minimum)
         ws = wb[EXCEL_SHEET_ALL_BLOCKS]
         assert ws.max_row >= 1  # At least header row exists
-        assert ws.max_column == 29  # All 29 columns should be present
+        assert ws.max_column == 31  # All 31 columns should be present
 
     def test_write_excel_all_blocks_is_first_sheet(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -1652,15 +1652,15 @@ class TestAllBlocksSheetIntegration:
     def test_write_excel_all_blocks_has_correct_columns(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that All Blocks sheet has 29 columns with correct headers."""
+        """Test that All Blocks sheet has 31 columns with correct headers."""
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Load All Blocks sheet
         df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
 
-        # Verify 29 columns
-        assert len(df.columns) == 29
+        # Verify 31 columns
+        assert len(df.columns) == 31
 
         # Verify key column headers exist (formatted)
         headers = list(df.columns)
@@ -1706,7 +1706,7 @@ class TestAllBlocksSheetIntegration:
 
         # Should have headers but no data rows
         assert len(df) == 0
-        assert len(df.columns) == 29
+        assert len(df.columns) == 31
 
     def test_write_excel_all_blocks_formatting_applied(
         self, temp_dir: str, sample_extraction_data: ExtractionResult

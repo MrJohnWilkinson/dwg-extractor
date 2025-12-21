@@ -155,7 +155,17 @@ def sample_extraction_data() -> ExtractionResult:
             "PIPE": ["VALVE"],
             "TAG": ["PIPE", "VALVE"],
         },
-        "block_attribute_data": {},
+        "block_attribute_data": {
+            "VALVE": [
+                ("DEPT", "30"),
+                ("PROD1", "Garage"),
+                ("PROD2", "Door Openers"),
+            ],
+            "PIPE": [
+                ("ID", "PIPE-001"),
+            ],
+            # TAG has no attributes
+        },
     }
 
 
