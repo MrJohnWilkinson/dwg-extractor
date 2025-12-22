@@ -29,7 +29,7 @@ from .constants import (
     EXCEL_COLUMN_ANNOTATION_LAYER_NAME,
     EXCEL_COLUMN_ANNOTATION_TYPE,
     EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT,
-    EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA,
+    EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
@@ -1094,7 +1094,7 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
                 EXCEL_COLUMN_BLOCK_SCALE_X,
                 EXCEL_COLUMN_BLOCK_SCALE_Y,
                 EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT,
-                EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA,
+                EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS,
             ]
         )
         df.columns = [format_header(col) for col in df.columns]
@@ -1233,8 +1233,9 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
         attrs = block_attribute_data.get(resolved_name, [])
         attr_count = len(attrs)
 
-        # Format as newline-separated TAG:VALUE pairs (already sorted from extraction)
-        attr_str = "\n".join(f"{tag}:{value}" for tag, value in attrs)
+        # Extract unique tags (sorted alphabetically) - count remains total (tag, value) pairs
+        unique_tags = sorted(set(tag for tag, value in attrs))
+        attr_str = ", ".join(unique_tags)
         attr_str = _truncate_segment_string(attr_str)
 
         rows.append(
@@ -1269,7 +1270,7 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
                 EXCEL_COLUMN_BLOCK_SCALE_X: x_scale,
                 EXCEL_COLUMN_BLOCK_SCALE_Y: y_scale,
                 EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT: attr_count,
-                EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA: attr_str,
+                EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS: attr_str,
             }
         )
 
@@ -1308,7 +1309,7 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
                 EXCEL_COLUMN_BLOCK_SCALE_X,
                 EXCEL_COLUMN_BLOCK_SCALE_Y,
                 EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT,
-                EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA,
+                EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS,
             ]
         )
         df.columns = [format_header(col) for col in df.columns]

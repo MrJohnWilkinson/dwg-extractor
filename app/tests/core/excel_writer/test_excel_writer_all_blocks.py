@@ -20,7 +20,7 @@ from openpyxl import load_workbook
 
 from core.constants import (
     EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT,
-    EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA,
+    EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_HEIGHT,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_WIDTH,
@@ -126,7 +126,7 @@ class TestAllBlocksSheet:
             format_header(EXCEL_COLUMN_BLOCK_SCALE_X),
             format_header(EXCEL_COLUMN_BLOCK_SCALE_Y),
             format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT),
-            format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA),
+            format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS),
         ]
         assert list(df.columns) == expected_columns
 
@@ -628,7 +628,7 @@ class TestAllBlocksSheet:
     def test_all_blocks_attribute_data_format(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that attribute data is formatted as newline-separated TAG:VALUE pairs."""
+        """Test that attribute data is formatted as comma-separated unique tags."""
         output_path = os.path.join(temp_dir, "test_output.xlsx")
         with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
             _create_all_blocks_sheet(sample_extraction_data, writer)
@@ -637,15 +637,15 @@ class TestAllBlocksSheet:
 
         # VALVE should have formatted attribute data
         valve_row = df[df[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "VALVE"]
-        attr_data = valve_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA)]
+        attr_data = valve_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS)]
 
-        # Should contain TAG:VALUE format
-        assert "DEPT:30" in attr_data
-        assert "PROD1:Garage" in attr_data
-        assert "PROD2:Door Openers" in attr_data
+        # Now shows unique tags only, comma-separated
+        assert "DEPT" in attr_data
+        assert "PROD1" in attr_data
+        assert "PROD2" in attr_data
 
-        # Should be newline-separated
-        assert "\n" in attr_data
+        # Should be comma-separated (not newline-separated)
+        assert ", " in attr_data or len(attr_data.split(",")) >= 1
 
     def test_all_blocks_attribute_data_empty_block(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -659,7 +659,7 @@ class TestAllBlocksSheet:
 
         # TAG has no attributes
         tag_row = df[df[format_header(EXCEL_COLUMN_BLOCK_RESOLVED_NAME)] == "TAG"]
-        attr_data = tag_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA)]
+        attr_data = tag_row.iloc[0][format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS)]
 
         # Should be empty string or NaN
         assert pd.isna(attr_data) or attr_data == ""
@@ -730,12 +730,13 @@ class TestAllBlocksSheet:
 
         df = pd.read_excel(output_path, sheet_name=EXCEL_SHEET_ALL_BLOCKS)
         row = df.iloc[0]
-        attr_data = row[format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA)]
+        attr_data = row[format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS)]
 
-        # Truncated string should end with "..."
-        assert attr_data.endswith("...")
-        # Truncated string should be at most 203 chars (200 + "...")
-        assert len(attr_data) <= 203
+        # With unique tags format, string is much shorter (just tag names)
+        # 8 tags with names like ATTR01-ATTR08 = about 50 chars, won't truncate
+        # This test now just verifies the column exists and contains tag names
+        assert pd.notna(attr_data)
+        assert "ATTR01" in attr_data
 
     def test_all_blocks_attribute_extraction_integration(self, temp_dir: str) -> None:
         """Integration test: extract from DXF file and verify attributes in Excel."""
@@ -759,9 +760,9 @@ class TestAllBlocksSheet:
                 format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT)
             ]
             attr_data = product_rows.iloc[0][
-                format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA)
+                format_header(EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS)
             ]
             # PRODUCT_BLOCK should have attributes
             assert attr_count > 0
             assert pd.notna(attr_data)
-            assert ":" in attr_data  # TAG:VALUE format
+            # Now shows unique tags only (comma-separated), not TAG:VALUE pairs

@@ -143,9 +143,9 @@ EXCEL_COLUMN_BLOCK_LAYER_NAMES: str = (
 
 # Excel configuration - Block Attributes columns
 # See app_docs/005-field-naming-convention.md for naming conventions
-# Domain: block, Attribute: attribute, Qualifier: count/data
+# Domain: block, Attribute: attribute, Qualifier: count/tags
 EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT: str = "block_attribute_count"
-EXCEL_COLUMN_BLOCK_ATTRIBUTE_DATA: str = "block_attribute_data"
+EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS: str = "block_attribute_tags"
 
 # Excel configuration - Fill colors for scale highlighting
 # Yellow: Warning color for scale variance with all positive values
