@@ -30,6 +30,7 @@ EXCEL_SHEET_COLOR_ANALYSIS: str = "Color Analysis"
 EXCEL_SHEET_EXTRACTION_ISSUES: str = "Extraction Issues"
 EXCEL_SHEET_BLOCK_DEFINITIONS: str = "Block Definitions"
 EXCEL_SHEET_ALL_BLOCKS: str = "All Blocks"
+EXCEL_SHEET_ATTRIBUTE_ANALYSIS: str = "Attribute Analysis"
 
 # Excel configuration - Block Counts sheet columns
 # See app_docs/005-field-naming-convention.md for naming conventions
@@ -146,6 +147,15 @@ EXCEL_COLUMN_BLOCK_LAYER_NAMES: str = (
 # Domain: block, Attribute: attribute, Qualifier: count/tags
 EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT: str = "block_attribute_count"
 EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS: str = "block_attribute_tags"
+
+# Excel configuration - Attribute Analysis columns
+# See app_docs/005-field-naming-convention.md for naming conventions
+# Domain: attribute (attribute-specific analysis across blocks)
+EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME: str = "attribute_block_name"
+EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES: str = "attribute_block_layer_names"
+EXCEL_COLUMN_ATTRIBUTE_TAG: str = "attribute_tag"
+EXCEL_COLUMN_ATTRIBUTE_VALUES: str = "attribute_values"
+EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT: str = "attribute_value_count"
 
 # Excel configuration - Fill colors for scale highlighting
 # Yellow: Warning color for scale variance with all positive values

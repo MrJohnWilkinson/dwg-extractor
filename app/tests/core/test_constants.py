@@ -18,6 +18,11 @@ from core.constants import (
     DEFAULT_PRECISION_SNAP_TOLERANCE,
     DEFAULT_SKIP_CURVED_ENTITIES,
     DXF_INSUNITS_MAP,
+    EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES,
+    EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME,
+    EXCEL_COLUMN_ATTRIBUTE_TAG,
+    EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT,
+    EXCEL_COLUMN_ATTRIBUTE_VALUES,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
     EXCEL_COLUMN_BLOCK_LAYER_COUNT,
     EXCEL_COLUMN_BLOCK_LAYER_NAMES,
@@ -26,6 +31,7 @@ from core.constants import (
     EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_RIGHT,
     EXCEL_COLUMN_BLOCK_SUGGESTED_TRIM_TOP,
     EXCEL_SHEET_ALL_BLOCKS,
+    EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
     GAP_BRIDGE_MAX,
     GAP_BRIDGE_MIN,
     LINE_SEGMENT_THRESHOLD,
@@ -632,3 +638,77 @@ class TestSettingsDefaultConstants:
         assert DEFAULT_LOG_VIEWER_LEVEL == "INFO"
         assert DEFAULT_LOG_VIEWER_AUTO_SCROLL is True
         assert DEFAULT_LOG_VIEWER_MAX_LINES == 1000
+
+
+class TestAttributeAnalysisSheetConstants:
+    """Tests for Attribute Analysis sheet constants."""
+
+    def test_excel_sheet_attribute_analysis_value(self) -> None:
+        """EXCEL_SHEET_ATTRIBUTE_ANALYSIS should have value 'Attribute Analysis'."""
+        assert EXCEL_SHEET_ATTRIBUTE_ANALYSIS == "Attribute Analysis", (
+            f"EXCEL_SHEET_ATTRIBUTE_ANALYSIS should be 'Attribute Analysis', "
+            f"got {EXCEL_SHEET_ATTRIBUTE_ANALYSIS!r}"
+        )
+
+    def test_attribute_column_constants_follow_naming_convention(self) -> None:
+        """All attribute analysis columns should start with 'attribute_' prefix."""
+        attribute_columns = [
+            EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME,
+            EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES,
+            EXCEL_COLUMN_ATTRIBUTE_TAG,
+            EXCEL_COLUMN_ATTRIBUTE_VALUES,
+            EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT,
+        ]
+
+        for column in attribute_columns:
+            assert column.startswith("attribute_"), (
+                f"Column '{column}' does not follow naming convention "
+                "(should start with 'attribute_')"
+            )
+
+    def test_attribute_block_name_value(self) -> None:
+        """EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME should have value 'attribute_block_name'."""
+        assert EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME == "attribute_block_name", (
+            f"Expected 'attribute_block_name', got {EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME!r}"
+        )
+
+    def test_attribute_block_layer_names_value(self) -> None:
+        """EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES should have value 'attribute_block_layer_names'."""
+        assert (
+            EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES == "attribute_block_layer_names"
+        ), (
+            f"Expected 'attribute_block_layer_names', "
+            f"got {EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES!r}"
+        )
+
+    def test_attribute_block_layer_names_uses_plural_suffix(self) -> None:
+        """EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES should end with '_names' (plural for collections)."""
+        assert EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES.endswith("_names"), (
+            f"Column '{EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES}' should end with '_names' "
+            "to indicate it contains a collection (per naming convention)"
+        )
+
+    def test_attribute_tag_value(self) -> None:
+        """EXCEL_COLUMN_ATTRIBUTE_TAG should have value 'attribute_tag'."""
+        assert EXCEL_COLUMN_ATTRIBUTE_TAG == "attribute_tag", (
+            f"Expected 'attribute_tag', got {EXCEL_COLUMN_ATTRIBUTE_TAG!r}"
+        )
+
+    def test_attribute_values_value(self) -> None:
+        """EXCEL_COLUMN_ATTRIBUTE_VALUES should have value 'attribute_values'."""
+        assert EXCEL_COLUMN_ATTRIBUTE_VALUES == "attribute_values", (
+            f"Expected 'attribute_values', got {EXCEL_COLUMN_ATTRIBUTE_VALUES!r}"
+        )
+
+    def test_attribute_values_uses_plural_suffix(self) -> None:
+        """EXCEL_COLUMN_ATTRIBUTE_VALUES should end with '_values' (plural for collections)."""
+        assert EXCEL_COLUMN_ATTRIBUTE_VALUES.endswith("_values"), (
+            f"Column '{EXCEL_COLUMN_ATTRIBUTE_VALUES}' should end with '_values' "
+            "to indicate it contains a collection (per naming convention)"
+        )
+
+    def test_attribute_value_count_value(self) -> None:
+        """EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT should have value 'attribute_value_count'."""
+        assert EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT == "attribute_value_count", (
+            f"Expected 'attribute_value_count', got {EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT!r}"
+        )
