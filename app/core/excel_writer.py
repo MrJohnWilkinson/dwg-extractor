@@ -28,6 +28,11 @@ from .constants import (
     EXCEL_COLUMN_ANNOTATION_COUNT,
     EXCEL_COLUMN_ANNOTATION_LAYER_NAME,
     EXCEL_COLUMN_ANNOTATION_TYPE,
+    EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES,
+    EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME,
+    EXCEL_COLUMN_ATTRIBUTE_TAG,
+    EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT,
+    EXCEL_COLUMN_ATTRIBUTE_VALUES,
     EXCEL_COLUMN_BLOCK_ATTRIBUTE_COUNT,
     EXCEL_COLUMN_BLOCK_ATTRIBUTE_TAGS,
     EXCEL_COLUMN_BLOCK_CONTENT_ZONE_DETECTED,
@@ -85,6 +90,7 @@ from .constants import (
     EXCEL_COLUMN_LAYER_UNIQUE_COLOR_COUNT,
     EXCEL_SHEET_ALL_BLOCKS,
     EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
+    EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_DEFINITIONS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
@@ -332,7 +338,7 @@ def write_excel(
     """
     Generate a multi-sheet Excel file from comprehensive CAD extraction data.
 
-    This function creates an Excel workbook with nine sheets:
+    This function creates an Excel workbook with ten sheets:
     1. All Blocks: Consolidated block-centric view with one row per block definition
     2. Block Analysis: Simplified inventory with block-layer pairs and insertion counts
     3. Layer Analysis: Layers with insertion counts and entity counts
@@ -342,6 +348,7 @@ def write_excel(
     7. Color Analysis: Entity color breakdown by layer and type
     8. Extraction Issues: Unresolved anonymous blocks and other extraction issues
     9. Block Definitions: All block definitions with nesting status
+    10. Attribute Analysis: Block attribute details with unique values per (block, tag) combination
 
     All sheets include headers, appropriate sorting, auto-filters, and proper column widths.
     The Block Geometry Analysis sheet includes red highlighting for mirrored blocks (negative scales).
@@ -414,6 +421,9 @@ def write_excel(
 
             # Sheet 9: Block Definitions
             _create_block_definitions_sheet(extraction_data, writer)
+
+            # Sheet 10: Attribute Analysis
+            _create_attribute_analysis_sheet(extraction_data, writer)
 
         # Load workbook for post-processing (formatting)
         logger.debug("Loading workbook for formatting stage...")
@@ -1338,3 +1348,79 @@ def _create_all_blocks_sheet(data: ExtractionResult, writer: pd.ExcelWriter) -> 
 
     df.to_excel(writer, sheet_name=EXCEL_SHEET_ALL_BLOCKS, index=False)
     logger.info(f"All Blocks sheet created with {len(df)} rows")
+
+
+def _create_attribute_analysis_sheet(
+    data: ExtractionResult,
+    writer: pd.ExcelWriter,
+) -> None:
+    """Create the Attribute Analysis sheet with block-attribute-value details.
+
+    This sheet provides a detailed view of block attributes, grouping by
+    (block_name, tag) and showing all unique values observed across all
+    insertions of that block.
+
+    Args:
+        data: ExtractionResult containing block_attribute_data and block_layer_pairs
+        writer: pandas ExcelWriter object for output
+    """
+    logger.info("Creating Attribute Analysis sheet...")
+
+    block_attribute_data = data.get("block_attribute_data", {})
+    block_layer_pairs = data.get("block_layer_pairs", {})
+
+    if not block_attribute_data:
+        # Create empty sheet with headers only
+        logger.info(
+            "No block attribute data found, creating empty Attribute Analysis sheet"
+        )
+        df = pd.DataFrame(
+            columns=[
+                EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME,
+                EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES,
+                EXCEL_COLUMN_ATTRIBUTE_TAG,
+                EXCEL_COLUMN_ATTRIBUTE_VALUES,
+                EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT,
+            ]
+        )
+        df.columns = [format_header(col) for col in df.columns]
+        df.to_excel(writer, sheet_name=EXCEL_SHEET_ATTRIBUTE_ANALYSIS, index=False)
+        return
+
+    # Build a lookup for block -> layer names
+    block_to_layers: dict[str, set[str]] = {}
+    for layer_key in block_layer_pairs.keys():
+        if layer_key.block_name not in block_to_layers:
+            block_to_layers[layer_key.block_name] = set()
+        block_to_layers[layer_key.block_name].add(layer_key.layer_name)
+
+    # Group attributes by (block_name, tag) -> set of values
+    block_tag_values: dict[tuple[str, str], set[str]] = {}
+    for block_name, attrs in block_attribute_data.items():
+        for tag, value in attrs:
+            attr_key = (block_name, tag)
+            if attr_key not in block_tag_values:
+                block_tag_values[attr_key] = set()
+            block_tag_values[attr_key].add(value)
+
+    # Build rows
+    rows = []
+    for (block_name, tag), values in sorted(block_tag_values.items()):
+        layer_names = sorted(block_to_layers.get(block_name, set()))
+        layer_str = ", ".join(layer_names)
+        values_str = ", ".join(sorted(values))
+        rows.append(
+            {
+                EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME: block_name,
+                EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES: layer_str,
+                EXCEL_COLUMN_ATTRIBUTE_TAG: tag,
+                EXCEL_COLUMN_ATTRIBUTE_VALUES: values_str,
+                EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT: len(values),
+            }
+        )
+
+    df = pd.DataFrame(rows)
+    # Apply header formatting
+    df.columns = [format_header(col) for col in df.columns]
+    df.to_excel(writer, sheet_name=EXCEL_SHEET_ATTRIBUTE_ANALYSIS, index=False)
+    logger.info(f"Attribute Analysis sheet created with {len(df)} rows")

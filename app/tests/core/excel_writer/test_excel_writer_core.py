@@ -71,11 +71,12 @@ from core.types import BlockLayerKey, BlockRotationKey
 class TestExcelWriter:
     """Test suite for the write_excel function."""
 
-    def test_write_excel_nine_sheets(
+    def test_write_excel_ten_sheets(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that nine sheets are created with correct names."""
+        """Test that ten sheets are created with correct names."""
         from core.constants import (
+            EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
             EXCEL_SHEET_BLOCK_DEFINITIONS,
             EXCEL_SHEET_COLOR_ANALYSIS,
             EXCEL_SHEET_EXTRACTION_ISSUES,
@@ -98,7 +99,8 @@ class TestExcelWriter:
         assert EXCEL_SHEET_COLOR_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_EXTRACTION_ISSUES in wb.sheetnames
         assert EXCEL_SHEET_BLOCK_DEFINITIONS in wb.sheetnames
-        assert len(wb.sheetnames) == 9
+        assert EXCEL_SHEET_ATTRIBUTE_ANALYSIS in wb.sheetnames
+        assert len(wb.sheetnames) == 10
 
     def test_block_analysis_sheet_simplified(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -1624,6 +1626,7 @@ class TestAllBlocksSheetIntegration:
     ) -> None:
         """Test that sheets are in the correct order."""
         from core.constants import (
+            EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
             EXCEL_SHEET_BLOCK_DEFINITIONS,
             EXCEL_SHEET_COLOR_ANALYSIS,
             EXCEL_SHEET_EXTRACTION_ISSUES,
@@ -1645,6 +1648,7 @@ class TestAllBlocksSheetIntegration:
             EXCEL_SHEET_COLOR_ANALYSIS,
             EXCEL_SHEET_EXTRACTION_ISSUES,
             EXCEL_SHEET_BLOCK_DEFINITIONS,
+            EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
         ]
 
         assert wb.sheetnames == expected_order
@@ -1784,3 +1788,187 @@ class TestTruncateSegmentString:
         from core.excel_writer import SEGMENT_MAX_DISPLAY_LENGTH
 
         assert SEGMENT_MAX_DISPLAY_LENGTH == 200
+
+
+class TestAttributeAnalysisSheet:
+    """Test suite for the Attribute Analysis sheet."""
+
+    def test_attribute_analysis_sheet_exists(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test that Attribute Analysis sheet is created."""
+        from core.constants import EXCEL_SHEET_ATTRIBUTE_ANALYSIS
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        wb = load_workbook(excel_path)
+        assert EXCEL_SHEET_ATTRIBUTE_ANALYSIS in wb.sheetnames
+
+    def test_attribute_analysis_sheet_headers(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test Attribute Analysis sheet has correct column headers."""
+        from core.constants import (
+            EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES,
+            EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME,
+            EXCEL_COLUMN_ATTRIBUTE_TAG,
+            EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT,
+            EXCEL_COLUMN_ATTRIBUTE_VALUES,
+            EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
+        )
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ATTRIBUTE_ANALYSIS)
+        expected_headers = [
+            format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME),
+            format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES),
+            format_header(EXCEL_COLUMN_ATTRIBUTE_TAG),
+            format_header(EXCEL_COLUMN_ATTRIBUTE_VALUES),
+            format_header(EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT),
+        ]
+        assert list(df.columns) == expected_headers
+
+    def test_attribute_analysis_sheet_data_aggregation(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test Attribute Analysis sheet correctly aggregates attribute data."""
+        from core.constants import (
+            EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME,
+            EXCEL_COLUMN_ATTRIBUTE_TAG,
+            EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT,
+            EXCEL_COLUMN_ATTRIBUTE_VALUES,
+            EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
+        )
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ATTRIBUTE_ANALYSIS)
+
+        # sample_extraction_data has VALVE with 3 attributes (DEPT, PROD1, PROD2)
+        # and PIPE with 1 attribute (ID)
+        # Total: 4 rows (one per block-tag combination)
+        assert len(df) == 4
+
+        # Verify VALVE rows exist with correct tags
+        valve_rows = df[df[format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME)] == "VALVE"]
+        assert len(valve_rows) == 3
+
+        # Verify PIPE row exists with correct tag
+        pipe_rows = df[df[format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME)] == "PIPE"]
+        assert len(pipe_rows) == 1
+        assert pipe_rows.iloc[0][format_header(EXCEL_COLUMN_ATTRIBUTE_TAG)] == "ID"
+        assert (
+            pipe_rows.iloc[0][format_header(EXCEL_COLUMN_ATTRIBUTE_VALUES)]
+            == "PIPE-001"
+        )
+        assert pipe_rows.iloc[0][format_header(EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT)] == 1
+
+    def test_attribute_analysis_sheet_layer_names(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test Attribute Analysis sheet shows correct layer names for each block."""
+        from core.constants import (
+            EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES,
+            EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME,
+            EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
+        )
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ATTRIBUTE_ANALYSIS)
+
+        # VALVE appears on Layer1 and Layer2 in sample_extraction_data
+        valve_rows = df[df[format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME)] == "VALVE"]
+        valve_layers = valve_rows.iloc[0][
+            format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES)
+        ]
+        assert "Layer1" in valve_layers
+        assert "Layer2" in valve_layers
+
+        # PIPE appears only on Layer1
+        pipe_rows = df[df[format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME)] == "PIPE"]
+        assert (
+            pipe_rows.iloc[0][format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES)]
+            == "Layer1"
+        )
+
+    def test_attribute_analysis_sheet_sorted_by_block_and_tag(
+        self, temp_dir: str, sample_extraction_data: ExtractionResult
+    ) -> None:
+        """Test Attribute Analysis sheet is sorted by block name then tag name."""
+        from core.constants import (
+            EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME,
+            EXCEL_COLUMN_ATTRIBUTE_TAG,
+            EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
+        )
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(sample_extraction_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ATTRIBUTE_ANALYSIS)
+
+        # Should be sorted: PIPE then VALVE (alphabetical by block)
+        # Within VALVE: DEPT, PROD1, PROD2 (alphabetical by tag)
+        block_names = list(df[format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME)])
+        assert block_names[0] == "PIPE"
+        assert block_names[1] == "VALVE"
+
+        # Verify VALVE tags are sorted
+        valve_rows = df[df[format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME)] == "VALVE"]
+        valve_tags = list(valve_rows[format_header(EXCEL_COLUMN_ATTRIBUTE_TAG)])
+        assert valve_tags == ["DEPT", "PROD1", "PROD2"]
+
+    def test_attribute_analysis_sheet_empty_data(self, temp_dir: str) -> None:
+        """Test Attribute Analysis sheet with no attribute data creates headers only."""
+        from core.constants import (
+            EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES,
+            EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME,
+            EXCEL_COLUMN_ATTRIBUTE_TAG,
+            EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT,
+            EXCEL_COLUMN_ATTRIBUTE_VALUES,
+            EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
+        )
+
+        # Create minimal extraction data with no attributes
+        empty_attr_data: ExtractionResult = {
+            "block_counts": {},
+            "block_entities": {},
+            "block_layer_pairs": {},
+            "block_rotation_counts": {},
+            "block_scale_data": {},
+            "block_xdata_apps": {},
+            "layer_block_insertion_counts": {},
+            "layer_entity_counts": {},
+            "layer_unique_color_counts": {},
+            "layer_annotation_counts": {},
+            "annotation_data": {},
+            "entity_type_counts": {},
+            "color_analysis_data": [],
+            "extraction_issues": [],
+            "block_trimming_data": {},
+            "block_content_zone_data": {},
+            "all_block_definitions": {},
+            "nested_block_parents": {},
+            "block_attribute_data": {},  # Empty!
+        }
+
+        output_path = os.path.join(temp_dir, "test_drawing.dxf")
+        excel_path = write_excel(empty_attr_data, output_path)
+
+        df = pd.read_excel(excel_path, sheet_name=EXCEL_SHEET_ATTRIBUTE_ANALYSIS)
+
+        # Should have headers but no data rows
+        expected_headers = [
+            format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME),
+            format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES),
+            format_header(EXCEL_COLUMN_ATTRIBUTE_TAG),
+            format_header(EXCEL_COLUMN_ATTRIBUTE_VALUES),
+            format_header(EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT),
+        ]
+        assert list(df.columns) == expected_headers
+        assert len(df) == 0
