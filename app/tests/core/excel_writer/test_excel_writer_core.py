@@ -1860,7 +1860,7 @@ class TestAttributeAnalysisSheet:
         # Verify PIPE row exists with correct tag
         pipe_rows = df[df[format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME)] == "PIPE"]
         assert len(pipe_rows) == 1
-        assert pipe_rows.iloc[0][format_header(EXCEL_COLUMN_ATTRIBUTE_TAG)] == "ID"
+        assert pipe_rows.iloc[0][format_header(EXCEL_COLUMN_ATTRIBUTE_TAG)] == "[ID]"
         assert (
             pipe_rows.iloc[0][format_header(EXCEL_COLUMN_ATTRIBUTE_VALUES)]
             == "PIPE-001"
@@ -1921,7 +1921,7 @@ class TestAttributeAnalysisSheet:
         # Verify VALVE tags are sorted
         valve_rows = df[df[format_header(EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME)] == "VALVE"]
         valve_tags = list(valve_rows[format_header(EXCEL_COLUMN_ATTRIBUTE_TAG)])
-        assert valve_tags == ["DEPT", "PROD1", "PROD2"]
+        assert valve_tags == ["[DEPT]", "[PROD1]", "[PROD2]"]
 
     def test_attribute_analysis_sheet_empty_data(self, temp_dir: str) -> None:
         """Test Attribute Analysis sheet with no attribute data creates headers only."""

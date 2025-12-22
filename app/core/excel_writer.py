@@ -1416,7 +1416,7 @@ def _create_attribute_analysis_sheet(
             {
                 EXCEL_COLUMN_ATTRIBUTE_BLOCK_NAME: block_name,
                 EXCEL_COLUMN_ATTRIBUTE_BLOCK_LAYER_NAMES: layer_str,
-                EXCEL_COLUMN_ATTRIBUTE_TAG: tag,
+                EXCEL_COLUMN_ATTRIBUTE_TAG: f"[{tag}]",
                 EXCEL_COLUMN_ATTRIBUTE_VALUES: values_str,
                 EXCEL_COLUMN_ATTRIBUTE_VALUE_COUNT: len(values),
             }
