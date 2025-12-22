@@ -16,6 +16,7 @@ from openpyxl.worksheet.worksheet import Worksheet
 from core.constants import (
     EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
     EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
+    EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_DEFINITIONS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
@@ -26,6 +27,7 @@ from core.constants import (
 )
 from core.excel_formatting import (
     _format_annotations_analysis_sheet,
+    _format_attribute_analysis_sheet,
     _format_block_analysis_sheet,
     _format_block_definitions_sheet,
     _format_block_geometry_analysis_sheet,
@@ -850,6 +852,140 @@ class TestBlockGeometryAnalysisFormatting:
             assert m_cell.alignment.horizontal == "right"
 
 
+class TestAttributeAnalysisFormatting:
+    """Test suite for _format_attribute_analysis_sheet function."""
+
+    def test_format_attribute_analysis_autofilter(self, temp_dir: str) -> None:
+        """Test that auto-filter is applied to Attribute Analysis sheet."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ATTRIBUTE_ANALYSIS
+
+        # Add headers and sample data
+        ws.append(
+            [
+                "attribute_block_name",
+                "attribute_block_layer_names",
+                "attribute_tag",
+                "attribute_values",
+                "attribute_value_count",
+            ]
+        )
+        ws.append(["VALVE", "Layer1, Layer2", "DEPT", "Engineering", 1])
+
+        _format_attribute_analysis_sheet(wb)
+
+        assert ws.auto_filter.ref is not None
+        assert ws.auto_filter.ref == "A1:E2"
+
+    def test_format_attribute_analysis_column_widths(self, temp_dir: str) -> None:
+        """Test that column widths are set correctly on Attribute Analysis sheet."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ATTRIBUTE_ANALYSIS
+        ws.append(
+            [
+                "attribute_block_name",
+                "attribute_block_layer_names",
+                "attribute_tag",
+                "attribute_values",
+                "attribute_value_count",
+            ]
+        )
+
+        _format_attribute_analysis_sheet(wb)
+
+        assert ws.column_dimensions["A"].width == 35  # attribute_block_name
+        assert ws.column_dimensions["B"].width == 35  # attribute_block_layer_names
+        assert ws.column_dimensions["C"].width == 20  # attribute_tag
+        assert ws.column_dimensions["D"].width == 60  # attribute_values
+        assert ws.column_dimensions["E"].width == 12  # attribute_value_count
+
+    def test_format_attribute_analysis_freeze_panes(self, temp_dir: str) -> None:
+        """Test that Attribute Analysis sheet freezes first row and first column."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ATTRIBUTE_ANALYSIS
+        ws.append(["block_name", "layer_names", "tag", "values", "count"])
+        ws.append(["VALVE", "Layer1", "DEPT", "Engineering", 1])
+
+        _format_attribute_analysis_sheet(wb)
+
+        assert ws.freeze_panes == "B2"
+
+    def test_format_attribute_analysis_header_wrap(self, temp_dir: str) -> None:
+        """Test that header row has text wrapping enabled."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ATTRIBUTE_ANALYSIS
+        ws.append(
+            [
+                "attribute_block_name",
+                "attribute_block_layer_names",
+                "attribute_tag",
+                "attribute_values",
+                "attribute_value_count",
+            ]
+        )
+
+        _format_attribute_analysis_sheet(wb)
+
+        for col_idx in range(1, 6):
+            cell = ws.cell(row=1, column=col_idx)
+            assert cell.alignment is not None
+            assert cell.alignment.wrap_text is True
+            assert cell.alignment.vertical == "top"
+
+    def test_format_attribute_analysis_data_wrap_columns(self, temp_dir: str) -> None:
+        """Test that columns B and D have text wrapping in data rows."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ATTRIBUTE_ANALYSIS
+        ws.append(["block_name", "layer_names", "tag", "values", "count"])
+        ws.append(["VALVE", "Layer1, Layer2, Layer3", "DEPT", "Eng, Maint, Ops", 3])
+        ws.append(["PIPE", "Layer1", "ID", "PIPE-001, PIPE-002", 2])
+
+        _format_attribute_analysis_sheet(wb)
+
+        # Verify columns B (2) and D (4) have text wrapping in data rows
+        for row_idx in [2, 3]:
+            b_cell = ws.cell(row=row_idx, column=2)
+            d_cell = ws.cell(row=row_idx, column=4)
+
+            assert b_cell.alignment is not None
+            assert b_cell.alignment.wrap_text is True
+            assert b_cell.alignment.vertical == "top"
+
+            assert d_cell.alignment is not None
+            assert d_cell.alignment.wrap_text is True
+            assert d_cell.alignment.vertical == "top"
+
+    def test_format_attribute_analysis_empty_sheet(self, temp_dir: str) -> None:
+        """Test that empty Attribute Analysis sheet is handled gracefully."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ATTRIBUTE_ANALYSIS
+
+        # Apply formatting (should not crash on empty sheet)
+        _format_attribute_analysis_sheet(wb)
+
+        # Column widths should still be set
+        assert ws.column_dimensions["A"].width == 35
+        assert ws.column_dimensions["D"].width == 60
+        assert ws.freeze_panes == "B2"
+
+    def test_format_attribute_analysis_missing_sheet(self, temp_dir: str) -> None:
+        """Test that missing Attribute Analysis sheet is handled gracefully."""
+        wb = Workbook()
+        # Default sheet has different name, so Attribute Analysis doesn't exist
+
+        # Should not raise an exception
+        _format_attribute_analysis_sheet(wb)
+
+        # Verify default sheet is unchanged
+        assert len(wb.sheetnames) == 1
+
+
 class TestFreezePanes:
     """Test suite for freeze_panes setting across all sheet types."""
 
@@ -949,8 +1085,20 @@ class TestFreezePanes:
 
         assert ws.freeze_panes == "B2"
 
+    def test_attribute_analysis_freeze_panes(self, temp_dir: str) -> None:
+        """Test that Attribute Analysis sheet freezes first row and first column."""
+        wb = Workbook()
+        ws = cast(Worksheet, wb.active)
+        ws.title = EXCEL_SHEET_ATTRIBUTE_ANALYSIS
+        ws.append(["block_name", "layer_names", "tag", "values", "count"])
+        ws.append(["VALVE", "Layer1", "DEPT", "Engineering", 1])
+
+        _format_attribute_analysis_sheet(wb)
+
+        assert ws.freeze_panes == "B2"
+
     def test_all_sheets_freeze_first_row_and_column(self, temp_dir: str) -> None:
-        """Test that all eight sheet types freeze both header row and first column (B2)."""
+        """Test that all nine sheet types freeze both header row and first column (B2)."""
         # Create workbook with all sheet types
         wb = Workbook()
 
@@ -959,7 +1107,7 @@ class TestFreezePanes:
         if default_sheet is not None:
             wb.remove(default_sheet)
 
-        # Create and populate all 8 sheets
+        # Create and populate all 9 sheets
         sheets_data = [
             (EXCEL_SHEET_BLOCK_ANALYSIS, ["block_name", "count"], ["VALVE", 10]),
             (EXCEL_SHEET_LAYER_ANALYSIS, ["layer_name", "count"], ["Layer1", 15]),
@@ -981,6 +1129,11 @@ class TestFreezePanes:
                 ["block_raw_name", "resolved"],
                 ["*M", "M"],
             ),
+            (
+                EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
+                ["block_name", "layer_names", "tag", "values", "count"],
+                ["VALVE", "Layer1", "DEPT", "Engineering", 1],
+            ),
         ]
 
         for sheet_name, headers, data in sheets_data:
@@ -997,6 +1150,7 @@ class TestFreezePanes:
         _format_color_analysis_sheet(wb)
         _format_extraction_issues_sheet(wb)
         _format_block_definitions_sheet(wb)
+        _format_attribute_analysis_sheet(wb)
 
         # Verify freeze_panes = "B2" for all sheets
         expected_freeze = "B2"

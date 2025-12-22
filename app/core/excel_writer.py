@@ -102,6 +102,7 @@ from .constants import (
 from .excel_formatting import (
     _format_all_blocks_sheet,
     _format_annotations_analysis_sheet,
+    _format_attribute_analysis_sheet,
     _format_block_analysis_sheet,
     _format_block_definitions_sheet,
     _format_block_geometry_analysis_sheet,
@@ -448,6 +449,8 @@ def write_excel(
         _format_extraction_issues_sheet(wb)
         logger.debug("Applying formatting to Block Definitions sheet...")
         _format_block_definitions_sheet(wb)
+        logger.debug("Applying formatting to Attribute Analysis sheet...")
+        _format_attribute_analysis_sheet(wb)
 
         # Save workbook with formatting
         logger.debug("Saving workbook with formatting applied...")

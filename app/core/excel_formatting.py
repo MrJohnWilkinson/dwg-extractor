@@ -24,6 +24,7 @@ from .constants import (
     EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE,
     EXCEL_SHEET_ALL_BLOCKS,
     EXCEL_SHEET_ANNOTATIONS_ANALYSIS,
+    EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
     EXCEL_SHEET_BLOCK_ANALYSIS,
     EXCEL_SHEET_BLOCK_DEFINITIONS,
     EXCEL_SHEET_BLOCK_GEOMETRY_ANALYSIS,
@@ -716,3 +717,52 @@ def _format_all_blocks_sheet(wb: Workbook) -> None:
         f"(red: {red_highlighted}, orange: {orange_highlighted}, yellow: {yellow_highlighted}) "
         f"and text wrapping applied to name/segment columns"
     )
+
+
+def _format_attribute_analysis_sheet(wb: Workbook) -> None:
+    """Apply formatting to the Attribute Analysis sheet.
+
+    This function applies:
+    - Auto-filter to the header row
+    - Frozen panes (header row and first column)
+    - Column widths appropriate for each data type
+    - Text wrapping on header row
+    - Text wrapping on columns B (layer names) and D (attribute values)
+
+    Args:
+        wb: openpyxl Workbook object containing the Attribute Analysis sheet
+    """
+    if EXCEL_SHEET_ATTRIBUTE_ANALYSIS not in wb.sheetnames:
+        logger.info("Attribute Analysis sheet not found, skipping formatting")
+        return
+
+    ws = wb[EXCEL_SHEET_ATTRIBUTE_ANALYSIS]
+
+    # Apply auto-filter
+    if ws.dimensions:
+        ws.auto_filter.ref = ws.dimensions
+
+    # Freeze header row and first column
+    ws.freeze_panes = "B2"
+    logger.info("Frozen panes applied to Attribute Analysis sheet")
+
+    # Set column widths (5 columns: A-E)
+    ws.column_dimensions["A"].width = 35  # attribute_block_name
+    ws.column_dimensions["B"].width = 35  # attribute_block_layer_names
+    ws.column_dimensions["C"].width = 20  # attribute_tag
+    ws.column_dimensions["D"].width = 60  # attribute_values
+    ws.column_dimensions["E"].width = 12  # attribute_value_count
+
+    # Enable text wrapping on header row
+    header_alignment = Alignment(wrap_text=True, vertical="top")
+    for cell in ws[1]:
+        cell.alignment = header_alignment
+
+    # Apply text wrapping for columns with potentially long text (B and D)
+    wrap_alignment = Alignment(wrap_text=True, vertical="top")
+    wrap_columns = [2, 4]  # B (layer_names) and D (attribute_values)
+    for row_idx in range(2, ws.max_row + 1):
+        for col_idx in wrap_columns:
+            ws.cell(row=row_idx, column=col_idx).alignment = wrap_alignment
+
+    logger.info("Attribute Analysis sheet formatted")
