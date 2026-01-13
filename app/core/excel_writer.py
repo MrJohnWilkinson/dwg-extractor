@@ -97,6 +97,7 @@ from .constants import (
     EXCEL_SHEET_COLOR_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
     EXCEL_SHEET_EXTRACTION_ISSUES,
+    EXCEL_SHEET_INSTRUCTIONS,
     EXCEL_SHEET_LAYER_ANALYSIS,
 )
 from .excel_formatting import (
@@ -109,6 +110,7 @@ from .excel_formatting import (
     _format_color_analysis_sheet,
     _format_entity_summary_sheet,
     _format_extraction_issues_sheet,
+    _format_instructions_sheet,
     _format_layer_analysis_sheet,
     format_header,
 )
@@ -331,6 +333,97 @@ def _has_negative_scale_in_set(scale_set: set[tuple[float, float]], axis: str) -
         raise ValueError(f"axis must be 'x' or 'y', got '{axis}'")
 
 
+def _create_instructions_sheet(writer: pd.ExcelWriter) -> None:
+    """Create the Instructions sheet with color coding legend and sheet descriptions.
+
+    This sheet provides users with:
+    - Color Coding section: Explains the four highlight colors used throughout the workbook
+    - Sheet Descriptions section: Brief description of each analysis sheet's purpose
+
+    The sheet is created first to ensure it appears as the leftmost tab in Excel.
+
+    Args:
+        writer: pandas ExcelWriter object for output
+    """
+    logger.info("Creating Instructions sheet...")
+
+    # Build rows for the Instructions sheet
+    rows = []
+
+    # Section 1: Color Coding
+    rows.append({"identifier": "Color Coding", "description": ""})
+    rows.append({
+        "identifier": "Yellow",
+        "description": "Scale variance detected - block has multiple scale values (all positive)"
+    })
+    rows.append({
+        "identifier": "Orange",
+        "description": "Negative scale detected - block is mirrored/flipped (consistent negative scale)"
+    })
+    rows.append({
+        "identifier": "Red",
+        "description": "Scale variance with negatives - block has varying scales including negative values"
+    })
+    rows.append({
+        "identifier": "Light Green",
+        "description": "Nested block - block is used inside another block definition"
+    })
+
+    # Empty separator row
+    rows.append({"identifier": "", "description": ""})
+
+    # Section 2: Sheet Descriptions
+    rows.append({"identifier": "Sheet Descriptions", "description": ""})
+    rows.append({
+        "identifier": "All Blocks",
+        "description": "Consolidated block-centric view with one row per block definition, including geometry, attributes, and insertion data"
+    })
+    rows.append({
+        "identifier": "Block Analysis",
+        "description": "Simplified inventory showing block-layer pairs with insertion counts and entity counts"
+    })
+    rows.append({
+        "identifier": "Layer Analysis",
+        "description": "Layer-based metrics including block insertions, entity counts, colors, and annotations per layer"
+    })
+    rows.append({
+        "identifier": "Entity Summary",
+        "description": "Global entity type counts across the entire drawing (INSERT, LINE, CIRCLE, etc.)"
+    })
+    rows.append({
+        "identifier": "Block Geometry Analysis",
+        "description": "Detailed transformation data per block-layer pair: rotations, scales, dimensions, and content zones"
+    })
+    rows.append({
+        "identifier": "Annotations Analysis",
+        "description": "TEXT and MTEXT annotations with contents, type, layer, color, and occurrence counts"
+    })
+    rows.append({
+        "identifier": "Color Analysis",
+        "description": "Entity color breakdown by layer and type, showing RGB values and AutoCAD color names"
+    })
+    rows.append({
+        "identifier": "Extraction Issues",
+        "description": "Unresolved anonymous blocks and other extraction problems requiring attention"
+    })
+    rows.append({
+        "identifier": "Block Definitions",
+        "description": "All block definitions in the drawing with insertion status and nesting relationships"
+    })
+    rows.append({
+        "identifier": "Attribute Analysis",
+        "description": "Block attribute details showing unique tag/value combinations per block"
+    })
+
+    # Create DataFrame with specific column names
+    df = pd.DataFrame(rows)
+    # Rename columns for display
+    df.columns = ["Identifier", "Description"]
+
+    df.to_excel(writer, sheet_name=EXCEL_SHEET_INSTRUCTIONS, index=False)
+    logger.info(f"Instructions sheet created with {len(df)} rows")
+
+
 def write_excel(
     extraction_data: ExtractionResult,
     input_file_path: str,
@@ -396,6 +489,9 @@ def write_excel(
 
         # Create Excel writer
         with pd.ExcelWriter(full_path, engine="openpyxl") as writer:
+            # Sheet 0: Instructions (static reference content)
+            _create_instructions_sheet(writer)
+
             # Sheet 1: All Blocks (consolidated block-centric view)
             _create_all_blocks_sheet(extraction_data, writer)
 
@@ -431,6 +527,8 @@ def write_excel(
         wb = load_workbook(full_path)
 
         # Apply formatting to all sheets
+        logger.debug("Applying formatting to Instructions sheet...")
+        _format_instructions_sheet(wb)
         logger.debug("Applying formatting to All Blocks sheet...")
         _format_all_blocks_sheet(wb)
         logger.debug("Applying formatting to Block Analysis sheet...")

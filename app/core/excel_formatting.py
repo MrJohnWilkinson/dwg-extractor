@@ -31,6 +31,7 @@ from .constants import (
     EXCEL_SHEET_COLOR_ANALYSIS,
     EXCEL_SHEET_ENTITY_SUMMARY,
     EXCEL_SHEET_EXTRACTION_ISSUES,
+    EXCEL_SHEET_INSTRUCTIONS,
     EXCEL_SHEET_LAYER_ANALYSIS,
 )
 from .logger import setup_logger
@@ -766,3 +767,81 @@ def _format_attribute_analysis_sheet(wb: Workbook) -> None:
             ws.cell(row=row_idx, column=col_idx).alignment = wrap_alignment
 
     logger.info("Attribute Analysis sheet formatted")
+
+
+def _format_instructions_sheet(wb: Workbook) -> None:
+    """Apply formatting to the Instructions sheet.
+
+    This function applies:
+    - Column widths (A: 20, B: 60)
+    - Bold font on section headers ("Color Coding" and "Sheet Descriptions")
+    - Text wrapping on Column B (descriptions)
+    - Color fills on sample cells in the Color Coding section
+    - NO auto-filter (static reference content)
+    - NO freeze panes (short, static content)
+
+    Args:
+        wb: openpyxl Workbook object containing the Instructions sheet
+    """
+    if EXCEL_SHEET_INSTRUCTIONS not in wb.sheetnames:
+        logger.info("Instructions sheet not found, skipping formatting")
+        return
+
+    ws = wb[EXCEL_SHEET_INSTRUCTIONS]
+
+    # Set column widths
+    ws.column_dimensions["A"].width = 20  # Identifier column
+    ws.column_dimensions["B"].width = 60  # Description column
+
+    # Define bold font for section headers
+    from openpyxl.styles import Font
+    bold_font = Font(bold=True)
+
+    # Define text wrapping alignment for descriptions
+    wrap_alignment = Alignment(wrap_text=True, vertical="top")
+
+    # Apply text wrapping to header row
+    for cell in ws[1]:
+        cell.alignment = wrap_alignment
+
+    # Apply formatting to data rows
+    # Row structure:
+    # 1: Header (Identifier, Description)
+    # 2: "Color Coding" section header
+    # 3-6: Color rows (Yellow, Orange, Red, Light Green)
+    # 7: Empty separator
+    # 8: "Sheet Descriptions" section header
+    # 9-18: Sheet description rows
+
+    # Apply bold to section headers (rows 2 and 8)
+    section_header_rows = [2, 8]
+    for row_idx in section_header_rows:
+        cell = ws.cell(row=row_idx, column=1)
+        if cell.value in ["Color Coding", "Sheet Descriptions"]:
+            cell.font = bold_font
+
+    # Apply text wrapping to description column (B) for all data rows
+    for row_idx in range(2, ws.max_row + 1):
+        ws.cell(row=row_idx, column=2).alignment = wrap_alignment
+
+    # Apply color fills to color sample cells in Column B
+    # Rows 3-6 correspond to Yellow, Orange, Red, Light Green
+    color_fills = [
+        (3, EXCEL_FILL_COLOR_SCALE_VARIANCE_POSITIVE),   # Yellow
+        (4, EXCEL_FILL_COLOR_SCALE_NEGATIVE),            # Orange
+        (5, EXCEL_FILL_COLOR_SCALE_VARIANCE_NEGATIVE),   # Red
+        (6, EXCEL_FILL_COLOR_NESTED_BLOCK),              # Light Green
+    ]
+
+    for row_idx, fill_color in color_fills:
+        fill = PatternFill(
+            start_color=fill_color,
+            end_color=fill_color,
+            fill_type="solid",
+        )
+        ws.cell(row=row_idx, column=2).fill = fill
+
+    # NOTE: NO auto-filter applied (static reference content)
+    # NOTE: NO freeze panes applied (short, static content)
+
+    logger.info("Instructions sheet formatted with color samples and bold headers")

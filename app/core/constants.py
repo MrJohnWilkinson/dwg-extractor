@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 SUPPORTED_EXTENSIONS: tuple[str] = (".dxf",)
 
 # Excel configuration - Sheet names
+EXCEL_SHEET_INSTRUCTIONS: str = "Instructions"
 EXCEL_SHEET_BLOCK_ANALYSIS: str = "Block Analysis"
 EXCEL_SHEET_LAYER_ANALYSIS: str = "Layer Analysis"
 EXCEL_SHEET_ENTITY_SUMMARY: str = "Entity Summary"

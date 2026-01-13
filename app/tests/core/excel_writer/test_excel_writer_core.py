@@ -71,15 +71,16 @@ from core.types import BlockLayerKey, BlockRotationKey
 class TestExcelWriter:
     """Test suite for the write_excel function."""
 
-    def test_write_excel_ten_sheets(
+    def test_write_excel_eleven_sheets(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that ten sheets are created with correct names."""
+        """Test that eleven sheets are created with correct names."""
         from core.constants import (
             EXCEL_SHEET_ATTRIBUTE_ANALYSIS,
             EXCEL_SHEET_BLOCK_DEFINITIONS,
             EXCEL_SHEET_COLOR_ANALYSIS,
             EXCEL_SHEET_EXTRACTION_ISSUES,
+            EXCEL_SHEET_INSTRUCTIONS,
         )
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -90,6 +91,7 @@ class TestExcelWriter:
 
         # Load and verify sheet names
         wb = load_workbook(excel_path)
+        assert EXCEL_SHEET_INSTRUCTIONS in wb.sheetnames
         assert EXCEL_SHEET_ALL_BLOCKS in wb.sheetnames
         assert EXCEL_SHEET_BLOCK_ANALYSIS in wb.sheetnames
         assert EXCEL_SHEET_LAYER_ANALYSIS in wb.sheetnames
@@ -100,7 +102,7 @@ class TestExcelWriter:
         assert EXCEL_SHEET_EXTRACTION_ISSUES in wb.sheetnames
         assert EXCEL_SHEET_BLOCK_DEFINITIONS in wb.sheetnames
         assert EXCEL_SHEET_ATTRIBUTE_ANALYSIS in wb.sheetnames
-        assert len(wb.sheetnames) == 10
+        assert len(wb.sheetnames) == 11
 
     def test_block_analysis_sheet_simplified(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -1610,16 +1612,18 @@ class TestAllBlocksSheetIntegration:
         assert ws.max_row >= 1  # At least header row exists
         assert ws.max_column == 31  # All 31 columns should be present
 
-    def test_write_excel_all_blocks_is_first_sheet(
+    def test_write_excel_instructions_is_first_sheet(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
     ) -> None:
-        """Test that All Blocks is the first (leftmost) sheet in the workbook."""
+        """Test that Instructions is the first (leftmost) sheet in the workbook."""
+        from core.constants import EXCEL_SHEET_INSTRUCTIONS
+
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
         excel_path = write_excel(sample_extraction_data, output_path)
 
         # Load workbook and verify sheet order
         wb = load_workbook(excel_path)
-        assert wb.sheetnames[0] == EXCEL_SHEET_ALL_BLOCKS
+        assert wb.sheetnames[0] == EXCEL_SHEET_INSTRUCTIONS
 
     def test_write_excel_sheet_order(
         self, temp_dir: str, sample_extraction_data: ExtractionResult
@@ -1630,6 +1634,7 @@ class TestAllBlocksSheetIntegration:
             EXCEL_SHEET_BLOCK_DEFINITIONS,
             EXCEL_SHEET_COLOR_ANALYSIS,
             EXCEL_SHEET_EXTRACTION_ISSUES,
+            EXCEL_SHEET_INSTRUCTIONS,
         )
 
         output_path = os.path.join(temp_dir, "test_drawing.dxf")
@@ -1639,6 +1644,7 @@ class TestAllBlocksSheetIntegration:
         wb = load_workbook(excel_path)
 
         expected_order = [
+            EXCEL_SHEET_INSTRUCTIONS,
             EXCEL_SHEET_ALL_BLOCKS,
             EXCEL_SHEET_BLOCK_ANALYSIS,
             EXCEL_SHEET_LAYER_ANALYSIS,
