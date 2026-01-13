@@ -229,6 +229,15 @@ class DXFExtractorApp(ctk.CTk):
         )
         self.settings_button.pack(side="left", padx=(10, 0))
 
+        # Instructions button
+        self.instructions_button = ctk.CTkButton(
+            button_frame,
+            text="Instructions",
+            width=120,
+            command=self._show_instructions,
+        )
+        self.instructions_button.pack(side="left", padx=(10, 0))
+
         # Abort button (initially hidden - shown during extraction)
         self.abort_button = ctk.CTkButton(
             button_frame,
@@ -694,6 +703,7 @@ class DXFExtractorApp(ctk.CTk):
         self.extract_button.pack_forget()
         self.open_folder_button.pack_forget()
         self.settings_button.pack_forget()  # Hide settings button during extraction
+        self.instructions_button.pack_forget()  # Hide instructions button during extraction
         self.abort_button.pack(side="left", padx=10)
 
     def _abort_extraction(self) -> None:
@@ -739,6 +749,7 @@ class DXFExtractorApp(ctk.CTk):
         self.extract_button.pack(side="left")
         self.open_folder_button.pack(side="left", padx=(10, 0))
         self.settings_button.pack(side="left", padx=(10, 0))  # Restore settings button
+        self.instructions_button.pack(side="left", padx=(10, 0))  # Restore instructions button
         self.abort_event = None
 
     def _extraction_worker(self) -> None:
@@ -1052,6 +1063,25 @@ class DXFExtractorApp(ctk.CTk):
         # Refresh main window from SettingsManager after closing
         self._refresh_from_settings()
         self.logger.debug("Advanced Settings window closed, main GUI refreshed")
+
+    def _show_instructions(self) -> None:
+        """Display WBLOCK export instructions in a popup dialog."""
+        self.logger.info("Showing WBLOCK export instructions")
+
+        instructions = (
+            "How to export DWG to DXF using WBLOCK:\n\n"
+            "1. Open your DWG file in AutoCAD\n"
+            "2. Type WBLOCK and press Enter\n"
+            "3. In the dialog, select 'Entire drawing'\n"
+            "4. Choose destination and filename with .dxf extension\n"
+            "5. Click OK to export\n\n"
+            "Why use WBLOCK instead of Save As?\n"
+            "WBLOCK exports ALL block definitions, including those\n"
+            "with zero insertions. Standard 'Save As DXF' may lose\n"
+            "blocks that aren't currently inserted in the drawing."
+        )
+
+        messagebox.showinfo("DWG to DXF Export Instructions", instructions)
 
     def _refresh_from_settings(self) -> None:
         """Refresh main GUI state from SettingsManager.
