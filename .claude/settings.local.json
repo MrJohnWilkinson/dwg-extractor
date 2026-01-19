@@ -27,7 +27,11 @@
       "Bash(ai_output/063-remove-parallel-processing-plan.md)",
       "Bash(specs/059-unit-4-5-log-file-controls.md )",
       "Bash(specs/060-unit-6-7-progress-feedback-hint.md )",
-      "Bash(specs/061-log-file-controls-visibility-fix.md)"
+      "Bash(specs/061-log-file-controls-visibility-fix.md)",
+      "Skill(utils:prime)",
+      "Skill(dev:implement)",
+      "Skill(dev:commit)",
+      "Bash(git show:*)"
     ],
     "deny": [],
     "ask": []
