@@ -72,9 +72,26 @@ for domain in \
     "statsig.com" \
     "marketplace.visualstudio.com" \
     "vscode.blob.core.windows.net" \
+    "main.vscode-cdn.net" \
+    "az764295.vo.msecnd.net" \
+    "claude.ai" \
     "update.code.visualstudio.com" \
     "pypi.org" \
-    "files.pythonhosted.org"; do
+    "files.pythonhosted.org" \
+    "anthropic.gallerycdn.vsassets.io" \
+    "anthropic.gallery.vsassets.io" \
+    "dbaeumer.gallerycdn.vsassets.io" \
+    "dbaeumer.gallery.vsassets.io" \
+    "esbenp.gallerycdn.vsassets.io" \
+    "esbenp.gallery.vsassets.io" \
+    "eamodio.gallerycdn.vsassets.io" \
+    "eamodio.gallery.vsassets.io" \
+    "ms-python.gallerycdn.vsassets.io" \
+    "ms-python.gallery.vsassets.io" \
+    "charliermarsh.gallerycdn.vsassets.io" \
+    "charliermarsh.gallery.vsassets.io" \
+    "shd101wyy.gallerycdn.vsassets.io" \
+    "shd101wyy.gallery.vsassets.io"; do
     echo "Resolving $domain..."
     ips=$(dig +noall +answer A "$domain" | awk '$4 == "A" {print $5}')
     if [ -z "$ips" ]; then

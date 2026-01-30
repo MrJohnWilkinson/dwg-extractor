@@ -92,7 +92,11 @@ USER node
 
 # Install global packages
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
-ENV PATH=$PATH:/usr/local/share/npm-global/bin
+# Include ~/.local/bin for Claude Code native installer and npm-global for npm packages
+# Note: Use explicit PATH (not $PATH) because $PATH is minimal at build time
+# and doesn't expand correctly for runtime. This ensures claude works in
+# non-login shells (e.g., docker exec ... bash -c)
+ENV PATH=/home/node/.local/bin:/usr/local/share/npm-global/bin:/usr/local/bin:/usr/bin:/bin
 
 # Set the default shell to zsh rather than sh
 ENV SHELL=/bin/zsh
@@ -109,10 +113,14 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
   -a "source /usr/share/doc/fzf/examples/key-bindings.zsh" \
   -a "source /usr/share/doc/fzf/examples/completion.zsh" \
   -a "export PROMPT_COMMAND='history -a' && export HISTFILE=/commandhistory/.bash_history" \
+  -a 'export PATH="$HOME/.local/bin:$PATH"' \
   -x
 
-# Install Claude Code globally
-RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
+# Install Claude Code using native installer
+# IMPORTANT: Must use bash (not sh) - installer uses bash-specific syntax (arrays, etc.)
+# Docker's default /bin/sh on Ubuntu is dash, which doesn't support these features.
+# See: https://docs.anthropic.com/en/docs/claude-code/getting-started
+RUN curl -fsSL https://claude.ai/install.sh | bash
 
 # Copy and set up firewall script
 COPY init-firewall.sh /usr/local/bin/

@@ -58,7 +58,7 @@
     "UV_PROJECT_ENVIRONMENT": "/workspace/.venv",
     "UV_PYTHON_PREFERENCE": "system",
     "VIRTUAL_ENV": "/workspace/.venv",
-    "PATH": "/workspace/.venv/bin:/usr/local/share/npm-global/bin:/usr/local/bin:/usr/bin:/bin"
+    "PATH": "/home/node/.local/bin:/workspace/.venv/bin:/usr/local/share/npm-global/bin:/usr/local/bin:/usr/bin:/bin"
   },
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
   "workspaceFolder": "/workspace",
